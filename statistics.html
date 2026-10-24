@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Báo Cáo &amp; Thống Kê Vận Hành - Cafe Task Manager</title>
+  <title>Bảng Điều Khiển &amp; Thống Kê Vận Hành Quán - Cafe Task Manager</title>
   <meta name="description" content="Trung tâm Báo cáo, Thống kê hiệu suất và Giới thiệu hệ thống vận hành Quán Cafe - Phụ trách bởi Người 5.">
 
-  <!-- 1. Google Fonts -->
+  <!-- 1. Google Fonts: Be Vietnam Pro & Playfair Display chuẩn của hệ thống -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
@@ -35,103 +35,169 @@
     })();
   </script>
 
-  <!-- 6. CSS Tinh chỉnh Riêng Cho Trang Thống Kê (Người 5 phụ trách) -->
+  <!-- 6. CSS Tinh Chỉnh Riêng Trang Thống Kê & Giới Thiệu (Người 5 phụ trách) -->
   <style>
-    /* Bố cục KPI Dashboard */
-    .stats-kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: var(--space-md);
-      margin-bottom: var(--space-xl);
-    }
-    .kpi-card {
+    /* ==============================================================
+       THE CLOUD COFFEE — DASHBOARD & STATISTICS CUSTOM STYLING
+       Phù hợp hoàn hảo với hệ thống biến màu của Cafe Task Manager
+       ============================================================== */
+
+    /* Card giao diện thống kê chung */
+    .stat-card-box {
       background-color: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: var(--space-md) var(--space-lg);
       box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
       position: relative;
       overflow: hidden;
     }
-    .kpi-card:hover {
-      transform: translateY(-3px);
+    .stat-card-box:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    /* Page Header banner nhỏ gọn */
+    .dashboard-header-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: var(--space-xl);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    .dashboard-header-banner::after {
+      content: '☕';
+      position: absolute;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 5rem;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    /* 4 Thẻ KPI Tổng quan (Summary Cards) */
+    .kpi-metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.35rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 145px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .kpi-metric-card:hover {
+      transform: translateY(-4px);
       box-shadow: var(--shadow-md);
     }
-    .kpi-card::before {
+    .kpi-metric-card::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 4px;
-      height: 100%;
-      background: var(--accent);
+      right: 0;
+      height: 4px;
     }
-    .kpi-card.kpi-done::before { background: var(--status-completed); }
-    .kpi-card.kpi-pending::before { background: var(--status-pending); }
-    .kpi-card.kpi-high::before { background: var(--danger); }
-    .kpi-card.kpi-info::before { background: var(--info); }
+    /* Màu viền trên theo sắc độ Quán Cafe */
+    .kpi-metric-card.kpi-total::before   { background: linear-gradient(90deg, #6F4E37, #C78243); }
+    .kpi-metric-card.kpi-done::before    { background: linear-gradient(90deg, #2A9D8F, #27AE60); }
+    .kpi-metric-card.kpi-pending::before { background: linear-gradient(90deg, #D4A373, #E67E22); }
+    .kpi-metric-card.kpi-urgent::before  { background: linear-gradient(90deg, #E76F51, #C0392B); }
 
-    .kpi-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-xs);
-    }
-    .kpi-title {
-      font-size: var(--text-xs);
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      letter-spacing: 0.04em;
-    }
-    .kpi-icon {
-      width: 36px;
-      height: 36px;
+    .kpi-icon-wrap {
+      width: 44px;
+      height: 44px;
       border-radius: var(--radius-md);
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
+      font-size: 1.25rem;
+      flex-shrink: 0;
     }
-    .kpi-value {
-      font-size: var(--text-2xl);
+    .kpi-total .kpi-icon-wrap   { background: rgba(111, 78, 55, 0.12); color: #6F4E37; }
+    .kpi-done .kpi-icon-wrap    { background: rgba(42, 157, 143, 0.14); color: #2A9D8F; }
+    .kpi-pending .kpi-icon-wrap { background: rgba(230, 126, 34, 0.14); color: #E67E22; }
+    .kpi-urgent .kpi-icon-wrap  { background: rgba(231, 111, 81, 0.14); color: #E76F51; }
+
+    [data-theme="dark"] .kpi-total .kpi-icon-wrap   { background: rgba(221, 162, 106, 0.18); color: #DDA26A; }
+    [data-theme="dark"] .kpi-done .kpi-icon-wrap    { background: rgba(46, 204, 113, 0.18); color: #2ECC71; }
+    [data-theme="dark"] .kpi-pending .kpi-icon-wrap { background: rgba(243, 156, 18, 0.18); color: #F39C12; }
+    [data-theme="dark"] .kpi-urgent .kpi-icon-wrap  { background: rgba(231, 111, 81, 0.22); color: #FF7B54; }
+
+    .kpi-value-number {
+      font-size: 2.25rem;
       font-weight: 800;
-      color: var(--text-primary);
-      line-height: 1.2;
+      line-height: 1.1;
       font-family: var(--font-serif);
+      color: var(--text-primary);
+      margin-top: 0.25rem;
     }
-    .kpi-sub {
-      font-size: var(--text-xs);
-      color: var(--text-muted);
-      margin-top: 4px;
+    .kpi-badge-pct {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.25rem 0.55rem;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
     }
 
-    /* Khối biểu đồ */
-    .chart-card {
-      background-color: var(--bg-surface);
+    /* Thanh tiến độ tổng thể ca làm */
+    .overall-progress-card {
+      background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: var(--space-lg);
+      padding: 1.25rem 1.5rem;
       box-shadow: var(--shadow-sm);
       margin-bottom: var(--space-xl);
+    }
+    .custom-progress-track {
+      height: 12px;
+      border-radius: var(--radius-full);
+      background-color: var(--bg-surface-secondary);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    .custom-progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      background: linear-gradient(90deg, #2A9D8F 0%, #27AE60 50%, #D4A373 100%);
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Chart Container ràng buộc kích thước tuyệt đối */
+    .chart-panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
       height: 100%;
       display: flex;
       flex-direction: column;
+      transition: box-shadow var(--transition-fast);
     }
-    .chart-card-header {
+    .chart-panel-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .chart-panel-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--space-md);
-      padding-bottom: var(--space-sm);
+      justify-content: space-between;
+      padding-bottom: 0.85rem;
+      margin-bottom: 1rem;
       border-bottom: 1px dashed var(--border-color);
     }
-    .chart-card-title {
-      font-size: var(--text-lg);
+    .chart-panel-title {
+      font-size: 1.05rem;
       font-weight: 700;
       color: var(--text-primary);
       margin: 0;
@@ -139,154 +205,167 @@
       align-items: center;
       gap: 8px;
     }
+    /* RÀNG BUỘC KỸ THUẬT CHO CANVAS */
     .chart-container {
       position: relative;
-      height: 280px;
-      min-height: 280px;
+      height: 300px;
       width: 100%;
+      flex-grow: 1;
+    }
+    .chart-container canvas {
+      max-height: 100% !important;
+      max-width: 100% !important;
     }
 
-    /* Management Insight Alert */
-    .insight-alert {
+    /* Empty state khi chưa có task */
+    .chart-empty-state {
       display: flex;
-      align-items: flex-start;
-      gap: var(--space-md);
-      padding: var(--space-md);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      text-align: center;
+      padding: 2rem;
+      border: 2px dashed var(--border-color);
       border-radius: var(--radius-md);
-      margin-bottom: var(--space-md);
-      border-left: 4px solid;
-    }
-    .insight-alert.insight-success {
-      background: var(--status-completed-bg);
-      border-color: var(--status-completed);
-      color: var(--text-primary);
-    }
-    .insight-alert.insight-warning {
-      background: var(--status-pending-bg);
-      border-color: var(--status-pending);
-      color: var(--text-primary);
-    }
-    .insight-alert.insight-danger {
-      background: var(--danger-soft);
-      border-color: var(--danger);
-      color: var(--text-primary);
-    }
-    .insight-alert.insight-info {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      color: var(--text-primary);
-    }
-    .insight-icon {
-      font-size: 1.25rem;
-      margin-top: 2px;
-    }
-    .insight-body p {
-      margin: 4px 0 0 0;
-      font-size: var(--text-sm);
-      color: var(--text-secondary);
+      background: var(--bg-surface-secondary);
     }
 
-    /* Bảng việc gấp */
-    .urgent-table-card {
-      background-color: var(--bg-surface);
+    /* Bảng các đầu việc cần chú ý ngay tại Quán */
+    .urgent-tasks-box {
+      background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: var(--space-lg);
+      padding: 1.5rem;
       box-shadow: var(--shadow-sm);
-      margin-bottom: var(--space-2xl);
+      margin-bottom: var(--space-xl);
     }
-    .urgent-table-card table th {
-      background-color: var(--bg-surface-secondary);
-      color: var(--text-secondary);
-      font-size: var(--text-xs);
-      text-transform: uppercase;
+    .urgent-table {
+      margin-bottom: 0;
+    }
+    .urgent-table th {
+      background-color: var(--bg-surface-secondary) !important;
+      color: var(--text-secondary) !important;
+      font-size: 0.78rem;
       font-weight: 700;
-      letter-spacing: 0.03em;
-      border-bottom: 2px solid var(--border-color);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 2px solid var(--border-color) !important;
       padding: 12px 14px;
+      white-space: nowrap;
     }
-    .urgent-table-card table td {
+    .urgent-table td {
+      background-color: var(--bg-surface) !important;
+      color: var(--text-primary) !important;
+      border-bottom: 1px solid var(--border-color) !important;
       padding: 14px;
       vertical-align: middle;
-      border-bottom: 1px solid var(--border-color);
-      color: var(--text-primary);
-      background-color: var(--bg-surface);
     }
 
-    /* Thẻ giới thiệu thành viên nhóm */
-    .team-section {
-      margin-bottom: var(--space-2xl);
-    }
-    .team-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: var(--space-md);
-    }
-    .team-card {
-      background-color: var(--bg-surface);
+    /* Khu vực Giới thiệu Quán Cafe, Liên hệ & Thành viên Nhóm */
+    .about-story-card {
+      background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      text-align: center;
+      padding: 2rem;
       box-shadow: var(--shadow-sm);
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      height: 100%;
     }
-    .team-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-md);
+    .contact-info-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-sm);
+      height: 100%;
+    }
+
+    .workflow-step-pill {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.75rem;
+    }
+    .workflow-step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .team-badge-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 1.25rem;
+    }
+    .team-mini-card {
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .team-mini-card:hover {
+      transform: translateY(-2px);
       border-color: var(--accent);
     }
-    .team-avatar {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      margin: 0 auto var(--space-md);
+
+    .contact-detail-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.75rem 0.85rem;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.75rem;
+    }
+    .contact-detail-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: rgba(111, 78, 55, 0.12);
+      color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.8rem;
-      background: var(--bg-surface-secondary);
-      border: 2px solid var(--accent);
-      color: var(--accent);
-    }
-    .team-name {
-      font-size: var(--text-base);
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-    .team-role {
-      font-size: var(--text-xs);
-      font-weight: 600;
-      color: var(--accent);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .team-desc {
-      font-size: var(--text-xs);
-      color: var(--text-secondary);
-      line-height: 1.4;
+      font-size: 1rem;
+      flex-shrink: 0;
     }
 
-    /* Liên hệ quán cafe */
-    .contact-card {
-      background-color: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: var(--space-xl);
-      box-shadow: var(--shadow-sm);
-      margin-bottom: var(--space-2xl);
+    /* Dark Mode override an toàn cho text form và badge */
+    [data-theme="dark"] .form-control,
+    [data-theme="dark"] .form-select {
+      background-color: var(--bg-surface-secondary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .form-control:focus,
+    [data-theme="dark"] .form-select:focus {
+      background-color: var(--bg-surface-secondary);
+      border-color: var(--border-focus);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 0.25rem rgba(221, 162, 106, 0.25);
     }
 
     @media print {
-      .site-navbar, .navbar-actions, .hero-actions, .btn-print, .team-section, .contact-card, .site-footer {
+      .site-navbar, .navbar-actions, .hero-actions, #btn-print-report, #btn-refresh-stats, #contact-form-block, .site-footer {
         display: none !important;
       }
-      body {
-        background: #fff !important;
-        color: #000 !important;
-      }
-      .chart-card, .kpi-card, .urgent-table-card {
+      body { background: #fff !important; color: #000 !important; }
+      .stat-card-box, .kpi-metric-card, .chart-panel-card, .urgent-tasks-box {
         box-shadow: none !important;
         border: 1px solid #ccc !important;
         page-break-inside: avoid;
@@ -297,7 +376,7 @@
 <body>
 
   <!-- ================================================================
-       NAVBAR RESPONSIVE DÙNG CHUNG (NGƯỜI 1 PHỤ TRÁCH)
+       NAVBAR RESPONSIVE DÙNG CHUNG (TÁI SỬ DỤNG 100% CẤU TRÚC NHÓM)
        ================================================================ -->
   <header class="site-navbar" id="site-navbar">
     <div class="container navbar-container">
@@ -305,15 +384,21 @@
       <!-- Brand Logo & Title -->
       <a href="index.html" class="navbar-brand" aria-label="Về trang chủ Cafe Task Manager">
         <div class="brand-icon">
-          <i class="fa-solid fa-mug-hot"></i>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+            <line x1="6" y1="1" x2="6" y2="4"></line>
+            <line x1="10" y1="1" x2="10" y2="4"></line>
+            <line x1="14" y1="1" x2="14" y2="4"></line>
+          </svg>
         </div>
         <div class="brand-text">
           <span class="brand-title">Cafe Task Manager</span>
-          <span class="brand-badge">Báo cáo &amp; Thống kê</span>
+          <span class="brand-badge">Hệ thống vận hành</span>
         </div>
       </a>
 
-      <!-- Menu Điều Hướng (Dùng chung cho cả 3 trang) -->
+      <!-- Menu Điều Hướng (Dùng chung cho cả 3 trang - Active tại Báo cáo & Thống kê) -->
       <nav class="navbar-nav" id="navbar-nav" aria-label="Điều hướng chính">
         <div class="mobile-nav-header">
           <span class="brand-title" style="font-size: var(--text-lg);">Cafe Task Manager</span>
@@ -331,16 +416,13 @@
       <!-- Overlay che mờ khi mở mobile drawer -->
       <div class="navbar-overlay" id="navbar-overlay" aria-hidden="true"></div>
 
-      <!-- Action Buttons (Dark Mode Toggle & Nút công cụ) -->
+      <!-- Action Buttons (Dark Mode Toggle & Hamburger Mobile) -->
       <div class="navbar-actions">
-        <!-- Nút Xuất JSON -->
-        <button type="button" class="btn btn-sm btn-outline btn-export-json d-none d-md-inline-flex" title="Tải xuống tệp dữ liệu cafe-tasks.json">
-          <i class="fa-solid fa-download me-1"></i> Xuất JSON
-        </button>
-
-        <!-- Nút chuyển đổi Dark Mode / Light Mode -->
+        <!-- Nút chuyển đổi Dark Mode / Light Mode (Đồng bộ với theme.js & main.js) -->
         <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Chuyển đổi giao diện Sáng/Tối" title="Chuyển đổi giao diện">
-          <i class="fa-solid fa-moon"></i>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
         </button>
 
         <!-- Nút Hamburger Điều Khiển Mobile Menu -->
@@ -357,338 +439,433 @@
   <!-- ================================================================
        MAIN CONTENT: TRUNG TÂM BÁO CÁO & THỐNG KÊ (NGƯỜI 5 PHỤ TRÁCH)
        ================================================================ -->
-  <main class="main-content">
+  <main class="main-content py-4">
     <div class="container">
       
-      <!-- 1. TIÊU ĐỀ TRANG VÀ NÚT TÁC VỤ NHANH -->
-      <div class="page-header flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
-        <div class="page-title-group">
-          <h1>
-            <i class="fa-solid fa-chart-pie text-warning me-2"></i>
-            <span>Trung Tâm Báo Cáo &amp; Thống Kê</span>
-          </h1>
-          <p class="page-title-desc">
-            Trực quan hóa hiệu suất vận hành, đo lường tỷ lệ hoàn thành ca trực và phân bổ công việc theo thời gian thực.
-          </p>
+      <!-- 1. PAGE HEADER: BANNER NHỎ GỌN & NÚT THAO TÁC NHANH -->
+      <div class="dashboard-header-banner animate__animated animate__fadeIn">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge" style="background: var(--accent); color: #fff; font-size: 0.75rem; letter-spacing: 0.04em;">
+                <i class="fa-solid fa-mug-hot me-1"></i> THE CLOUD COFFEE
+              </span>
+              <span class="text-secondary small d-flex align-items-center gap-1">
+                <i class="fa-regular fa-clock"></i> Cập nhật: <strong id="last-updated-time">Đang tải...</strong>
+              </span>
+            </div>
+            <h1 class="h3 fw-bold mb-1" style="color: var(--text-primary); font-family: var(--font-serif);">
+              Bảng Điều Khiển &amp; Thống Kê Vận Hành Quán
+            </h1>
+            <p class="text-secondary small mb-0">
+              Đo lường hiệu suất ca làm, giám sát tiến độ công việc và kiểm soát các đầu việc khẩn cấp theo thời gian thực.
+            </p>
+          </div>
+
+          <!-- Các nút tác vụ nhanh -->
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline" id="btn-refresh-stats" title="Làm mới lại dữ liệu từ LocalStorage">
+              <i class="fa-solid fa-arrows-rotate me-1"></i> Làm mới số liệu
+            </button>
+            <button type="button" class="btn btn-outline" id="btn-print-report" title="In báo cáo này ra giấy hoặc xuất PDF">
+              <i class="fa-solid fa-print me-1"></i> In / Xuất PDF
+            </button>
+            <a href="tasks.html" class="btn btn-primary" title="Chuyển sang trang Quản lý công việc để CRUD">
+              <i class="fa-solid fa-list-check me-1"></i> Quản lý công việc
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. KHU VỰC 1: 4 THẺ KPI TỔNG QUAN (SUMMARY CARDS) & THANH TIẾN ĐỘ -->
+      <section class="mb-4" aria-label="Các chỉ số KPI chính của ca làm">
+        <div class="row g-4 mb-3">
+          
+          <!-- Thẻ 1: Tổng số công việc/đơn -->
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-metric-card kpi-total">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.75rem; letter-spacing: 0.05em;">Tổng số công việc</span>
+                <div class="kpi-icon-wrap">
+                  <i class="fa-solid fa-mug-hot"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-number" id="stat-total-tasks">0</div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <small class="text-secondary">Đầu việc toàn ca</small>
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size: 0.7rem;">Hôm nay</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thẻ 2: Đã hoàn thành (Done) -->
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-metric-card kpi-done">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.75rem; letter-spacing: 0.05em;">Đã hoàn thành</span>
+                <div class="kpi-icon-wrap">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-number" style="color: #2A9D8F;" id="stat-done-tasks">0</div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <small class="text-secondary">Đạt chuẩn chất lượng</small>
+                  <span class="kpi-badge-pct" style="background: rgba(42, 157, 143, 0.15); color: #2A9D8F;" id="stat-done-pct">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thẻ 3: Đang chờ xử lý (Pending) -->
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-metric-card kpi-pending">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.75rem; letter-spacing: 0.05em;">Đang chờ xử lý</span>
+                <div class="kpi-icon-wrap">
+                  <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-number" style="color: #E67E22;" id="stat-pending-tasks">0</div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <small class="text-secondary">Cần tiếp tục thực hiện</small>
+                  <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size: 0.7rem;">Đang chạy</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thẻ 4: Cần ưu tiên cao / Sắp đến hạn -->
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-metric-card kpi-urgent">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.75rem; letter-spacing: 0.05em;">Ưu tiên cao / Cận hạn</span>
+                <div class="kpi-icon-wrap">
+                  <i class="fa-solid fa-fire"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-number" style="color: #E76F51;" id="stat-urgent-tasks">0</div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <small class="text-secondary">Chưa xong hoặc quá hạn</small>
+                  <span class="badge bg-danger-subtle text-danger" style="font-size: 0.7rem;">Cần gấp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div class="d-flex flex-wrap gap-2">
-          <button type="button" class="btn btn-outline" id="btn-print-report" title="In báo cáo này ra giấy hoặc lưu thành PDF">
-            <i class="fa-solid fa-print me-1"></i> In / Lưu PDF
-          </button>
-          <a href="tasks.html" class="btn btn-primary" title="Chuyển sang trang Quản lý công việc để CRUD">
-            <i class="fa-solid fa-list-check me-1"></i> Quản lý công việc
+        <!-- THANH TIẾN ĐỘ TỔNG THỂ (OVERALL PROGRESS BAR) -->
+        <div class="overall-progress-card">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <div>
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">
+                <i class="fa-solid fa-chart-line me-1" style="color: var(--accent);"></i>
+                Tiến độ hoàn thành ca trực hiện tại
+              </strong>
+              <span class="text-secondary small ms-2" id="stat-progress-desc">Đang tải tiến độ...</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold" style="font-size: 1.15rem; color: #2A9D8F;" id="stat-completion-rate">0%</span>
+            </div>
+          </div>
+          <div class="custom-progress-track">
+            <div class="custom-progress-fill" id="stat-progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. KHU VỰC 2: BIỂU ĐỒ TRỰC QUAN BẰNG CHART.JS (DOUGHNUT & BAR) -->
+      <section class="mb-4" aria-label="Biểu đồ trực quan hóa dữ liệu Chart.js">
+        
+        <!-- Khối Empty State nếu LocalStorage có 0 công việc -->
+        <div id="stats-empty-state" class="chart-empty-state mb-4" style="display: none;">
+          <div style="font-size: 3.5rem; color: var(--accent); margin-bottom: 0.75rem;">
+            <i class="fa-solid fa-mug-saucer"></i>
+          </div>
+          <h3 class="h5 fw-bold" style="color: var(--text-primary);">Chưa có công việc nào trong hệ thống!</h3>
+          <p class="text-secondary small mb-3" style="max-width: 480px;">
+            Hiện tại danh sách công việc trong ca làm việc đang trống. Bạn hãy thêm công việc mới hoặc nạp lại dữ liệu mẫu để biểu đồ hiển thị.
+          </p>
+          <a href="tasks.html" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-1"></i> Thêm công việc ngay
           </a>
         </div>
-      </div>
 
-      <!-- 2. KHỐI NHẬN XÉT QUẢN TRỊ TỰ ĐỘNG (DYNAMIC INSIGHTS) -->
-      <div id="management-insights">
-        <!-- Render tự động bởi assets/js/stats.js -->
-      </div>
+        <!-- Grid 2 Biểu đồ (Done vs Pending và Phân bổ Priority) -->
+        <div class="row g-4 mb-4" id="stats-charts-row">
+          
+          <!-- Cột trái: Biểu đồ Tròn (Doughnut Chart) -->
+          <div class="col-12 col-lg-6">
+            <div class="chart-panel-card">
+              <div class="chart-panel-header">
+                <h2 class="chart-panel-title">
+                  <i class="fa-solid fa-chart-pie" style="color: #2A9D8F;"></i>
+                  <span>Tỷ lệ Trạng thái Công việc</span>
+                </h2>
+                <span class="badge bg-secondary-subtle text-secondary-emphasis">Done vs Pending</span>
+              </div>
+              
+              <!-- Bọc Canvas trong chart-container với kích thước cố định tuyệt đối -->
+              <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                <canvas id="chartStatus"></canvas>
+              </div>
 
-      <!-- 3. BẢNG TỔNG HỢP CHỈ SỐ KPI VẬN HÀNH (6 THẺ ĐỘNG) -->
-      <div class="stats-kpi-grid">
-        <!-- Tổng số công việc -->
-        <div class="kpi-card kpi-info">
-          <div class="kpi-header">
-            <span class="kpi-title">Tổng công việc</span>
-            <div class="kpi-icon" style="background: var(--primary-soft); color: var(--primary);">
-              <i class="fa-solid fa-clipboard-list"></i>
+              <div class="text-center mt-3 small text-secondary">
+                <i class="fa-solid fa-circle-info me-1"></i> So sánh tỷ lệ giữa các đầu việc đã hoàn thành và việc còn tồn đọng.
+              </div>
             </div>
           </div>
-          <div class="kpi-value" id="stat-total-tasks">0</div>
-          <div class="kpi-sub">Đầu việc trong hệ thống</div>
+
+          <!-- Cột phải: Biểu đồ Cột (Bar Chart) -->
+          <div class="col-12 col-lg-6">
+            <div class="chart-panel-card">
+              <div class="chart-panel-header">
+                <h2 class="chart-panel-title">
+                  <i class="fa-solid fa-chart-column" style="color: var(--accent);"></i>
+                  <span>Phân bổ Công việc theo Độ ưu tiên</span>
+                </h2>
+                <span class="badge bg-secondary-subtle text-secondary-emphasis">Low / Medium / High</span>
+              </div>
+              
+              <!-- Bọc Canvas trong chart-container với kích thước cố định tuyệt đối -->
+              <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                <canvas id="chartPriority"></canvas>
+              </div>
+
+              <div class="text-center mt-3 small text-secondary">
+                <i class="fa-solid fa-circle-info me-1"></i> Thể hiện chi tiết số lượng Đã xong và Đang chờ theo từng mức độ ưu tiên.
+              </div>
+            </div>
+          </div>
+
         </div>
+      </section>
 
-        <!-- Tỷ lệ hoàn thành -->
-        <div class="kpi-card kpi-done">
-          <div class="kpi-header">
-            <span class="kpi-title">Tỷ lệ hoàn thành</span>
-            <div class="kpi-icon" style="background: var(--status-completed-bg); color: var(--status-completed);">
-              <i class="fa-solid fa-percent"></i>
-            </div>
-          </div>
-          <div class="kpi-value text-success" id="stat-completion-rate">0%</div>
-          <div class="progress mt-2" style="height: 6px;">
-            <div class="progress-bar bg-success" id="stat-progress-bar" role="progressbar" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Đã hoàn thành (Done) -->
-        <div class="kpi-card kpi-done">
-          <div class="kpi-header">
-            <span class="kpi-title">Đã hoàn thành</span>
-            <div class="kpi-icon" style="background: var(--status-completed-bg); color: var(--status-completed);">
-              <i class="fa-solid fa-circle-check"></i>
-            </div>
-          </div>
-          <div class="kpi-value text-success" id="stat-done-tasks">0</div>
-          <div class="kpi-sub">Đầu việc đạt chuẩn</div>
-        </div>
-
-        <!-- Chờ thực hiện (Pending) -->
-        <div class="kpi-card kpi-pending">
-          <div class="kpi-header">
-            <span class="kpi-title">Chờ thực hiện</span>
-            <div class="kpi-icon" style="background: var(--status-pending-bg); color: var(--status-pending);">
-              <i class="fa-solid fa-clock-rotate-left"></i>
-            </div>
-          </div>
-          <div class="kpi-value text-warning" id="stat-pending-tasks">0</div>
-          <div class="kpi-sub">Đang cần giải quyết</div>
-        </div>
-
-        <!-- Ưu tiên cao (High) -->
-        <div class="kpi-card kpi-high">
-          <div class="kpi-header">
-            <span class="kpi-title">Ưu tiên cao</span>
-            <div class="kpi-icon" style="background: var(--danger-soft); color: var(--danger);">
-              <i class="fa-solid fa-fire"></i>
-            </div>
-          </div>
-          <div class="kpi-value text-danger" id="stat-high-priority">0</div>
-          <div class="kpi-sub">Cần xử lý trước</div>
-        </div>
-
-        <!-- Hạn chót hôm nay / Quá hạn -->
-        <div class="kpi-card kpi-high">
-          <div class="kpi-header">
-            <span class="kpi-title">Cận hạn / Quá hạn</span>
-            <div class="kpi-icon" style="background: var(--danger-soft); color: var(--danger);">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-          </div>
-          <div class="kpi-value text-danger" id="stat-due-soon">0</div>
-          <div class="kpi-sub">Cần dứt điểm ngay</div>
-        </div>
-      </div>
-
-      <!-- 4. KHU VỰC VẼ BIỂU ĐỒ CHART.JS (BONUS RUBRIC 10 ĐIỂM) -->
-      <div class="row g-4 mb-4">
-        <!-- Biểu đồ 1: Tỷ lệ Trạng thái (Doughnut Chart) -->
-        <div class="col-12 col-lg-5">
-          <div class="chart-card">
-            <div class="chart-card-header">
-              <h2 class="chart-card-title">
-                <i class="fa-solid fa-chart-pie text-success"></i>
-                <span>Tỷ lệ Trạng Thái Công Việc</span>
-              </h2>
-              <span class="badge bg-secondary-subtle text-secondary-emphasis">Done vs Pending</span>
-            </div>
-            <div class="chart-container">
-              <canvas id="chartStatus"></canvas>
-            </div>
-            <div class="text-center mt-3 small text-muted">
-              Biểu đồ trực quan hóa cán cân giữa các việc đã xong và các việc đang tồn đọng.
-            </div>
-          </div>
-        </div>
-
-        <!-- Biểu đồ 2: Phân Bố Mức Độ Ưu Tiên (Bar Chart) -->
-        <div class="col-12 col-lg-7">
-          <div class="chart-card">
-            <div class="chart-card-header">
-              <h2 class="chart-card-title">
-                <i class="fa-solid fa-chart-simple text-warning"></i>
-                <span>Phân Bổ Mức Độ Ưu Tiên (Priority)</span>
-              </h2>
-              <span class="badge bg-secondary-subtle text-secondary-emphasis">High / Medium / Low</span>
-            </div>
-            <div class="chart-container">
-              <canvas id="chartPriority"></canvas>
-            </div>
-            <div class="text-center mt-3 small text-muted">
-              Đo lường mức độ quan trọng để phân bổ nhân lực Barista và Phục vụ ca trực hợp lý.
-            </div>
-          </div>
-        </div>
-
-        <!-- Biểu đồ 3: Phân Bổ Theo Bộ Phận / Danh Mục -->
-        <div class="col-12">
-          <div class="chart-card">
-            <div class="chart-card-header">
-              <h2 class="chart-card-title">
-                <i class="fa-solid fa-layer-group text-primary"></i>
-                <span>Tiến Độ Công Việc Theo Phân Loại Bộ Phận</span>
-              </h2>
-              <span class="badge bg-secondary-subtle text-secondary-emphasis">So sánh Done / Tổng</span>
-            </div>
-            <div class="chart-container" style="height: 300px; min-height: 300px;">
-              <canvas id="chartCategory"></canvas>
-            </div>
-            <div class="text-center mt-3 small text-muted">
-              Đánh giá tỷ lệ hoàn thành theo từng khối nghiệp vụ: Pha chế, Kho nguyên liệu, Thu ngân, Vệ sinh quán.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. DANH SÁCH CÔNG VIỆC KHẨN CẤP CẦN XỬ LÝ GẤP -->
-      <div class="urgent-table-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+      <!-- 4. KHU VỰC 3: BẢNG CÁC ĐẦU VIỆC CẦN CHÚ Ý NGAY TẠI QUÁN -->
+      <section class="urgent-tasks-box animate__animated animate__fadeIn" aria-label="Bảng các việc gấp cần làm ngay">
+        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-3">
           <div>
-            <h3 class="h5 fw-bold mb-1 text-primary">
-              <i class="fa-solid fa-bell text-danger me-2"></i>
-              Danh Sách Việc Ưu Tiên Cao Đang Chờ Xử Lý
+            <h3 class="h5 fw-bold mb-1" style="color: var(--text-primary);">
+              <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>
+              Các Đầu Việc Cần Chú Ý Ngay Tại Quán
             </h3>
-            <p class="text-secondary small mb-0">Các đầu việc có mức độ High chưa hoàn thành cần giải quyết trước khi chuyển ca.</p>
+            <p class="text-secondary small mb-0">
+              Danh sách tối đa 5 công việc đang chờ xử lý có mức độ High hoặc hạn chót gần nhất/quá hạn để quản lý xử lý kịp thời.
+            </p>
           </div>
-          <a href="tasks.html" class="btn btn-sm btn-outline">
+          <a href="tasks.html" class="btn btn-sm btn-outline text-nowrap">
             Xem toàn bộ bảng việc <i class="fa-solid fa-arrow-right ms-1"></i>
           </a>
         </div>
 
         <div class="table-responsive">
-          <table class="table align-middle mb-0">
+          <table class="table urgent-table align-middle">
             <thead>
               <tr>
                 <th style="width: 50px;">STT</th>
                 <th>Tên công việc</th>
-                <th style="width: 140px;">Mức ưu tiên</th>
                 <th style="width: 140px;">Hạn chót</th>
+                <th style="width: 130px;">Mức ưu tiên</th>
                 <th style="width: 130px;">Trạng thái</th>
-                <th style="width: 100px;" class="text-end">Thao tác</th>
+                <th style="width: 110px;" class="text-end">Hành động</th>
               </tr>
             </thead>
             <tbody id="urgent-tasks-table-body">
-              <!-- Render tự động bởi assets/js/stats.js -->
+              <!-- Render động bởi assets/js/stats.js -->
             </tbody>
           </table>
-          <div id="urgent-tasks-empty" class="text-center py-4 text-muted" style="display: none;">
+
+          <div id="urgent-tasks-empty" class="text-center py-4 text-secondary" style="display: none;">
             <i class="fa-solid fa-circle-check text-success fa-2x mb-2"></i>
-            <div>Tuyệt vời! Hiện tại không có công việc ưu tiên cao nào bị tồn đọng.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 6. PHẦN GIỚI THIỆU NHÓM DỰ ÁN (ABOUT TEAM) -->
-      <section class="team-section">
-        <div class="text-center mb-4">
-          <h2 class="h3 fw-bold text-primary mb-2">
-            <i class="fa-solid fa-users text-warning me-2"></i>
-            Đội Ngũ Phát Triển Dự Án
-          </h2>
-          <p class="text-secondary small">
-            Đồ án Giữa kỳ Môn Phát Triển Ứng Dụng Web — Trường Đại Học CMC — Nhóm 5 thành viên
-          </p>
-        </div>
-
-        <div class="team-grid">
-          <!-- Người 1 -->
-          <div class="team-card">
-            <div class="team-avatar"><i class="fa-solid fa-user-shield"></i></div>
-            <div class="team-name">Người 1</div>
-            <div class="team-role">Trưởng Nhóm / Kiến Trúc Hệ Thống</div>
-            <div class="team-desc">
-              Phụ trách Khung dùng chung, Navbar responsive, Footer, Dark/Light Mode, Tầng dữ liệu LocalStorage (TaskService) và Quản lý GitHub Repo.
-            </div>
-          </div>
-
-          <!-- Người 2 -->
-          <div class="team-card">
-            <div class="team-avatar"><i class="fa-solid fa-square-check"></i></div>
-            <div class="team-name">Người 2</div>
-            <div class="team-role">Lập Trình Viên CRUD &amp; Validate</div>
-            <div class="team-desc">
-              Thiết kế giao diện bảng/card công việc, Modal Popup Thêm/Sửa, Logic CRUD, Đổi trạng thái Done và Kiểm tra tính hợp lệ dữ liệu (Validation).
-            </div>
-          </div>
-
-          <!-- Người 3 -->
-          <div class="team-card">
-            <div class="team-avatar"><i class="fa-solid fa-filter"></i></div>
-            <div class="team-name">Người 3</div>
-            <div class="team-role">Chuyên Viên Lọc &amp; Thiết Kế UML</div>
-            <div class="team-desc">
-              Thanh công cụ Tìm kiếm theo từ khóa, Bộ lọc đa tiêu chí (Status + Priority), Sắp xếp theo Deadline, Phân trang và Sơ đồ UML Activity Diagram.
-            </div>
-          </div>
-
-          <!-- Người 4 -->
-          <div class="team-card">
-            <div class="team-avatar"><i class="fa-solid fa-database"></i></div>
-            <div class="team-name">Người 4</div>
-            <div class="team-role">Thiết Kế CSDL &amp; Trang Chủ</div>
-            <div class="team-desc">
-              Thiết kế Trang chủ mang phong cách Quán Cafe, Phát biểu bài toán theo các vai trò người dùng, Chuẩn hóa 3NF, Sơ đồ ERD và SQL Script mẫu.
-            </div>
-          </div>
-
-          <!-- Người 5 (Bạn) -->
-          <div class="team-card" style="border-color: var(--accent); background: var(--bg-card-hover);">
-            <div class="team-avatar" style="background: var(--accent-soft);"><i class="fa-solid fa-chart-line"></i></div>
-            <div class="team-name">Người 5 (Bạn)</div>
-            <div class="team-role">Thống Kê, Biểu Đồ &amp; Quay Video Demo</div>
-            <div class="team-desc">
-              Phát triển toàn diện Trang Thống kê (statistics.html), Vẽ biểu đồ Chart.js tự động cập nhật, Giới thiệu hệ thống, Soạn Slide thuyết trình và Quay Video Demo 3 phút chuẩn rubric.
-            </div>
+            <div>Tuyệt vời! Hiện không có công việc nào bị quá hạn hoặc ưu tiên cao bị tồn đọng.</div>
           </div>
         </div>
       </section>
 
-      <!-- 7. THÔNG TIN LIÊN HỆ & QUÁN CAFE (CONTACT SECTION) -->
-      <section class="contact-card">
-        <div class="row g-4 align-items-center">
-          <div class="col-12 col-md-5">
-            <h3 class="h4 fw-bold text-primary mb-3">
-              <i class="fa-solid fa-location-dot text-danger me-2"></i>
-              Thông Tin Vận Hành Quán Cafe
-            </h3>
-            <p class="text-secondary small mb-4">
-              Hệ thống được thiết kế riêng nhằm chuẩn hóa quy trình mở ca, phục vụ và chốt ca hàng ngày của chuỗi cafe hiện đại.
-            </p>
+      <!-- 5. KHU VỰC 4: GIỚI THIỆU QUÁN CAFE, THÔNG TIN LIÊN HỆ & THÀNH VIÊN NHÓM -->
+      <section class="mb-4" aria-label="Giới thiệu thương hiệu và thông tin liên hệ">
+        <div class="row g-4">
+          
+          <!-- Cột trái (col-lg-7): Giới thiệu & Thành viên Nhóm -->
+          <div class="col-12 col-lg-7">
+            <div class="about-story-card">
+              
+              <!-- Câu chuyện thương hiệu -->
+              <div class="mb-4">
+                <span class="badge" style="background: rgba(199, 130, 67, 0.15); color: var(--accent); font-weight: 700; font-size: 0.75rem;">
+                  VỀ CHÚNG TÔI
+                </span>
+                <h3 class="h4 fw-bold mt-2 mb-2" style="color: var(--text-primary); font-family: var(--font-serif);">
+                  The Cloud Coffee &amp; Tea — Vận Hành Chuẩn Hóa
+                </h3>
+                <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                  Được thành lập với đam mê mang lại trải nghiệm cà phê mộc đậm đà nguyên bản kết hợp không gian làm việc hiện đại. 
+                  Hệ thống <strong>Cafe Task Manager</strong> là giải pháp chuyển đổi số nội bộ giúp ban quản lý và đội ngũ Barista, 
+                  Phục vụ, Thu ngân phối hợp nhịp nhàng, kiểm soát nguyên vật liệu và không bỏ sót bất kỳ đầu việc nào giữa các ca trực.
+                </p>
 
-            <ul class="list-unstyled small text-secondary d-flex flex-column gap-3 mb-0">
-              <li class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary-subtle text-primary p-2"><i class="fa-solid fa-store fa-fw"></i></span>
-                <span><strong>Địa chỉ:</strong> Số 123 Đường Cà Phê, Quận Cầu Giấy, TP. Hà Nội</span>
-              </li>
-              <li class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary-subtle text-primary p-2"><i class="fa-solid fa-phone fa-fw"></i></span>
-                <span><strong>Hotline quản lý:</strong> 0901.234.567 (Hỗ trợ 24/7)</span>
-              </li>
-              <li class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary-subtle text-primary p-2"><i class="fa-solid fa-envelope fa-fw"></i></span>
-                <span><strong>Email:</strong> admin@cafetaskmanager.vn</span>
-              </li>
-              <li class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary-subtle text-primary p-2"><i class="fa-solid fa-clock fa-fw"></i></span>
-                <span><strong>Giờ mở cửa:</strong> 07:00 - 22:30 (Tất cả các ngày trong tuần)</span>
-              </li>
-            </ul>
-          </div>
+                <h4 class="h6 fw-bold mb-3" style="color: var(--text-primary);">
+                  <i class="fa-solid fa-clipboard-check me-2" style="color: var(--accent);"></i>
+                  Quy Trình Vận Hành 4 Bước Tiêu Chuẩn:
+                </h4>
 
-          <div class="col-12 col-md-7 border-start-md ps-md-4">
-            <h4 class="h5 fw-bold text-primary mb-3">Gửi Phản Hồi / Đóng Góp Ý Kiến Vận Hành</h4>
-            <form id="cafe-contact-form">
-              <div class="row g-3">
-                <div class="col-12 col-sm-6">
-                  <label for="contact-name" class="form-label small fw-semibold text-secondary">Họ và tên của bạn</label>
-                  <input type="text" class="form-control" id="contact-name" placeholder="Nguyễn Văn A" required>
+                <div class="workflow-step-pill">
+                  <span class="workflow-step-number">1</span>
+                  <div>
+                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Mở ca &amp; Kiểm định máy móc</strong>
+                    <div class="text-secondary small">Vệ sinh máy pha espresso, kiểm tra tồn kho hạt Arabica/Robusta và lượng sữa thanh trùng.</div>
+                  </div>
                 </div>
-                <div class="col-12 col-sm-6">
-                  <label for="contact-role" class="form-label small fw-semibold text-secondary">Bộ phận / Vai trò</label>
-                  <select class="form-select" id="contact-role">
-                    <option value="barista">Nhân viên Barista</option>
-                    <option value="service">Nhân viên Phục vụ</option>
-                    <option value="cashier">Thu ngân</option>
-                    <option value="manager">Quản lý quán</option>
-                    <option value="customer">Khách hàng thành viên</option>
-                  </select>
+
+                <div class="workflow-step-pill">
+                  <span class="workflow-step-number">2</span>
+                  <div>
+                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Pha chế chuẩn công thức &amp; Phục vụ tận tâm</strong>
+                    <div class="text-secondary small">Chiết xuất cà phê chuẩn định lượng, bảo đảm thời gian ra món dưới 5 phút cho mỗi đơn.</div>
+                  </div>
                 </div>
-                <div class="col-12">
-                  <label for="contact-message" class="form-label small fw-semibold text-secondary">Nội dung góp ý</label>
-                  <textarea class="form-control" id="contact-message" rows="3" placeholder="Nhập ý kiến đóng góp nhằm cải tiến quy trình phục vụ quán cafe..." required></textarea>
+
+                <div class="workflow-step-pill">
+                  <span class="workflow-step-number">3</span>
+                  <div>
+                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Duy trì không gian &amp; Trải nghiệm khách hàng</strong>
+                    <div class="text-secondary small">Lau dọn bàn ghế định kỳ, bảo đảm quầy phục vụ luôn gọn gàng và âm nhạc phù hợp.</div>
+                  </div>
                 </div>
-                <div class="col-12 text-end">
-                  <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi ý kiến phản hồi
-                  </button>
+
+                <div class="workflow-step-pill">
+                  <span class="workflow-step-number">4</span>
+                  <div>
+                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Chốt ca, Bàn giao &amp; Tổng hợp số liệu</strong>
+                    <div class="text-secondary small">Kiểm kê doanh thu cuối ngày, đánh giá các đầu việc hoàn thành và bàn giao ca tiếp theo.</div>
+                  </div>
                 </div>
               </div>
-            </form>
+
+              <!-- Danh sách 5 thành viên thực hiện dự án -->
+              <div class="border-top pt-3" style="border-color: var(--border-color) !important;">
+                <h4 class="h6 fw-bold mb-2" style="color: var(--text-primary);">
+                  <i class="fa-solid fa-users me-2" style="color: var(--accent);"></i>
+                  Đội Ngũ Thực Hiện Dự Án (Nhóm 5 Thành Viên):
+                </h4>
+                <div class="team-badge-row">
+                  <div class="team-mini-card">
+                    <strong style="color: var(--text-primary); font-size: 0.85rem;">BIT250081 NGUYỄN TIẾN ĐỨC</strong>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Hệ thống lõi, Navbar, Dark Mode &amp; LocalStorage TaskService</div>
+                  </div>
+                  <div class="team-mini-card">
+                    <strong style="color: var(--text-primary); font-size: 0.85rem;">BIT250014 VŨ HOÀNG ANH</strong>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Giao diện Bảng việc, Modal Thêm/Sửa &amp; CRUD Validation</div>
+                  </div>
+                  <div class="team-mini-card">
+                    <strong style="color: var(--text-primary); font-size: 0.85rem;">BIT250020 VŨ HOÀNG ANH</strong>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Tìm kiếm realtime, Bộ lọc đa tiêu chí, Sắp xếp &amp; UML Activity</div>
+                  </div>
+                  <div class="team-mini-card">
+                    <strong style="color: var(--text-primary); font-size: 0.85rem;">BIT250045 ĐINH THANH BÌNH</strong>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Thiết kế CSDL 3NF, Sơ đồ ERD, Script SQL &amp; Trang chủ</div>
+                  </div>
+                  <div class="team-mini-card">
+                    <strong style="color: var(--text-primary); font-size: 0.85rem;">BCS250039 TRẦN HÀ THẢO VÂN</strong>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Trang Thống kê, Biểu đồ Chart.js, Giới thiệu &amp; Video Demo</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
+
+          <!-- Cột phải (col-lg-5): Thẻ thông tin liên hệ của Quán & Form góp ý -->
+          <div class="col-12 col-lg-5">
+            <div class="contact-info-card">
+              <span class="badge" style="background: rgba(111, 78, 55, 0.12); color: var(--primary); font-weight: 700; font-size: 0.75rem;">
+                LIÊN HỆ QUÁN CAFE
+              </span>
+              <h3 class="h4 fw-bold mt-2 mb-3" style="color: var(--text-primary); font-family: var(--font-serif);">
+                Thông Tin Vận Hành &amp; Hỗ Trợ
+              </h3>
+              
+              <div class="contact-detail-row">
+                <div class="contact-detail-icon">
+                  <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                  <small class="text-secondary d-block">Địa chỉ quán</small>
+                  <strong style="color: var(--text-primary); font-size: 0.85rem;">Số 123 Đường Cà Phê, Quận Cầu Giấy, Hà Nội</strong>
+                </div>
+              </div>
+
+              <div class="contact-detail-row">
+                <div class="contact-detail-icon">
+                  <i class="fa-solid fa-clock"></i>
+                </div>
+                <div>
+                  <small class="text-secondary d-block">Giờ mở cửa phục vụ</small>
+                  <strong style="color: var(--text-primary); font-size: 0.85rem;">07:00 – 22:30 (Thứ Hai – Chủ Nhật)</strong>
+                </div>
+              </div>
+
+              <div class="contact-detail-row">
+                <div class="contact-detail-icon">
+                  <i class="fa-solid fa-phone"></i>
+                </div>
+                <div>
+                  <small class="text-secondary d-block">Hotline Quản lý / Đặt bàn</small>
+                  <strong style="color: var(--text-primary); font-size: 0.85rem;">0901.234.567 (Hỗ trợ 24/7)</strong>
+                </div>
+              </div>
+
+              <div class="contact-detail-row mb-4">
+                <div class="contact-detail-icon">
+                  <i class="fa-solid fa-envelope"></i>
+                </div>
+                <div>
+                  <small class="text-secondary d-block">Hòm thư điện tử</small>
+                  <strong style="color: var(--text-primary); font-size: 0.85rem;">lienhe@thecloudcoffee.vn</strong>
+                </div>
+              </div>
+
+              <!-- Form đóng góp ý kiến vận hành -->
+              <div id="contact-form-block" class="border-top pt-3" style="border-color: var(--border-color) !important;">
+                <h4 class="h6 fw-bold mb-2" style="color: var(--text-primary);">
+                  <i class="fa-solid fa-paper-plane me-1" style="color: var(--accent);"></i>
+                  Gửi Phản Hồi Vận Hành
+                </h4>
+                <p class="text-secondary small mb-3">Đóng góp ý kiến cải tiến quy trình phục vụ hoặc báo lỗi ca làm việc:</p>
+                
+                <form id="cafe-contact-form">
+                  <div class="mb-2">
+                    <label for="feedback-name" class="form-label small fw-semibold text-secondary mb-1">Họ và tên:</label>
+                    <input type="text" class="form-control form-control-sm" id="feedback-name" placeholder="Nguyễn Văn A" required>
+                  </div>
+                  <div class="mb-2">
+                    <label for="feedback-role" class="form-label small fw-semibold text-secondary mb-1">Bộ phận / Vị trí:</label>
+                    <select class="form-select form-select-sm" id="feedback-role">
+                      <option value="Barista">Nhân viên Barista (Pha chế)</option>
+                      <option value="Phục vụ">Nhân viên Phục vụ bàn</option>
+                      <option value="Thu ngân">Nhân viên Thu ngân</option>
+                      <option value="Quản lý">Quản lý quán / Giám sát ca</option>
+                      <option value="Khách hàng">Khách hàng thành viên</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label for="feedback-content" class="form-label small fw-semibold text-secondary mb-1">Ý kiến đóng góp:</label>
+                    <textarea class="form-control form-control-sm" id="feedback-content" rows="3" placeholder="Nhập nội dung đóng góp ý kiến..." required></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi ý kiến phản hồi
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -696,16 +873,16 @@
   </main>
 
   <!-- ================================================================
-       FOOTER DÙNG CHUNG (NGƯỜI 1 PHỤ TRÁCH)
+       FOOTER DÙNG CHUNG (TÁI SỬ DỤNG 100% CẤU TRÚC NHÓM)
        ================================================================ -->
   <footer class="site-footer">
     <div class="container">
       <div class="footer-content">
         <div class="footer-brand">
-          <div class="brand-icon" style="width: 32px; height: 32px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border-radius: var(--radius-sm);">☕</div>
+          <div class="brand-icon" style="width: 30px; height: 30px;">☕</div>
           <div>
             <strong style="color: var(--text-primary);">Cafe Task Manager</strong>
-            <div style="font-size: var(--text-xs); color: var(--text-muted);">Hệ thống Quản lý Vận hành Quán Cafe Chuẩn Hóa</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted);">Mô hình vận hành quán Cafe MVP</div>
           </div>
         </div>
         <div class="footer-nav">
@@ -716,14 +893,14 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 Cafe Task Manager. Đồ án Phát triển Ứng dụng Web - Khoa CNTT&amp;TT Đại Học CMC.</span>
-        <span>Phụ trách Báo cáo &amp; Biểu đồ: <strong>Người 5</strong></span>
+        <span>© 2026 Cafe Task Manager. Bản quyền dự án Lập trình Web.</span>
+        <span>Phụ trách Báo cáo &amp; Biểu đồ: <strong>BCS250039 TRẦN HÀ THẢO VÂN</strong></span>
       </div>
     </div>
   </footer>
 
   <!-- ================================================================
-       SCRIPTS: TÍCH HỢP THƯ VIỆN & CÁC MODULE DỰ ÁN
+       SCRIPTS: THƯ VIỆN & CÁC MODULE DỰ ÁN
        ================================================================ -->
   <!-- 1. Bootstrap 5 Bundle JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -739,7 +916,7 @@
   <!-- 3. Tầng dữ liệu LocalStorage (Người 1 phụ trách) -->
   <script src="assets/js/taskService.js"></script>
 
-  <!-- 4. Logic tương tác giao diện chung, Dark Mode, Navbar (Người 1 phụ trách) -->
+  <!-- 4. Logic quản lý Dark/Light Theme & giao diện dùng chung (Người 1 phụ trách) -->
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/main.js"></script>
 
@@ -748,4 +925,3 @@
 
 </body>
 </html>
-

@@ -1,47 +1,269 @@
 /**
  * ====================================================================
  * DỰ ÁN: CAFE TASK MANAGER (HỆ THỐNG QUẢN LÝ CÔNG VIỆC QUÁN CAFE)
- * TẦNG THỐNG KÊ, TRỰC QUAN HÓA BIỂU ĐỒ & BÁO CÁO VẬN HÀNH
+ * TẦNG THỐNG KÊ, LOGIC TÍNH TOÁN & TRỰC QUAN HÓA BIỂU ĐỒ CHART.JS
  * File: assets/js/stats.js
- * Phụ trách: Người 5 (Data Analytics, Charts & Reporting Specialist)
+ * Phụ trách: Người 5 (Senior Frontend Developer & UI/UX Designer)
  * ====================================================================
- * Mô tả:
- * - Thu thập và xử lý số liệu thời gian thực từ LocalStorage qua TaskService.
- * - Tính toán các chỉ số vận hành cốt lõi (KPI): Tổng việc, Done vs Pending,
- *   tỷ lệ hoàn thành %, phân bổ mức độ ưu tiên (High/Medium/Low), việc cận hạn.
- * - Khởi tạo và cập nhật 3 biểu đồ trực quan bằng thư viện Chart.js:
- *   1. Biểu đồ Doughnut: Tỷ lệ hoàn thành (Done vs Pending).
- *   2. Biểu đồ Cột (Bar Chart): Phân bố mức độ ưu tiên công việc.
- *   3. Biểu đồ Ngang (Horizontal Bar Chart): Phân bổ đầu việc theo bộ phận/danh mục.
- * - Tương thích 100% với Dark Mode / Light Mode: Tự động đảo màu chữ, trục tọa độ,
- *   lưới đồ thị khi chuyển đổi giao diện.
- * - Cơ chế phản ứng thời gian thực (Reactive): Lắng nghe sự kiện 'tasks:changed'
- *   để biểu đồ và số liệu tự cập nhật ngay khi thêm/sửa/xóa task ở trang khác.
- * - Tự động đưa ra nhận xét & cảnh báo quản trị (AI-like Management Insights).
+ * Mô tả chức năng:
+ * - Thu thập và tính toán dữ liệu công việc từ LocalStorage qua TaskService.
+ * - Chuẩn hóa chữ hoa/thường cho status (Pending/Done) và priority (Low/Medium/High).
+ * - Tính toán chính xác 4 chỉ số KPI: Tổng số việc, Đã xong, Đang chờ, Việc khẩn cấp/quá hạn.
+ * - Cập nhật thanh tiến độ tổng thể (Overall Progress Bar) của ca làm việc.
+ * - Khởi tạo & cập nhật 2 biểu đồ Chart.js (Doughnut Chart & Grouped Bar Chart)
+ *   với cơ chế hủy instance (.destroy()) tránh lỗi chồng đè và responsive 100%.
+ * - Tự động thích ứng màu sắc Dark Mode / Light Mode theo theme.js thời gian thực.
+ * - Đồng bộ tức thì (Realtime Sync) khi dữ liệu LocalStorage thay đổi (Storage Event & tasks:changed).
+ * - Render bảng 5 đầu việc cần chú ý nhất tại quán kèm nút đổi trạng thái nhanh.
  * ====================================================================
  */
 
 (function (window, document) {
   'use strict';
 
-  // Lưu trữ các thể hiện (instances) của Chart.js để hủy và vẽ lại khi cập nhật
+  // Khóa lưu trữ LocalStorage theo quy ước hệ thống
+  const STORAGE_KEY = 'CAFE_TASKS';
+  const LEGACY_STORAGE_KEY = 'cafe_tasks_data';
+
+  // Biến lưu trữ Chart.js instances để gọi .destroy() trước khi vẽ lại
   let statusChartInstance = null;
   let priorityChartInstance = null;
-  let categoryChartInstance = null;
 
   /* ------------------------------------------------------------------
-     1. TIỆN ÍCH HỖ TRỢ THEME & MÀU SẮC CHO CHART.JS
+     1. TIỆN ÍCH CHUẨN HÓA DỮ LIỆU & KIỂM TRA THỜI GIAN
      ------------------------------------------------------------------ */
-  function getThemeColors() {
+
+  /**
+   * Chuẩn hóa trạng thái công việc về "Done" hoặc "Pending"
+   * @param {string} val 
+   * @returns {"Done" | "Pending"}
+   */
+  function normalizeStatus(val) {
+    if (!val) return 'Pending';
+    const s = String(val).trim().toLowerCase();
+    if (s === 'done' || s === 'completed') return 'Done';
+    return 'Pending';
+  }
+
+  /**
+   * Chuẩn hóa mức độ ưu tiên về "Low", "Medium", hoặc "High"
+   * @param {string} val 
+   * @returns {"Low" | "Medium" | "High"}
+   */
+  function normalizePriority(val) {
+    if (!val) return 'Medium';
+    const s = String(val).trim().toLowerCase();
+    if (s === 'high') return 'High';
+    if (s === 'low') return 'Low';
+    return 'Medium';
+  }
+
+  /**
+   * Lấy chuỗi ngày hiện tại định dạng YYYY-MM-DD ở mốc 00:00:00 địa phương
+   * @returns {string}
+   */
+  function getTodayDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * So sánh deadline với ngày hiện tại
+   * @param {string} deadlineStr 
+   * @returns {"overdue" | "today" | "future" | "none"}
+   */
+  function checkDeadlineStatus(deadlineStr) {
+    if (!deadlineStr) return 'none';
+    const today = getTodayDateString();
+    if (deadlineStr < today) return 'overdue';
+    if (deadlineStr === today) return 'today';
+    return 'future';
+  }
+
+  /**
+   * Mã hóa HTML chống XSS khi render nội dung
+   * @param {string} str 
+   * @returns {string}
+   */
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /* ------------------------------------------------------------------
+     2. ĐỌC DỮ LIỆU TỪ TASKSERVICE / LOCALSTORAGE
+     ------------------------------------------------------------------ */
+  function getTasksFromStorage() {
+    // 1. Thử lấy qua TaskService của Người 1
+    if (window.TaskService && typeof window.TaskService.getAllTasks === 'function') {
+      try {
+        const tasks = window.TaskService.getAllTasks();
+        if (Array.isArray(tasks)) {
+          return tasks.map(t => ({
+            ...t,
+            status: normalizeStatus(t.status),
+            priority: normalizePriority(t.priority)
+          }));
+        }
+      } catch (e) {
+        console.warn('[Stats] Lỗi khi gọi TaskService.getAllTasks():', e);
+      }
+    }
+
+    // 2. Fallback đọc trực tiếp từ LocalStorage
+    try {
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map(t => ({
+            ...t,
+            status: normalizeStatus(t.status),
+            priority: normalizePriority(t.priority)
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('[Stats] Lỗi phân tích JSON từ LocalStorage:', err);
+    }
+
+    return [];
+  }
+
+  /* ------------------------------------------------------------------
+     3. TÍNH TOÁN CÁC CHỈ SỐ VẬN HÀNH (METRICS & KPIS)
+     ------------------------------------------------------------------ */
+  function computeStatistics(tasks) {
+    const totalTasks = tasks.length;
+    let doneCount = 0;
+    let pendingCount = 0;
+
+    // Thống kê chi tiết theo từng mức ưu tiên: Low / Medium / High
+    const priorityStats = {
+      Low: { done: 0, pending: 0, total: 0 },
+      Medium: { done: 0, pending: 0, total: 0 },
+      High: { done: 0, pending: 0, total: 0 }
+    };
+
+    let urgentCount = 0; // High priority Pending HOẶC quá hạn / hôm nay mà Pending
+    const todayStr = getTodayDateString();
+
+    tasks.forEach(task => {
+      const status = normalizeStatus(task.status);
+      const priority = normalizePriority(task.priority);
+
+      // Đếm trạng thái chung
+      if (status === 'Done') {
+        doneCount++;
+        priorityStats[priority].done++;
+      } else {
+        pendingCount++;
+        priorityStats[priority].pending++;
+
+        // Kiểm tra xem có phải việc khẩn cấp không:
+        // 1. Độ ưu tiên High nhưng đang Pending
+        // 2. HOẶC có deadline <= ngày hôm nay nhưng đang Pending
+        const isHigh = priority === 'High';
+        const isOverdueOrToday = task.deadline && (task.deadline <= todayStr);
+        if (isHigh || isOverdueOrToday) {
+          urgentCount++;
+        }
+      }
+
+      priorityStats[priority].total++;
+    });
+
+    const completionRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
+
+    return {
+      totalTasks,
+      doneCount,
+      pendingCount,
+      completionRate,
+      urgentCount,
+      priorityStats
+    };
+  }
+
+  /* ------------------------------------------------------------------
+     4. CẬP NHẬT GIAO DIỆN: 4 THẺ KPI & THANH TIẾN ĐỘ TỔNG THỂ
+     ------------------------------------------------------------------ */
+  function updateSummaryUI(metrics) {
+    // 1. Thẻ 1: Tổng số công việc
+    const elTotal = document.getElementById('stat-total-tasks');
+    if (elTotal) elTotal.textContent = metrics.totalTasks;
+
+    // 2. Thẻ 2: Đã hoàn thành (Done) & Tỷ lệ %
+    const elDone = document.getElementById('stat-done-tasks');
+    const elDonePct = document.getElementById('stat-done-pct');
+    if (elDone) elDone.textContent = metrics.doneCount;
+    if (elDonePct) elDonePct.textContent = `${metrics.completionRate}%`;
+
+    // 3. Thẻ 3: Đang chờ xử lý (Pending)
+    const elPending = document.getElementById('stat-pending-tasks');
+    if (elPending) elPending.textContent = metrics.pendingCount;
+
+    // 4. Thẻ 4: Cần ưu tiên cao / Sắp đến hạn
+    const elUrgent = document.getElementById('stat-urgent-tasks');
+    if (elUrgent) elUrgent.textContent = metrics.urgentCount;
+
+    // 5. Thanh tiến độ tổng thể (Overall Progress Bar)
+    const elRate = document.getElementById('stat-completion-rate');
+    const elProgressBar = document.getElementById('stat-progress-bar');
+    const elProgressDesc = document.getElementById('stat-progress-desc');
+
+    if (elRate) elRate.textContent = `${metrics.completionRate}%`;
+    if (elProgressBar) elProgressBar.style.width = `${metrics.completionRate}%`;
+
+    if (elProgressDesc) {
+      if (metrics.totalTasks === 0) {
+        elProgressDesc.textContent = 'Chưa có công việc nào trong ca làm.';
+      } else if (metrics.completionRate === 100) {
+        elProgressDesc.textContent = 'Tuyệt vời! Ca làm đã hoàn tất 100% tất cả các đầu việc!';
+      } else if (metrics.completionRate >= 80) {
+        elProgressDesc.textContent = `Đạt ${metrics.completionRate}% — Tiến độ xuất sắc, quán đang vận hành rất trơn tru.`;
+      } else if (metrics.completionRate >= 50) {
+        elProgressDesc.textContent = `Đã xong ${metrics.doneCount}/${metrics.totalTasks} việc — Đạt một nửa chặng đường ca trực.`;
+      } else {
+        elProgressDesc.textContent = `Còn ${metrics.pendingCount} việc đang chờ — Quản lý cần theo dõi đôn đốc nhân viên.`;
+      }
+    }
+
+    // 6. Cập nhật thời gian làm mới
+    const elLastUpdated = document.getElementById('last-updated-time');
+    if (elLastUpdated) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      elLastUpdated.textContent = `${timeStr} (Hôm nay)`;
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     5. CẤU HÌNH MÀU SẮC BIỂU ĐỒ THEO DARK / LIGHT MODE (TƯƠNG THÍCH THEME.JS)
+     ------------------------------------------------------------------ */
+  function getChartThemeColors() {
     const isDark = (document.documentElement.getAttribute('data-theme') === 'dark') ||
-                   (document.body && document.body.classList.contains('dark-theme')) ||
-                   document.documentElement.classList.contains('dark-theme');
+                   (document.body && (document.body.classList.contains('dark-theme') || document.body.classList.contains('dark-mode'))) ||
+                   document.documentElement.classList.contains('dark-theme') ||
+                   document.documentElement.classList.contains('dark-mode');
+
     return {
       isDark,
       textColor: isDark ? '#F5EFEB' : '#2C1810',
       textSecondary: isDark ? '#B8ABA2' : '#6E5D53',
       textMuted: isDark ? '#83746B' : '#9E8E84',
-      cardBg: isDark ? '#221B17' : '#FFFFFF',
+      surfaceColor: isDark ? '#221B17' : '#FFFFFF',
       gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(44, 24, 16, 0.08)',
       tooltipBg: isDark ? 'rgba(30, 23, 19, 0.96)' : 'rgba(255, 255, 255, 0.96)',
       tooltipText: isDark ? '#FFFDF9' : '#1A0E08',
@@ -51,271 +273,55 @@
   }
 
   /* ------------------------------------------------------------------
-     2. LẤY DANH SÁCH TASK AN TOÀN TỪ TASKSERVICE
-     ------------------------------------------------------------------ */
-  function getTasksData() {
-    if (window.TaskService && typeof window.TaskService.getAllTasks === 'function') {
-      return window.TaskService.getAllTasks();
-    }
-    if (window.TaskService && typeof window.TaskService.getTasks === 'function') {
-      return window.TaskService.getTasks();
-    }
-    try {
-      const raw = localStorage.getItem('CAFE_TASKS') || localStorage.getItem('cafe_tasks_data');
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      console.error('[Stats] Lỗi đọc dữ liệu từ LocalStorage:', e);
-      return [];
-    }
-  }
-
-  /* ------------------------------------------------------------------
-     3. TÍNH TOÁN CÁC CHỈ SỐ KPI VẬN HÀNH
-     ------------------------------------------------------------------ */
-  function calculateMetrics(tasks) {
-    const total = tasks.length;
-    let done = 0;
-    let pending = 0;
-    let high = 0;
-    let medium = 0;
-    let low = 0;
-    let dueSoon = 0;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const categoryMap = {};
-
-    tasks.forEach(task => {
-      // Chuẩn hóa trạng thái
-      const s = String(task.status || '').toLowerCase();
-      if (s === 'done' || s === 'completed') {
-        done++;
-      } else {
-        pending++;
-        // Kiểm tra hạn chót nếu chưa hoàn thành
-        if (task.deadline) {
-          if (task.deadline <= todayStr) {
-            dueSoon++; // Hạn chót hôm nay hoặc đã quá hạn
-          }
-        }
-      }
-
-      // Chuẩn hóa mức độ ưu tiên
-      const p = String(task.priority || '').toLowerCase();
-      if (p === 'high') high++;
-      else if (p === 'medium') medium++;
-      else low++;
-
-      // Gom nhóm theo danh mục / bộ phận
-      const cat = task.category || 'Vận hành chung';
-      if (!categoryMap[cat]) {
-        categoryMap[cat] = { total: 0, done: 0, pending: 0 };
-      }
-      categoryMap[cat].total++;
-      if (s === 'done' || s === 'completed') {
-        categoryMap[cat].done++;
-      } else {
-        categoryMap[cat].pending++;
-      }
-    });
-
-    const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
-
-    return {
-      total,
-      done,
-      pending,
-      high,
-      medium,
-      low,
-      dueSoon,
-      completionRate,
-      categoryMap
-    };
-  }
-
-  /* ------------------------------------------------------------------
-     4. CẬP NHẬT CÁC THẺ KPI LÊN GIAO DIỆN
-     ------------------------------------------------------------------ */
-  function updateKPIElements(metrics) {
-    const elTotal = document.getElementById('stat-total-tasks');
-    const elRate = document.getElementById('stat-completion-rate');
-    const elProgressBar = document.getElementById('stat-progress-bar');
-    const elDone = document.getElementById('stat-done-tasks');
-    const elPending = document.getElementById('stat-pending-tasks');
-    const elHigh = document.getElementById('stat-high-priority');
-    const elDueSoon = document.getElementById('stat-due-soon');
-
-    if (elTotal) elTotal.textContent = metrics.total;
-    if (elRate) elRate.textContent = `${metrics.completionRate}%`;
-    if (elProgressBar) elProgressBar.style.width = `${metrics.completionRate}%`;
-    if (elDone) elDone.textContent = metrics.done;
-    if (elPending) elPending.textContent = metrics.pending;
-    if (elHigh) elHigh.textContent = metrics.high;
-    if (elDueSoon) elDueSoon.textContent = metrics.dueSoon;
-  }
-
-  /* ------------------------------------------------------------------
-     5. TẠO NHẬN XÉT QUẢN TRỊ TỰ ĐỘNG (INSIGHTS)
-     ------------------------------------------------------------------ */
-  function updateBusinessInsights(metrics, tasks) {
-    const container = document.getElementById('management-insights');
-    if (!container) return;
-
-    if (metrics.total === 0) {
-      container.innerHTML = `
-        <div class="insight-alert insight-info">
-          <div class="insight-icon"><i class="fa-solid fa-circle-info"></i></div>
-          <div class="insight-body">
-            <strong>Chưa có công việc nào trong hệ thống!</strong>
-            <p>Hãy thêm công việc mới hoặc bấm "Nạp lại việc mẫu" để bắt đầu theo dõi vận hành quán.</p>
-          </div>
-        </div>
-      `;
-      return;
-    }
-
-    let insightsHtml = '';
-
-    // Cảnh báo công việc cận hạn / quá hạn
-    if (metrics.dueSoon > 0) {
-      insightsHtml += `
-        <div class="insight-alert insight-danger animate__animated animate__fadeIn">
-          <div class="insight-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-          <div class="insight-body">
-            <strong>Cảnh báo khẩn cấp:</strong> Có <strong>${metrics.dueSoon}</strong> công việc đang đến hạn hôm nay hoặc đã quá hạn cần hoàn thành ngay để không gián đoạn phục vụ khách.
-          </div>
-        </div>
-      `;
-    }
-
-    // Đánh giá tỷ lệ hoàn thành
-    if (metrics.completionRate >= 80) {
-      insightsHtml += `
-        <div class="insight-alert insight-success animate__animated animate__fadeIn">
-          <div class="insight-icon"><i class="fa-solid fa-circle-check"></i></div>
-          <div class="insight-body">
-            <strong>Hiệu suất xuất sắc:</strong> Tiến độ ca làm đạt <strong>${metrics.completionRate}%</strong> hoàn thành. Các bộ phận Barista và Phục vụ đang phối hợp rất nhịp nhàng!
-          </div>
-        </div>
-      `;
-    } else if (metrics.completionRate >= 50) {
-      insightsHtml += `
-        <div class="insight-alert insight-warning animate__animated animate__fadeIn">
-          <div class="insight-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-          <div class="insight-body">
-            <strong>Đang trong tiến độ:</strong> Đã hoàn tất <strong>${metrics.done}/${metrics.total}</strong> đầu việc (${metrics.completionRate}%). Hãy ưu tiên dứt điểm các việc có độ ưu tiên High trước giờ cao điểm.
-          </div>
-        </div>
-      `;
-    } else {
-      insightsHtml += `
-        <div class="insight-alert insight-warning animate__animated animate__fadeIn">
-          <div class="insight-icon"><i class="fa-solid fa-bell"></i></div>
-          <div class="insight-body">
-            <strong>Khối lượng việc tồn nhiều:</strong> Còn <strong>${metrics.pending}</strong> việc chưa hoàn tất. Quản lý cần kiểm tra phân công ca trực và hỗ trợ nhân viên giải quyết dồn ứ.
-          </div>
-        </div>
-      `;
-    }
-
-    container.innerHTML = insightsHtml;
-  }
-
-  /* ------------------------------------------------------------------
-     6. DANH SÁCH VIỆC ƯU TIÊN CAO CẦN XỬ LÝ GẤP
-     ------------------------------------------------------------------ */
-  function renderUrgentTasks(tasks) {
-    const container = document.getElementById('urgent-tasks-table-body');
-    const emptyState = document.getElementById('urgent-tasks-empty');
-    if (!container) return;
-
-    // Lọc công việc High priority chưa hoàn thành
-    const urgentTasks = tasks.filter(t => {
-      const s = String(t.status || '').toLowerCase();
-      const p = String(t.priority || '').toLowerCase();
-      return (s !== 'done' && s !== 'completed') && p === 'high';
-    });
-
-    if (urgentTasks.length === 0) {
-      container.innerHTML = '';
-      if (emptyState) emptyState.style.display = 'block';
-      return;
-    }
-
-    if (emptyState) emptyState.style.display = 'none';
-
-    container.innerHTML = urgentTasks.map((t, idx) => `
-      <tr>
-        <td class="text-muted fw-bold">#${idx + 1}</td>
-        <td>
-          <div class="fw-semibold text-primary">${escapeHtml(t.title)}</div>
-          <small class="text-secondary d-none d-md-inline">${escapeHtml(t.description ? t.description.substring(0, 60) + '...' : '')}</small>
-        </td>
-        <td>
-          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-            <i class="fa-solid fa-fire me-1"></i> Ưu tiên cao
-          </span>
-        </td>
-        <td>
-          <span class="text-nowrap fw-medium ${isOverdue(t.deadline) ? 'text-danger fw-bold' : ''}">
-            <i class="fa-regular fa-calendar me-1"></i>${t.deadline || 'Chưa đặt'}
-          </span>
-        </td>
-        <td>
-          <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
-            <i class="fa-solid fa-spinner fa-spin me-1"></i> Đang chờ
-          </span>
-        </td>
-        <td class="text-end">
-          <button type="button" class="btn btn-sm btn-outline-success btn-quick-done" data-id="${t.id}" title="Đánh dấu đã xong">
-            <i class="fa-solid fa-check"></i> Xong
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    // Gắn sự kiện đánh dấu nhanh
-    container.querySelectorAll('.btn-quick-done').forEach(btn => {
-      btn.addEventListener('click', function () {
-        const taskId = this.getAttribute('data-id');
-        if (window.TaskService && typeof window.TaskService.toggleStatus === 'function') {
-          window.TaskService.toggleStatus(taskId);
-          if (typeof window.showToast === 'function') {
-            window.showToast('Đã đánh dấu hoàn thành công việc khẩn cấp!', 'success');
-          }
-        }
-      });
-    });
-  }
-
-  /* ------------------------------------------------------------------
-     7. VẼ CÁC BIỂU ĐỒ BẰNG CHART.JS (BONUS RUBRIC ĐIỂM CAO)
+     6. KHỞI TẠO & CẬP NHẬT CHART.JS (DOUGHNUT & BAR CHARTS)
      ------------------------------------------------------------------ */
   function renderCharts(metrics) {
+    const emptyState = document.getElementById('stats-empty-state');
+    const chartsRow = document.getElementById('stats-charts-row');
+
+    // Nếu không có công việc nào (0 tasks) -> Hiện Empty State thân thiện
+    if (metrics.totalTasks === 0) {
+      if (emptyState) emptyState.style.display = 'flex';
+      if (chartsRow) chartsRow.style.display = 'none';
+
+      // Hủy chart cũ nếu đang tồn tại
+      if (statusChartInstance) {
+        statusChartInstance.destroy();
+        statusChartInstance = null;
+      }
+      if (priorityChartInstance) {
+        priorityChartInstance.destroy();
+        priorityChartInstance = null;
+      }
+      return;
+    }
+
+    // Nếu có công việc -> Ẩn Empty State và hiện Chart
+    if (emptyState) emptyState.style.display = 'none';
+    if (chartsRow) chartsRow.style.display = 'flex';
+
     if (typeof Chart === 'undefined') {
       console.warn('[Stats] Thư viện Chart.js chưa được tải!');
       return;
     }
 
-    const theme = getThemeColors();
+    const theme = getChartThemeColors();
 
-    // 7.1. BIỂU ĐỒ TRÒN (DOUGHNUT): TỶ LỆ TRẠNG THÁI (DONE VS PENDING)
+    /* ----------------------------------------------------------------
+       6.1. BIỂU ĐỒ TRÒN (DOUGHNUT CHART): DONE VS PENDING
+       Kèm Center Text Plugin vẽ % hoàn thành ở tâm vòng tròn
+       ---------------------------------------------------------------- */
     const ctxStatus = document.getElementById('chartStatus');
     if (ctxStatus) {
+      // BẮT BUỘC: Hủy instance cũ trước khi vẽ lại để tránh lỗi đè biểu đồ
       if (statusChartInstance) {
         statusChartInstance.destroy();
         statusChartInstance = null;
       }
 
-      const hasTasks = metrics.total > 0;
-      const doughnutData = hasTasks ? [metrics.done, metrics.pending] : [1];
-      const doughnutLabels = hasTasks ? ['Đã hoàn thành (Done)', 'Chờ thực hiện (Pending)'] : ['Chưa có dữ liệu'];
-      const doughnutBg = hasTasks ? ['#27AE60', '#E67E22'] : [theme.isDark ? '#382D26' : '#E6DCCE'];
-      const doughnutHover = hasTasks ? ['#2ECC71', '#F39C12'] : [theme.isDark ? '#4A3B32' : '#D5C8B8'];
-
-      // Custom Center Text Plugin for Doughnut Chart
+      // Plugin vẽ % tỷ lệ ở tâm biểu đồ
       const centerTextPlugin = {
-        id: 'centerTextPlugin',
+        id: 'doughnutCenterText',
         afterDraw(chart) {
           const { ctx } = chart;
           const meta = chart.getDatasetMeta(0);
@@ -327,16 +333,16 @@
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
-          // Tỷ lệ % chính
+          // Chữ % lớn
           ctx.font = `800 28px ${theme.fontFamily}`;
           ctx.fillStyle = theme.textColor;
-          ctx.fillText(`${hasTasks ? metrics.completionRate : 0}%`, centerX, centerY - 8);
+          ctx.fillText(`${metrics.completionRate}%`, centerX, centerY - 6);
 
           // Phụ đề chữ nhỏ
           ctx.font = `700 10px ${theme.fontFamily}`;
           ctx.fillStyle = theme.textMuted;
           ctx.letterSpacing = '0.08em';
-          ctx.fillText('HOÀN THÀNH', centerX, centerY + 16);
+          ctx.fillText('HOÀN THÀNH', centerX, centerY + 18);
 
           ctx.restore();
         }
@@ -345,188 +351,122 @@
       statusChartInstance = new Chart(ctxStatus, {
         type: 'doughnut',
         data: {
-          labels: doughnutLabels,
+          labels: ['Đã hoàn thành (Done)', 'Đang chờ xử lý (Pending)'],
           datasets: [{
-            data: doughnutData,
-            backgroundColor: doughnutBg,
-            hoverBackgroundColor: doughnutHover,
-            borderColor: theme.cardBg,
+            data: [metrics.doneCount, metrics.pendingCount],
+            backgroundColor: [
+              '#2A9D8F', // Xanh Matcha (Done)
+              '#E76F51'  // Đỏ Cam (Pending)
+            ],
+            hoverBackgroundColor: [
+              '#228579',
+              '#D95D3E'
+            ],
+            borderColor: theme.surfaceColor,
             borderWidth: 3,
-            hoverOffset: 4
+            hoverOffset: 6
           }]
         },
         plugins: [centerTextPlugin],
         options: {
           responsive: true,
-          maintainAspectRatio: false,
-          cutout: '72%',
-          animation: {
-            animateRotate: true,
-            animateScale: false,
-            duration: 800
-          },
+          maintainAspectRatio: false, // Bắt buộc cho responsive chuẩn
+          cutout: '70%',              // Tạo khoảng rỗng tâm thanh lịch
           plugins: {
             legend: {
               position: 'bottom',
               labels: {
                 color: theme.textColor,
-                font: { family: theme.fontFamily, size: 12, weight: '600' },
+                font: {
+                  family: theme.fontFamily,
+                  size: 13,
+                  weight: '600'
+                },
                 padding: 16,
                 usePointStyle: true,
                 pointStyle: 'circle'
               }
             },
             tooltip: {
-              enabled: hasTasks,
               backgroundColor: theme.tooltipBg,
               titleColor: theme.tooltipText,
               bodyColor: theme.tooltipText,
               borderColor: theme.tooltipBorder,
               borderWidth: 1,
               padding: 12,
+              boxPadding: 6,
+              usePointStyle: true,
               callbacks: {
                 label: function (context) {
                   const val = context.raw || 0;
-                  const pct = metrics.total > 0 ? Math.round((val / metrics.total) * 100) : 0;
+                  const pct = metrics.totalTasks > 0 ? Math.round((val / metrics.totalTasks) * 100) : 0;
                   return ` ${context.label}: ${val} việc (${pct}%)`;
                 }
               }
             }
+          },
+          animation: {
+            animateScale: true,
+            animateRotate: true,
+            duration: 750
           }
         }
       });
     }
 
-    // 7.2. BIỂU ĐỒ CỘT (BAR): MỨC ĐỘ ƯU TIÊN (HIGH - MEDIUM - LOW)
+    /* ----------------------------------------------------------------
+       6.2. BIỂU ĐỒ CỘT (BAR CHART): PHÂN BỔ MỨC ĐỘ ƯU TIÊN
+       Chia rõ 2 cột cho mỗi mức: Đã hoàn thành (Done) & Đang chờ (Pending)
+       ---------------------------------------------------------------- */
     const ctxPriority = document.getElementById('chartPriority');
     if (ctxPriority) {
+      // BẮT BUỘC: Hủy instance cũ trước khi vẽ lại
       if (priorityChartInstance) {
         priorityChartInstance.destroy();
         priorityChartInstance = null;
       }
 
+      const pStats = metrics.priorityStats;
+
       priorityChartInstance = new Chart(ctxPriority, {
         type: 'bar',
         data: {
-          labels: ['Ưu tiên cao (High)', 'Trung bình (Medium)', 'Thấp (Low)'],
-          datasets: [{
-            label: 'Số lượng công việc',
-            data: [metrics.high, metrics.medium, metrics.low],
-            backgroundColor: [
-              theme.isDark ? '#E74C3C' : '#C0392B', // Đỏ High
-              theme.isDark ? '#F39C12' : '#E67E22', // Vàng cam Medium
-              theme.isDark ? '#3498DB' : '#2980B9'  // Lam Low
-            ],
-            hoverBackgroundColor: [
-              '#FF6B5B',
-              '#F5B041',
-              '#5DADE2'
-            ],
-            borderColor: [
-              theme.isDark ? '#C0392B' : '#962D22',
-              theme.isDark ? '#D68910' : '#B9770E',
-              theme.isDark ? '#2471A3' : '#1F618D'
-            ],
-            borderWidth: 1.5,
-            borderRadius: { topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0 },
-            maxBarThickness: 46
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 800 },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: theme.tooltipBg,
-              titleColor: theme.tooltipText,
-              bodyColor: theme.tooltipText,
-              borderColor: theme.tooltipBorder,
-              borderWidth: 1,
-              padding: 12,
-              callbacks: {
-                label: function (context) {
-                  return ` ${context.dataset.label}: ${context.raw} đầu việc`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                color: theme.textColor,
-                font: { family: theme.fontFamily, size: 12, weight: '600' }
-              }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                stepSize: 1,
-                color: theme.textMuted,
-                font: { family: theme.fontFamily, size: 11 }
-              },
-              grid: {
-                color: theme.gridColor
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // 7.3. BIỂU ĐỒ THEO BỘ PHẬN / DANH MỤC (CATEGORY SUMMARY - HORIZONTAL BAR)
-    const ctxCategory = document.getElementById('chartCategory');
-    if (ctxCategory) {
-      if (categoryChartInstance) {
-        categoryChartInstance.destroy();
-        categoryChartInstance = null;
-      }
-
-      const catNames = Object.keys(metrics.categoryMap);
-      const isCatEmpty = catNames.length === 0;
-      const displayLabels = isCatEmpty ? ['Chưa có danh mục'] : catNames;
-      const catTotals = isCatEmpty ? [0] : catNames.map(c => metrics.categoryMap[c].total);
-      const catDones = isCatEmpty ? [0] : catNames.map(c => metrics.categoryMap[c].done);
-
-      categoryChartInstance = new Chart(ctxCategory, {
-        type: 'bar',
-        data: {
-          labels: displayLabels,
+          labels: ['Ưu tiên Thấp (Low)', 'Trung bình (Medium)', 'Ưu tiên Cao (High)'],
           datasets: [
             {
               label: 'Đã hoàn thành',
-              data: catDones,
-              backgroundColor: '#27AE60',
-              hoverBackgroundColor: '#2ECC71',
+              data: [pStats.Low.done, pStats.Medium.done, pStats.High.done],
+              backgroundColor: '#2A9D8F', // Xanh Matcha
+              borderColor: '#2A9D8F',
+              borderWidth: 1,
               borderRadius: 6,
-              maxBarThickness: 22
+              maxBarThickness: 34
             },
             {
-              label: 'Tổng đầu việc',
-              data: catTotals,
-              backgroundColor: theme.isDark ? '#DDA26A' : '#C78243',
-              hoverBackgroundColor: theme.isDark ? '#EDB988' : '#B06F33',
+              label: 'Đang chờ xử lý',
+              data: [pStats.Low.pending, pStats.Medium.pending, pStats.High.pending],
+              backgroundColor: '#D4A373', // Vàng Caramel ấm áp
+              borderColor: '#D4A373',
+              borderWidth: 1,
               borderRadius: 6,
-              maxBarThickness: 22
+              maxBarThickness: 34
             }
           ]
         },
         options: {
-          indexAxis: 'y', // Biểu đồ nằm ngang
           responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 800 },
+          maintainAspectRatio: false, // Bắt buộc cho responsive chuẩn
           plugins: {
             legend: {
               position: 'top',
-              align: 'end',
               labels: {
                 color: theme.textColor,
-                font: { family: theme.fontFamily, size: 12, weight: '600' },
-                padding: 12,
+                font: {
+                  family: theme.fontFamily,
+                  size: 12,
+                  weight: '600'
+                },
+                padding: 14,
                 usePointStyle: true,
                 pointStyle: 'rectRounded'
               }
@@ -538,31 +478,41 @@
               borderColor: theme.tooltipBorder,
               borderWidth: 1,
               padding: 12,
-              callbacks: {
-                label: function (context) {
-                  return ` ${context.dataset.label}: ${context.raw} việc`;
-                }
-              }
+              boxPadding: 6,
+              usePointStyle: true
             }
           },
           scales: {
             x: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                stepSize: 1,
-                color: theme.textMuted,
-                font: { family: theme.fontFamily, size: 11 }
+              grid: {
+                display: false
               },
-              grid: { color: theme.gridColor }
-            },
-            y: {
               ticks: {
                 color: theme.textColor,
-                font: { family: theme.fontFamily, size: 12, weight: '600' }
+                font: {
+                  family: theme.fontFamily,
+                  size: 12,
+                  weight: '500'
+                }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1, // Đảm bảo số lượng nguyên vẹn
+                color: theme.textMuted,
+                font: {
+                  family: theme.fontFamily,
+                  size: 12
+                }
               },
-              grid: { display: false }
+              grid: {
+                color: theme.gridColor
+              }
             }
+          },
+          animation: {
+            duration: 750
           }
         }
       });
@@ -570,115 +520,266 @@
   }
 
   /* ------------------------------------------------------------------
-     8. HÀM ĐIỀU PHỐI CẬP NHẬT TOÀN DIỆN TRANG THỐNG KÊ
+     7. RENDER BẢNG: CÁC ĐẦU VIỆC CẦN CHÚ Ý NGAY TẠI QUÁN
+     - Lọc tối đa 5 việc Pending có Priority High hoặc Deadline gần nhất / quá hạn
+     ------------------------------------------------------------------ */
+  function renderUrgentTasksTable(tasks) {
+    const tableBody = document.getElementById('urgent-tasks-table-body');
+    const emptyNotice = document.getElementById('urgent-tasks-empty');
+    if (!tableBody) return;
+
+    const todayStr = getTodayDateString();
+
+    // 1. Chỉ lọc các việc đang ở trạng thái 'Pending'
+    const pendingTasks = tasks.filter(t => normalizeStatus(t.status) === 'Pending');
+
+    // 2. Lọc và chấm điểm mức độ khẩn cấp để sắp xếp
+    const sortedTasks = [...pendingTasks].sort((a, b) => {
+      const aPriority = normalizePriority(a.priority);
+      const bPriority = normalizePriority(b.priority);
+      const aDeadline = a.deadline || '9999-99-99';
+      const bDeadline = b.deadline || '9999-99-99';
+
+      const aIsOverdue = aDeadline < todayStr;
+      const bIsOverdue = bDeadline < todayStr;
+
+      // Quá hạn xếp trước
+      if (aIsOverdue && !bIsOverdue) return -1;
+      if (!aIsOverdue && bIsOverdue) return 1;
+
+      // Đến hạn hôm nay xếp tiếp
+      const aIsToday = aDeadline === todayStr;
+      const bIsToday = bDeadline === todayStr;
+      if (aIsToday && !bIsToday) return -1;
+      if (!aIsToday && bIsToday) return 1;
+
+      // Priority High xếp trước Medium, Medium xếp trước Low
+      const weight = { High: 3, Medium: 2, Low: 1 };
+      if (weight[aPriority] !== weight[bPriority]) {
+        return weight[bPriority] - weight[aPriority];
+      }
+
+      // Cuối cùng so sánh deadline ngày nào sớm hơn
+      return aDeadline.localeCompare(bDeadline);
+    });
+
+    // 3. Lấy tối đa 5 việc khẩn cấp nhất
+    const urgentTop5 = sortedTasks.slice(0, 5);
+
+    if (urgentTop5.length === 0) {
+      tableBody.innerHTML = '';
+      if (emptyNotice) emptyNotice.style.display = 'block';
+      return;
+    }
+
+    if (emptyNotice) emptyNotice.style.display = 'none';
+
+    // 4. Render HTML các hàng
+    tableBody.innerHTML = urgentTop5.map((task, index) => {
+      const priority = normalizePriority(task.priority);
+      const deadlineStatus = checkDeadlineStatus(task.deadline);
+
+      // Badge Deadline
+      let deadlineBadge = '';
+      if (deadlineStatus === 'overdue') {
+        deadlineBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fa-solid fa-triangle-exclamation me-1"></i> Quá hạn (${task.deadline})</span>`;
+      } else if (deadlineStatus === 'today') {
+        deadlineBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="fa-regular fa-clock me-1"></i> Hôm nay (${task.deadline})</span>`;
+      } else if (task.deadline) {
+        deadlineBadge = `<span class="text-secondary small"><i class="fa-regular fa-calendar me-1"></i> ${task.deadline}</span>`;
+      } else {
+        deadlineBadge = `<span class="text-muted small">Không đặt</span>`;
+      }
+
+      // Badge Priority
+      let priorityBadge = '';
+      if (priority === 'High') {
+        priorityBadge = `<span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-fire me-1"></i> Ưu tiên cao</span>`;
+      } else if (priority === 'Medium') {
+        priorityBadge = `<span class="badge bg-warning-subtle text-warning-emphasis"><i class="fa-solid fa-bolt me-1"></i> Trung bình</span>`;
+      } else {
+        priorityBadge = `<span class="badge bg-secondary-subtle text-secondary-emphasis"><i class="fa-solid fa-arrow-down me-1"></i> Thấp</span>`;
+      }
+
+      return `
+        <tr>
+          <td class="text-muted fw-bold">#${index + 1}</td>
+          <td>
+            <div class="fw-bold" style="color: var(--text-primary); font-size: 0.95rem;">${escapeHtml(task.title)}</div>
+            ${task.description ? `<small class="text-secondary d-none d-md-inline-block" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(task.description)}</small>` : ''}
+          </td>
+          <td>${deadlineBadge}</td>
+          <td>${priorityBadge}</td>
+          <td>
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+              <i class="fa-solid fa-hourglass-half me-1"></i> Chờ làm
+            </span>
+          </td>
+          <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-success btn-quick-done" data-id="${escapeHtml(task.id)}" title="Đánh dấu đã hoàn thành ngay">
+              <i class="fa-solid fa-check me-1"></i> Xong
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // 5. Gắn sự kiện click nút "Xong" nhanh
+    tableBody.querySelectorAll('.btn-quick-done').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const taskId = this.getAttribute('data-id');
+        if (!taskId) return;
+
+        if (window.TaskService && typeof window.TaskService.toggleStatus === 'function') {
+          const updated = window.TaskService.toggleStatus(taskId);
+          if (updated) {
+            if (typeof window.showToast === 'function') {
+              window.showToast('Đã đánh dấu hoàn thành công việc khẩn cấp!', 'success');
+            }
+          }
+        } else {
+          // Fallback cập nhật LocalStorage trực tiếp
+          const tasks = getTasksFromStorage();
+          const target = tasks.find(t => t.id === taskId);
+          if (target) {
+            target.status = 'Done';
+            target.updatedAt = new Date().toISOString();
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+              updateAllStatistics();
+              if (typeof window.showToast === 'function') {
+                window.showToast('Đã đánh dấu hoàn thành công việc!', 'success');
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     8. HÀM ĐIỀU PHỐI CHÍNH: LÀM MỚI TOÀN BỘ SỐ LIỆU & BIỂU ĐỒ
      ------------------------------------------------------------------ */
   function updateAllStatistics() {
-    const tasks = getTasksData();
-    const metrics = calculateMetrics(tasks);
+    const tasks = getTasksFromStorage();
+    const metrics = computeStatistics(tasks);
 
-    // Cập nhật các khối UI
-    updateKPIElements(metrics);
-    updateBusinessInsights(metrics, tasks);
-    renderUrgentTasks(tasks);
+    // 1. Cập nhật 4 thẻ KPI và thanh tiến độ
+    updateSummaryUI(metrics);
+
+    // 2. Vẽ lại 2 biểu đồ Chart.js
     renderCharts(metrics);
+
+    // 3. Render bảng các đầu việc cần chú ý ngay
+    renderUrgentTasksTable(tasks);
   }
 
   /* ------------------------------------------------------------------
-     9. TIỆN ÍCH HELPER
+     9. KHỞI TẠO TẤT CẢ SỰ KIỆN TƯƠNG TÁC & REALTIME SYNC
      ------------------------------------------------------------------ */
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  function isOverdue(deadlineStr) {
-    if (!deadlineStr) return false;
-    const today = new Date().toISOString().split('T')[0];
-    return deadlineStr < today;
-  }
-
-  /* ------------------------------------------------------------------
-     10. KHỞI TẠO CÁC SỰ KIỆN TƯƠNG TÁC
-     ------------------------------------------------------------------ */
-  function setupEvents() {
-    // 10.1. Lắng nghe sự kiện dữ liệu LocalStorage thay đổi từ TaskService
+  function registerEventListeners() {
+    // 9.1. Lắng nghe CustomEvent 'tasks:changed' do TaskService phát ra
     window.addEventListener('tasks:changed', function (e) {
-      console.log('[Stats] Dữ liệu task vừa cập nhật, làm mới biểu đồ...');
+      console.log('[Stats] Dữ liệu thay đổi từ TaskService, làm mới biểu đồ...');
       updateAllStatistics();
     });
 
-    // 10.2. Lắng nghe storage event (khi mở nhiều tab trình duyệt)
+    // 9.2. Lắng nghe Storage Event khi người dùng thêm/sửa/xóa task ở tab khác
     window.addEventListener('storage', function (e) {
-      if (e.key === 'CAFE_TASKS') {
+      if (e.key === STORAGE_KEY || e.key === LEGACY_STORAGE_KEY || e.key === 'CAFE_THEME' || e.key === 'theme') {
+        console.log('[Stats] Phát hiện thay đổi trong LocalStorage từ tab khác, đồng bộ...');
         updateAllStatistics();
       }
     });
 
-    // 10.3. Lắng nghe sự kiện themechange từ theme.js
+    // 9.3. Lắng nghe sự kiện themechange từ theme.js
     window.addEventListener('themechange', function () {
       setTimeout(updateAllStatistics, 50);
     });
 
-    // 10.4. Đổi theme sáng/tối -> Cập nhật màu biểu đồ ngay lập tức
-    const themeBtn = document.querySelectorAll('.theme-toggle-btn');
-    themeBtn.forEach(btn => {
+    // 9.4. Tự động đổi màu biểu đồ khi bật/tắt Dark Mode
+    const themeButtons = document.querySelectorAll('.theme-toggle-btn, #theme-toggle');
+    themeButtons.forEach(btn => {
       btn.addEventListener('click', () => {
-        setTimeout(updateAllStatistics, 100);
+        setTimeout(updateAllStatistics, 120);
       });
     });
 
-    // Quan sát thay đổi thuộc tính data-theme hoặc class trên html/body
-    const themeObserver = new MutationObserver(function (mutations) {
-      mutations.forEach(function (mutation) {
+    // Dùng MutationObserver theo dõi thuộc tính data-theme và class trên <html> và <body>
+    const observer = new MutationObserver(function (mutations) {
+      for (const mutation of mutations) {
         if (mutation.type === 'attributes' && (mutation.attributeName === 'data-theme' || mutation.attributeName === 'class')) {
           updateAllStatistics();
+          break;
         }
-      });
+      }
     });
-    themeObserver.observe(document.documentElement, { attributes: true });
+    observer.observe(document.documentElement, { attributes: true });
     if (document.body) {
-      themeObserver.observe(document.body, { attributes: true });
+      observer.observe(document.body, { attributes: true });
     }
 
-    // 10.5. Xử lý nút In / Lưu PDF báo cáo
+    // 9.5. Nút "Làm mới số liệu" trên Header
+    const refreshBtn = document.getElementById('btn-refresh-stats');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () {
+        const icon = this.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+
+        updateAllStatistics();
+
+        setTimeout(() => {
+          if (icon) icon.classList.remove('fa-spin');
+          if (typeof window.showToast === 'function') {
+            window.showToast('Đã làm mới số liệu và cập nhật biểu đồ thành công!', 'info');
+          }
+        }, 400);
+      });
+    }
+
+    // 9.6. Nút "In / Xuất PDF"
     const printBtn = document.getElementById('btn-print-report');
     if (printBtn) {
-      printBtn.addEventListener('click', () => {
+      printBtn.addEventListener('click', function () {
         window.print();
       });
     }
 
-    // 10.5. Xử lý form gửi góp ý / liên hệ quán
+    // 9.7. Form gửi phản hồi vận hành
     const contactForm = document.getElementById('cafe-contact-form');
     if (contactForm) {
       contactForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const name = (document.getElementById('contact-name') || {}).value || 'Quý khách';
+        const nameInput = document.getElementById('feedback-name');
+        const name = nameInput ? nameInput.value.trim() : 'Quý khách';
+
         if (typeof window.showToast === 'function') {
-          window.showToast(`Cảm ơn bạn ${name}! Phản hồi đã được gửi thành công đến ban quản lý quán.`, 'success');
+          window.showToast(`Cảm ơn bạn ${name}! Ý kiến phản hồi đã được gửi đến ban quản lý quán.`, 'success');
         } else {
-          alert(`Cảm ơn bạn ${name}! Phản hồi đã được gửi thành công.`);
+          alert(`Cảm ơn bạn ${name}! Ý kiến phản hồi đã được gửi thành công.`);
         }
+
         contactForm.reset();
       });
     }
   }
 
   /* ------------------------------------------------------------------
-     11. KHỞI CHẠY KHI TẢI XONG TRANG
+     10. KHỞI CHẠY KHI TẢI XONG TRANG
      ------------------------------------------------------------------ */
   document.addEventListener('DOMContentLoaded', function () {
+    // Đảm bảo TaskService đã khởi tạo nếu có
+    if (window.TaskService && typeof window.TaskService.init === 'function') {
+      window.TaskService.init();
+    }
+
     updateAllStatistics();
-    setupEvents();
+    registerEventListeners();
   });
 
-  // Xuất hàm ra window để kiểm thử hoặc gọi thủ công từ console
+  // Xuất hàm ra window để dễ dàng kiểm thử hoặc trigger thủ công
   window.refreshCafeStats = updateAllStatistics;
 
 })(window, document);
-
