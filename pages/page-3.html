@@ -192,7 +192,7 @@
         <div class="footer-nav">
           <a href="../index.html">Trang chủ</a>
           <a href="../tasks.html">Quản lý công việc</a>
-          <a href="page-2.html">Báo cáo &amp; Thống kê</a>
+          <a href="../statistics.html">Báo cáo &amp; Thống kê</a>
           <a href="page-3.html">Phân công ca trực</a>
         </div>
       </div>
@@ -211,61 +211,75 @@
   <!-- Script liên kết dữ liệu cho Trang 3 -->
   <script>
     (function () {
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
       function updatePage3Shifts() {
         if (!window.TaskService) return;
-        const tasks = window.TaskService.getAllTasks ? window.TaskService.getAllTasks() : window.TaskService.getTasks();
+        const tasks = window.TaskService.getAllTasks ? window.TaskService.getAllTasks() : (window.TaskService.getTasks ? window.TaskService.getTasks() : []);
 
         const morningEl = document.getElementById('shift-morning-tasks');
         const eveningEl = document.getElementById('shift-evening-tasks');
         const closingEl = document.getElementById('shift-closing-tasks');
 
-        const isDone = t => {
+        const isDone = function(t) {
           const s = String(t.status || '').toLowerCase();
           return s === 'done' || s === 'completed';
         };
 
-        // Phân bổ mẫu các task vào 3 ca dựa trên danh mục/nhiệm vụ
-        const morningTasks = tasks.filter(t => t.category === 'Kho & Nguyên liệu' || t.category === 'Pha chế');
-        const eveningTasks = tasks.filter(t => t.category === 'Phục vụ' || t.category === 'Quầy bar' || t.category === 'Chung');
-        const closingTasks = tasks.filter(t => t.category === 'Kỹ thuật & Máy móc' || isDone(t));
+        const morningTasks = tasks.filter(function(t) { return t.category === 'Kho & Nguyên liệu' || t.category === 'Pha chế'; });
+        const eveningTasks = tasks.filter(function(t) { return t.category === 'Phục vụ' || t.category === 'Quầy bar' || t.category === 'Chung'; });
+        const closingTasks = tasks.filter(function(t) { return t.category === 'Kỹ thuật & Máy móc' || isDone(t); });
 
-        // Hàm tiện ích escape HTML an toàn chống lỗ hổng XSS
-        function escapeHtml(str) {
-          if (str === null || str === undefined) return '';
-          return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-        }
-
-        function renderMiniTaskList(element, list) {
+        function renderMiniTaskList(element, list, emptyMsg) {
           if (!element) return;
           if (list.length === 0) {
-            element.innerHTML = '<span style="font-size: var(--text-xs); color: var(--text-muted);">Chưa có công việc phân công.</span>';
+            element.innerHTML = '<span style="font-size: var(--text-xs); color: var(--text-muted);">' + emptyMsg + '</span>';
             return;
           }
-          element.innerHTML = list.slice(0, 4).map(t => {
+          element.innerHTML = list.map(function(t) {
             const done = isDone(t);
-            return `
-            <div style="font-size: var(--text-xs); background: var(--bg-surface-secondary); padding: 6px 10px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 500;">${escapeHtml(t.title)}</span>
-              <span class="badge ${done ? 'badge-completed' : 'badge-pending'}" style="font-size: 0.65rem;">${done ? 'Xong' : 'Chờ'}</span>
-            </div>
-          `;
+            return '<div style="font-size: var(--text-xs); background: var(--bg-surface-secondary); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; gap: 8px; border-left: 3px solid ' + (done ? 'var(--success)' : 'var(--accent)') + ';">' +
+              '<div style="display: flex; flex-direction: column; overflow: hidden;">' +
+                '<span style="font-weight: 600; text-decoration: ' + (done ? 'line-through' : 'none') + '; color: ' + (done ? 'var(--text-muted)' : 'var(--text-primary)') + '; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + escapeHtml(t.title) + '</span>' +
+                '<span style="font-size: 0.7rem; color: var(--text-muted);">Hạn: ' + escapeHtml(t.deadline || 'Hôm nay') + ' • ' + escapeHtml(t.priority || 'Medium') + '</span>' +
+              '</div>' +
+              '<button type="button" class="btn-toggle-shift-task" data-id="' + escapeHtml(t.id) + '" style="cursor: pointer; border: none; background: ' + (done ? 'var(--success)' : 'var(--primary)') + '; color: #fff; border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.7rem; font-weight: 600; flex-shrink: 0;">' +
+                (done ? '✓ Xong' : '○ Làm') +
+              '</button>' +
+            '</div>';
           }).join('');
         }
 
-        renderMiniTaskList(morningEl, morningTasks);
-        renderMiniTaskList(eveningEl, eveningTasks);
-        renderMiniTaskList(closingEl, closingTasks);
+        renderMiniTaskList(morningEl, morningTasks, 'Chưa có việc ca sáng');
+        renderMiniTaskList(eveningEl, eveningTasks, 'Chưa có việc ca tối');
+        renderMiniTaskList(closingEl, closingTasks, 'Chưa có việc đóng quán');
+
+        // Bắt sự kiện đổi trạng thái nhanh
+        const buttons = document.querySelectorAll('.btn-toggle-shift-task');
+        buttons.forEach(function(btn) {
+          btn.onclick = function () {
+            const taskId = this.getAttribute('data-id');
+            if (taskId && window.TaskService.toggleTaskStatus) {
+              window.TaskService.toggleTaskStatus(taskId);
+            } else if (taskId && window.TaskService.toggleStatus) {
+              window.TaskService.toggleStatus(taskId);
+            }
+          };
+        });
       }
 
       document.addEventListener('DOMContentLoaded', updatePage3Shifts);
       window.addEventListener('tasks:changed', updatePage3Shifts);
+      window.addEventListener('storage', updatePage3Shifts);
     })();
   </script>
 </body>
-
 </html>
