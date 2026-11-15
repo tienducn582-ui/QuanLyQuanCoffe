@@ -1,0 +1,22 @@
+#hr-app { margin-bottom: var(--space-xl); }
+#hr-app [hidden] { display: none !important; }
+.hr-panel { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-lg); min-width: 0; }
+.hr-panel h2 { font-size: var(--text-xl); margin-bottom: var(--space-md); }
+.hr-form, .hr-tools { display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: end; margin-bottom: var(--space-md); }
+.hr-form label, .hr-tools label { display: flex; flex-direction: column; gap: 6px; flex: 1 1 170px; }
+.hr-form input, .hr-form select, .hr-form textarea, .hr-tools input, .hr-tools select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-surface-secondary); color: var(--text-primary); font: inherit; }
+.hr-form fieldset { flex: 1 1 100%; border: 1px solid var(--border-color); padding: var(--space-sm); }
+.hr-form .hr-check { display: inline-flex; flex-direction: row; align-items: center; margin: 8px; }
+.hr-check input { width: auto; }
+.hr-scroll { overflow-x: auto; }
+.hr-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.hr-table th, .hr-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; }
+.hr-week { min-width: 950px; }
+.hr-week td { min-width: 110px; }
+.hr-shift { display: block; background: var(--accent-soft); padding: 8px; border-radius: var(--radius-sm); margin: 4px 0; }
+.hr-shift button { margin: 4px 4px 0 0; }
+.hr-note { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: 12px; }
+#hr-message { padding: 10px; border: 1px solid var(--success); border-radius: var(--radius-sm); margin-bottom: 12px; }
+#hr-message.hr-error { color: var(--danger); border-color: var(--danger); }
+.hr-record { margin: 12px 0; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow-wrap: anywhere; white-space: pre-line; }
+@media (max-width: 600px) { .hr-panel { padding: var(--space-sm); } .hr-form > button { width: 100%; } }

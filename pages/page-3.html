@@ -10,6 +10,7 @@
 
   <!-- CSS Dùng Chung (Người 1 phụ trách) -->
   <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/shifts.css">
 
   <!-- Chống giật sáng khi chuyển trang (Tránh FOUC) -->
   <script>
@@ -59,6 +60,7 @@
 
         <ul class="nav-list">
           <li><a href="../index.html" class="nav-link">Trang chủ</a></li>
+          <li><a href="../pos.html" class="nav-link">Bán hàng (POS)</a></li>
           <li><a href="../tasks.html" class="nav-link">Quản lý công việc</a></li>
           <li><a href="../statistics.html" class="nav-link">Báo cáo &amp; Thống kê</a></li>
           <li><a href="page-3.html" class="nav-link">Phân công ca trực</a></li>
@@ -101,10 +103,10 @@
       <div class="page-header">
         <div class="page-title-group">
           <h1>
-            <span>Phân Công Ca Trực &amp; Điều Phối Quán</span>
+            <span>Quản Lý Ca Làm Việc &amp; Nhân Sự</span>
           </h1>
           <p class="page-title-desc">
-            Sắp xếp nhiệm vụ cho các ca làm việc (Ca Sáng: 06:30 - 14:30 | Ca Tối: 14:30 - 22:30).
+            Phân lịch tuần, ghi nhận giờ làm thực tế và đối soát bàn giao ca.
           </p>
         </div>
 
@@ -114,6 +116,8 @@
           </a>
         </div>
       </div>
+
+      <section id="hr-app" aria-label="Quản lý nhân sự và ca làm việc"></section>
 
       <!-- Bố cục 3 Ca làm việc mẫu tích hợp dữ liệu -->
       <div
@@ -207,6 +211,8 @@
   <script src="../assets/js/theme.js"></script>
   <script src="../assets/js/taskService.js"></script>
   <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/shiftService.js"></script>
+  <script src="../assets/js/shifts.js"></script>
 
   <!-- Script liên kết dữ liệu cho Trang 3 -->
   <script>

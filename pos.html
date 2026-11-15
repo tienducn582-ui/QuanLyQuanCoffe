@@ -304,6 +304,13 @@
           </div>
 
           <div class="cart-summary">
+            <label for="checkout-shift">Thu ngân đang trong ca</label>
+            <select id="checkout-shift" style="width: 100%; margin-bottom: 8px; padding: 8px; background: var(--bg-surface); color: var(--text-primary);"></select>
+            <label for="checkout-method">Phương thức thanh toán</label>
+            <select id="checkout-method" style="width: 100%; margin-bottom: 8px; padding: 8px; background: var(--bg-surface); color: var(--text-primary);">
+              <option value="cash">Tiền mặt</option><option value="transfer">Chuyển khoản (đã xác nhận nhận tiền)</option>
+            </select>
+            <p style="font-size: var(--text-xs);"><a href="pages/page-3.html">Phân ca &amp; chấm công thu ngân trước khi thanh toán</a></p>
             <div class="summary-row">
               <span style="color: var(--text-muted);">Tạm tính:</span>
               <span id="subtotal-amount" style="font-weight: 600;">0 đ</span>
@@ -330,6 +337,7 @@
 
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/shiftService.js"></script>
 
   <!-- Script xử lý Logic POS -->
   <script>
@@ -363,6 +371,36 @@
       let ordersByTable = {
         'T02': [{ id: 'CF02', name: 'Cà phê Sữa Đá', price: 29000, qty: 2 }]
       };
+
+      function renderCheckoutShifts() {
+        const select = document.getElementById('checkout-shift');
+        const previous = select.value;
+        select.replaceChildren();
+        try {
+          const data = window.ShiftService.getData();
+          data.attendance.filter(entry => !entry.clockOut).forEach(entry => {
+            const shift = data.shifts.find(item => item.id === entry.shiftId && !item.handover);
+            const employee = data.employees.find(item => item.id === entry.employeeId && item.active && item.role === 'Thu ngân');
+            if (!shift || !employee) return;
+            const option = document.createElement('option');
+            option.value = entry.id;
+            option.textContent = `${shift.name} — ${employee.name} (${new Date(shift.start).toLocaleString('vi-VN')})`;
+            option.dataset.shift = shift.id;
+            option.dataset.employee = employee.id;
+            select.appendChild(option);
+          });
+          if (!select.options.length) select.add(new Option('Chưa có thu ngân vào ca', ''));
+          if ([...select.options].some(option => option.value === previous)) select.value = previous;
+        } catch (error) {
+          console.error('[POS Shift]', error);
+          select.add(new Option('Lỗi đọc dữ liệu ca làm việc', ''));
+          window.showToast('Không thể đọc dữ liệu ca. Vui lòng kiểm tra dữ liệu trình duyệt.', 'error');
+        }
+      }
+      window.addEventListener('storage', event => {
+        if (event.key === 'CAFE_HR_V1' || event.key === null) renderCheckoutShifts();
+      });
+      renderCheckoutShifts();
 
       function formatMoney(amount) {
         return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
@@ -524,7 +562,26 @@
           return;
         }
         const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        const cashier = document.getElementById('checkout-shift').selectedOptions[0];
+        if (!cashier?.value) {
+          alert('Cần phân lịch và Clock-in cho thu ngân trước khi thanh toán.');
+          return;
+        }
         if (confirm(`Xác nhận thanh toán cho ${selectedTable}?\nTổng số tiền: ${formatMoney(total)}`)) {
+          try {
+            window.ShiftService.recordPayment({
+              shiftId: cashier.dataset.shift,
+              employeeId: cashier.dataset.employee,
+              amount: total,
+              method: document.getElementById('checkout-method').value,
+              tableId: selectedTable
+            });
+          } catch (error) {
+            console.error('[POS Checkout]', error);
+            alert('Không thể lưu thanh toán: ' + error.message);
+            renderCheckoutShifts();
+            return;
+          }
           ordersByTable[selectedTable] = [];
           const currentTableObj = TABLES.find(t => t.id === selectedTable);
           if (currentTableObj) {
