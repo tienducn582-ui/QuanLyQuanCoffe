@@ -79,6 +79,8 @@ A. Công cụ và nơi lưu
 - Tự bật server (npm start trong server/) trước khi test, tắt sau khi xong. Không đọc .env thật. Dùng tài khoản mẫu admin@cafe.com và staff@cafe.com.
 - Dữ liệu tạo khi test có tiền tố TEST_ và phải xóa lại; không xóa hay sửa dữ liệu seed.
 - Được dùng mock API (page.route) để test giao diện khi backend chưa có, nhưng mock chỉ tồn tại trong .local-test/, không đưa vào mã nguồn, và báo cáo phải ghi rõ "test bằng mock".
+- File văn bản trong repo phải là UTF-8. Cấm ghi file bằng '>' hoặc Out-File của PowerShell 5; dùng Node (writeFileSync) hoặc editor.
+- Sau khi ghi file, kiểm tra byte đầu không phải FF FE.
 
 B. Test giao diện cho MỌI trang thuộc phạm vi, ở 5 cỡ 375x667, 768x1024, 1200x800, 1366x768, 1920x1080, cả chế độ sáng và tối
 1. Không tràn ngang: document.documentElement.scrollWidth <= window.innerWidth. Liệt kê phần tử có getBoundingClientRect().right > innerWidth (bỏ qua phần tử nằm trong khối cố ý cuộn ngang overflow-x:auto).
