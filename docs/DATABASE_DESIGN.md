@@ -26,6 +26,14 @@ Hệ thống quản lý dữ liệu vận hành của một quán cafe, hỗ tr�
 
 ## 2. Thực thể và thuộc tính
 
+### Phân hệ ca làm việc trong ứng dụng trình duyệt
+
+Phân hệ mới dùng `CAFE_HR_V1` trong LocalStorage, độc lập với SQL bên dưới (chưa có backend kết nối). Mô hình gồm `employees` (id, tên, vai trò, trạng thái), `shifts` (id, tên, bắt đầu/kết thúc, tiền mặt đầu ca, employeeIds), `attendance` (id, shiftId, employeeId, clockIn, clockOut), `payments` (id, shiftId, employeeId thu ngân, phương thức, số tiền, bàn, paidAt). Danh sách `employeeIds` biểu diễn quan hệ N-N nhân viên/ca; khi chuyển SQL cần tách thành bảng phân công có khóa ghép.
+
+Mỗi ca có tối đa một `handover`: người giao/nhận, thời điểm chốt, checklist, tình trạng máy móc, số giao dịch, doanh thu theo phương thức, tiền dự kiến/thực đếm, chênh lệch và giải trình. Số liệu bàn giao là bản chụp tại lúc khóa ca. Không xóa nhân viên có lịch sử; ngừng hoạt động bằng cờ. Timestamp lưu ISO, giao diện dùng giờ địa phương. Đảm bảo duy nhất một lượt chấm công trên cặp nhân viên/ca và không trùng lịch trong tầng service. Đây là ràng buộc ứng dụng đơn trình duyệt, không thay thế khóa ngoại, transaction và xác thực phía máy chủ.
+
+### Các bảng SQL hiện có
+
 | Thực thể | Khóa chính / khóa ngoại | Thuộc tính chính và ràng buộc |
 |---|---|---|
 | `Roles` | PK `RoleID` | `RoleName` duy nhất, `Description`; danh mục vai trò nhân viên. |

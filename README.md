@@ -2,6 +2,26 @@
 
 Ứng dụng web quản lý quy trình công việc và vận hành quán Cafe xây dựng bằng HTML5, CSS3 và Vanilla JavaScript thuần. Dự án được thiết kế theo chuẩn phân tầng, giao diện Responsive hiện đại, hỗ trợ Dark/Light Mode và lưu trữ bền vững bằng LocalStorage.
 
+## Quản lý ca làm việc & nhân sự
+
+Mở [Phân công ca trực](pages/page-3.html) để sử dụng phân hệ nhân sự. Logic dữ liệu nằm trong [shiftService.js](assets/js/shiftService.js), giao diện trong [shifts.js](assets/js/shifts.js). Dữ liệu thật ban đầu để trống, không tạo chấm công hoặc doanh thu mẫu.
+
+1. Thêm nhân viên thuộc Barista, Thu ngân, Phục vụ hoặc Bảo vệ. Có thể ngừng làm việc khi không còn ca đang mở hoặc lịch chưa kết thúc; lịch sử được giữ lại.
+2. Phân ca với ngày giờ bắt đầu/kết thúc, tiền mặt đầu ca và danh sách nhân viên. Lịch tuần bắt đầu thứ Hai, hiển thị theo từng nhân viên. Hỗ trợ ca qua đêm tối đa 24 giờ; ngăn một nhân viên được phân hai ca trùng giờ. Chỉ sửa ca chưa bắt đầu và chưa chấm công, chỉ xóa ca chưa có dữ liệu vận hành.
+3. Clock-in từ 30 phút trước giờ bắt đầu đến trước giờ kết thúc; Clock-out ghi giờ thực tế, kể cả khi làm quá giờ. Mỗi nhân viên có một cặp vào/ra mỗi ca và chỉ được có một lượt đang mở. Báo cáo tuần tính số ca phân công, đã vào, hoàn thành, giờ thực tế và phút đi muộn. Ca qua đêm được tính vào tuần chứa ngày bắt đầu; giờ hiển thị làm tròn hai chữ số, timestamp gốc giữ đến mili giây.
+4. Tại [POS](pos.html), chọn thu ngân đang chấm công và phương thức tiền mặt/chuyển khoản. Chỉ xóa giỏ sau khi lưu thanh toán thành công. Lựa chọn chuyển khoản là xác nhận thủ công đã nhận tiền, chưa tích hợp ngân hàng/VietQR. Các giao dịch mới được gắn ca; đơn mẫu và thanh toán trước khi có phân hệ không được tính ngược thành doanh thu thật.
+5. Sau khi tất cả lượt chấm công trong ca đã ra, chọn người giao đã làm ca và người nhận đang hoạt động (hai người khác nhau). Kiểm kê két, đối soát doanh thu, mô tả máy móc và tích đủ ba mục checklist. Tiền phải có = tiền đầu ca + doanh thu tiền mặt; chuyển khoản chỉ cộng doanh thu, không cộng két. Mọi chênh lệch cần giải trình. Xác nhận tạo biên bản có thời gian và khóa ca, không cho sửa hoặc thêm thanh toán.
+
+Phạm vi hiện tại không ghi nhận thu/chi két, hoàn tiền hay tách thanh toán. Các mục công việc ca sáng/tối bên dưới vẫn là nhóm việc theo danh mục, độc lập với ca nhân sự. Bảng SQL hiện có chưa kết nối ứng dụng; phân hệ dùng khóa LocalStorage `CAFE_HR_V1`, không thay dữ liệu công việc/theme. Không xóa dữ liệu site nếu cần giữ lịch sử. Dùng Live Server cùng một origin cho các trang để chia sẻ dữ liệu; không nên dựa vào cơ chế LocalStorage của URL `file:`.
+
+Đây là ứng dụng một trình duyệt, chưa xác thực danh tính/quyền quản lý. Chấm công dùng đồng hồ thiết bị, chưa phải bằng chứng chống sửa giờ; không xử lý ghi đồng thời giữa nhiều tab/máy. Các tab cùng origin cập nhật khi nhận sự kiện storage, nhưng nên chỉ thao tác ghi trên một tab tại một thời điểm. Triển khai thực tế cần backend xác thực, thời gian máy chủ và transaction cơ sở dữ liệu.
+
+Kiểm thử nghiệp vụ bằng Node.js (không cần cài dependency):
+
+```powershell
+node --test tests\shiftService.test.cjs
+```
+
 ---
 
 # PHẦN 1: CHUẨN HÓA 6 BƯỚC LÀM BÀI TẬP GIỮA KỲ (TỪ ĐẦU ĐẾN CUỐI)
