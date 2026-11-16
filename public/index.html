@@ -66,11 +66,14 @@
           <button type="button" class="mobile-nav-close" id="mobile-nav-close" aria-label="Đóng menu">&times;</button>
         </div>
 
-        <ul class="nav-list">
+        <ul class="nav-list" id="mainNavList">
           <li><a href="index.html" class="nav-link active" aria-current="page">Trang chủ</a></li>
           <li><a href="tasks.html" class="nav-link">Quản lý công việc</a></li>
           <li><a href="statistics.html" class="nav-link">Báo cáo &amp; Thống kê</a></li>
-          <li><a href="pages/page-3.html" class="nav-link">Phân công ca trực</a></li>
+          <li><a href="shifts.html" class="nav-link">Phân công ca trực</a></li>
+          <li class="auth-only-guest"><a href="login.html" class="nav-link">Đăng nhập</a></li>
+          <li class="auth-only-guest"><a href="register.html" class="nav-link">Đăng ký</a></li>
+          <li class="auth-only-user" style="display: none;"><a href="profile.html" class="nav-link">Hồ sơ</a></li>
         </ul>
       </nav>
 
@@ -107,15 +110,33 @@
           <h1 id="hero-title">Mỗi ca làm <span>trơn tru.</span><br>Quán cafe <span>thảnh thơi.</span></h1>
           <p class="hero-description">Tập trung công việc trong một nơi dễ theo dõi — từ chuẩn bị nguyên liệu, phục vụ
             khách đến tổng kết cuối ngày.</p>
-          <div class="hero-actions">
-            <a class="button button-light" href="tasks.html">
-              Bắt đầu quản lý
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </a>
-            <a class="text-link" href="#tinh-nang">Khám phá tính năng <span aria-hidden="true">↓</span></a>
+          <div class="hero-actions" id="heroActions">
+            <!-- Nút hiển thị cho khách chưa đăng nhập -->
+            <div id="heroGuestActions" class="d-flex align-items-center gap-2 flex-wrap">
+              <a class="button button-light" href="login.html">
+                Đăng Nhập
+                <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
+                  <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+              <a class="button button-outline" href="register.html" style="border: 1px solid var(--accent); color: var(--accent); padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                Đăng Ký Tài Khoản
+              </a>
+              <a class="text-link ms-2" href="#tinh-nang">Khám phá tính năng <span aria-hidden="true">↓</span></a>
+            </div>
+
+            <!-- Nút hiển thị khi đã đăng nhập (sẽ được kích hoạt qua JS) -->
+            <div id="heroUserActions" style="display: none;" class="d-flex align-items-center gap-2 flex-wrap">
+              <a class="button button-light" href="tasks.html">
+                Vào Ứng Dụng (Công Việc)
+                <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
+                  <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+              <a class="text-link ms-2" href="profile.html">👤 Hồ sơ của tôi</a>
+            </div>
           </div>
           <div class="hero-note">
             <span class="note-icon" aria-hidden="true">✓</span>
@@ -213,7 +234,7 @@
             <span class="feature-number">03</span>
             <h3>Phối hợp theo ca</h3>
             <p>Giúp mọi người biết việc cần làm, trạng thái hiện tại và bàn giao ca dễ dàng hơn.</p>
-            <a href="pages/page-3.html" class="feature-link">Xem phân công ca <span aria-hidden="true">→</span></a>
+            <a href="shifts.html" class="feature-link">Xem phân công ca <span aria-hidden="true">→</span></a>
           </article>
           <article class="feature-card">
             <span class="feature-icon icon-chart" aria-hidden="true">
@@ -271,7 +292,7 @@
           <a href="#tinh-nang">Tính năng</a>
           <a href="tasks.html">Quản lý công việc</a>
           <a href="statistics.html">Báo cáo &amp; thống kê</a>
-          <a href="pages/page-3.html">Phân công ca trực</a>
+          <a href="shifts.html">Phân công ca trực</a>
         </div>
         <div class="footer-column footer-contact">
           <h2>Liên hệ &amp; dự án</h2>
@@ -287,9 +308,32 @@
     </div>
   </footer>
 
-  <!-- JavaScript Dùng Chung (Người 1 phụ trách) -->
+  <!-- JavaScript Dùng Chung & API Core -->
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    // Kiểm tra và hiển thị nút hành động trang chủ theo trạng thái đăng nhập
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = typeof getUser === 'function' ? getUser() : null;
+      const guestBox = document.getElementById('heroGuestActions');
+      const userBox = document.getElementById('heroUserActions');
+      const guestNavs = document.querySelectorAll('.auth-only-guest');
+      const userNavs = document.querySelectorAll('.auth-only-user');
+
+      if (user) {
+        if (guestBox) guestBox.style.display = 'none';
+        if (userBox) userBox.style.display = 'flex';
+        guestNavs.forEach(el => el.style.display = 'none');
+        userNavs.forEach(el => el.style.display = 'block');
+      } else {
+        if (guestBox) guestBox.style.display = 'flex';
+        if (userBox) userBox.style.display = 'none';
+        guestNavs.forEach(el => el.style.display = 'block');
+        userNavs.forEach(el => el.style.display = 'none');
+      }
+    });
+  </script>
 </body>
 
 </html>

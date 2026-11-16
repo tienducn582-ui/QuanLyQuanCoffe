@@ -1324,3 +1324,198 @@ h1, h2, h3, h4, h5, h6 {
   gap: var(--space-sm);
   justify-content: center;
 }
+
+
+/* ====================================================================
+ * PHẦN MỞ RỘNG TV5: TƯƠNG THÍCH BOOTSTRAP 5, RESPONSIVE VÀ FORM CHUẨN
+ * ==================================================================== */
+
+/* Đồng bộ biến màu với Bootstrap */
+.bg-surface {
+  background-color: var(--bg-surface) !important;
+}
+
+.text-primary-cafe {
+  color: var(--primary) !important;
+}
+
+.text-accent-cafe {
+  color: var(--accent) !important;
+}
+
+/* Nút Bootstrap tông màu Cafe */
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #FFFFFF !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+
+.btn-outline-primary {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+  background-color: var(--primary) !important;
+  color: #FFFFFF !important;
+}
+
+/* Form validation */
+.form-control:focus, .form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.25rem rgba(199, 130, 67, 0.25);
+}
+
+.form-control.is-invalid, .form-select.is-invalid {
+  border-color: var(--danger) !important;
+  background-image: none;
+}
+
+.invalid-feedback {
+  font-size: 0.85rem;
+  color: var(--danger);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Auth Card (Đăng nhập, Đăng ký, Hồ sơ) */
+.auth-card {
+  max-width: 480px;
+  width: 100%;
+  margin: 3rem auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(44, 24, 16, 0.08);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+}
+
+@media (max-width: 575.98px) {
+  .auth-card {
+    margin: 1.5rem auto;
+    border-radius: 8px;
+  }
+  .auth-header {
+    padding: 1.5rem 1rem 0.75rem;
+  }
+  .auth-body {
+    padding: 0.75rem 1rem 1.5rem;
+  }
+}
+
+.auth-header {
+  text-align: center;
+  padding: 2rem 2rem 1rem;
+}
+
+.auth-header .auth-logo {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.auth-header h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.auth-body {
+  padding: 1rem 2rem 2rem;
+}
+
+/* Bảng Responsive dạng Card trên Mobile (< 576px) */
+@media (max-width: 575.98px) {
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards, .table-cards tbody, .table-cards tr, .table-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-cards tr {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 0.75rem;
+  }
+
+  .table-cards td {
+    text-align: right;
+    padding: 0.5rem 0.25rem;
+    position: relative;
+    border-bottom: 1px dashed var(--border-color);
+  }
+
+  .table-cards td:last-child {
+    border-bottom: none;
+    text-align: center;
+    padding-top: 0.75rem;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+}
+
+/* Toast Container & Toast Bootstrap */
+.toast-container {
+  z-index: 1090;
+}
+
+.toast {
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
+/* Dark mode bổ sung cho Bootstrap elements */
+[data-theme="dark"] .bg-surface,
+.dark-theme .bg-surface {
+  background-color: #211915 !important;
+  color: #EDE3DC !important;
+}
+
+[data-theme="dark"] .auth-card,
+.dark-theme .auth-card {
+  background-color: #211915;
+  border-color: #3D2C24;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+.dark-theme .form-control,
+.dark-theme .form-select {
+  background-color: #2D221C;
+  border-color: #4A382E;
+  color: #EDE3DC;
+}
+
+[data-theme="dark"] .dropdown-menu,
+.dark-theme .dropdown-menu {
+  background-color: #261D18;
+  border-color: #4A382E;
+  color: #EDE3DC;
+}
+
+[data-theme="dark"] .dropdown-item,
+.dark-theme .dropdown-item {
+  color: #EDE3DC;
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+.dark-theme .dropdown-item:hover {
+  background-color: #362922;
+}

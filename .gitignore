@@ -1,3 +1,7 @@
+# Thư mục phụ thuộc & biến môi trường
+node_modules/
+.env
+
 # Hệ thống & Trình soạn thảo
 .DS_Store
 Thumbs.db
@@ -5,9 +9,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Thư mục tạm & sao lưu
-node_modules/
+# Thư mục tạm & sao lưu & kiểm thử
 dist/
 backup_*/
 *.bak
 *.tmp
+.local-test/
+test-results/
+playwright-report/
