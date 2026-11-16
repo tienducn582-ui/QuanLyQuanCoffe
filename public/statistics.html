@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thống Kê Vận Hành &amp; Báo Cáo - Cafe Task Manager</title>
+  <meta name="description" content="Trung tâm Báo cáo và Thống kê hiệu suất ca làm việc Quán Cafe - TV4 phụ trách.">
+
+  <!-- 1. Google Fonts: Be Vietnam Pro & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+  <!-- 2. Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- 3. Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- 4. CSS Dùng Chung Toàn Hệ Thống -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <style>
+    /* Biến màu chủ đạo cho phong cách quán Cafe */
+    :root {
+      --primary: #6F4E37;
+      --primary-dark: #513624;
+      --accent: #DDA266;
+      --bg-surface: #ffffff;
+      --bg-surface-secondary: #fcf9f6;
+      --text-primary: #2B1810;
+      --text-secondary: #7A6961;
+      --border-color: #E8DFD8;
+      --border-focus: #DDA266;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --shadow-sm: 0 2px 8px rgba(43, 24, 16, 0.06);
+      --shadow-md: 0 4px 16px rgba(43, 24, 16, 0.1);
+      --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-serif: 'Playfair Display', Georgia, serif;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #F8F5F0;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard-header-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    .dashboard-header-banner::after {
+      content: '☕';
+      position: absolute;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 5rem;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    /* 6 Thẻ KPI */
+    .kpi-metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 140px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .kpi-metric-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .kpi-icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+    }
+    .kpi-value-number {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.1;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+    }
+
+    /* Thanh tiến độ tổng thể */
+    .overall-progress-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1.75rem;
+    }
+    .custom-progress-track {
+      height: 10px;
+      background: var(--border-color);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .custom-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #DDA266, #2A9D8F);
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Khung biểu đồ Chart.js */
+    .chart-panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .chart-panel-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Trạng thái Loading và Empty */
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 2rem;
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .chart-empty-state {
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    @media print {
+      #navbar, .site-navbar, #btn-print-report, #btn-refresh-stats, footer {
+        display: none !important;
+      }
+      body { background: #fff !important; }
+      .kpi-metric-card, .chart-panel-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================================================================
+       NAVBAR RESPONSIVE DÙNG CHUNG (Tự động render bởi ui.js qua #navbar)
+       ================================================================ -->
+  <nav id="navbar">
+    <!-- Fallback thanh điều hướng khi chưa load ui.js -->
+    <header class="site-navbar navbar navbar-expand-lg bg-white border-bottom py-2">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-dark" href="index.html">
+          <span style="font-size: 1.4rem;">☕</span>
+          <span>Cafe Task Manager</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navFallback">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navFallback">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="tasks.html">Công việc</a></li>
+            <li class="nav-item"><a class="nav-link" href="shifts.html">Ca làm</a></li>
+            <li class="nav-item"><a class="nav-link active fw-bold text-primary" href="statistics.html">Thống kê</a></li>
+            <li class="nav-item"><a class="nav-link" href="profile.html">Hồ sơ</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+  </nav>
+
+  <!-- ================================================================
+       NỘI DUNG CHÍNH: BÁO CÁO & THỐNG KÊ (TV4)
+       ================================================================ -->
+  <main class="container my-4 flex-grow-1">
+
+    <!-- 1. Header Banner -->
+    <div class="dashboard-header-banner">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge" style="background: var(--primary); color: #fff; font-size: 0.75rem;">
+              <i class="fa-solid fa-mug-hot me-1"></i> CAFE TASK MANAGER
+            </span>
+            <span class="text-secondary small">
+              <i class="fa-regular fa-clock me-1"></i> Cập nhật lúc: <strong id="last-updated-time">Đang tải...</strong>
+            </span>
+          </div>
+          <h1 class="h3 fw-bold mb-1" style="font-family: var(--font-serif); color: var(--primary-dark);">
+            Bảng Thống Kê &amp; Báo Cáo Vận Hành
+          </h1>
+          <p class="text-secondary small mb-0">
+            Dữ liệu tổng hợp trực tiếp từ cơ sở dữ liệu qua Backend API (GET /api/stats). Phụ trách bởi TV4.
+          </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" id="btn-refresh-stats" title="Làm mới lại dữ liệu từ Backend API">
+            <i class="fa-solid fa-arrows-rotate me-1"></i> Làm mới
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="btn-print-report" title="In báo cáo này ra giấy hoặc xuất PDF">
+            <i class="fa-solid fa-print me-1"></i> In / Xuất PDF
+          </button>
+          <a href="tasks.html" class="btn btn-primary" style="background-color: var(--primary); border-color: var(--primary);">
+            <i class="fa-solid fa-list-check me-1"></i> Quản lý công việc
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spinner trạng thái đang nạp dữ liệu -->
+    <div id="loading-spinner" class="loading-overlay" style="display: none;">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span>Đang tổng hợp dữ liệu từ hệ thống máy chủ...</span>
+    </div>
+
+    <!-- 2. KHU VỰC 6 THẺ CHỈ SỐ KPI CHÍNH -->
+    <section class="mb-4" aria-label="Các chỉ số KPI chính của hệ thống">
+      <div class="row g-3 mb-3">
+        
+        <!-- Thẻ 1: Tổng số công việc -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Tổng công việc</span>
+              <div class="kpi-icon-wrap" style="background: rgba(111, 78, 55, 0.1); color: var(--primary);">
+                <i class="fa-solid fa-list-ol"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" id="stat-total-tasks">0</div>
+              <small class="text-secondary" style="font-size: 0.75rem;">Toàn bộ đầu việc</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thẻ 2: Đã hoàn thành (Done) -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Đã hoàn thành</span>
+              <div class="kpi-icon-wrap" style="background: rgba(42, 157, 143, 0.15); color: #2A9D8F;">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" style="color: #2A9D8F;" id="stat-done-tasks">0</div>
+              <small class="text-success fw-semibold" id="stat-done-pct" style="font-size: 0.75rem;">0%</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thẻ 3: Đang thực hiện (InProgress) -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Đang thực hiện</span>
+              <div class="kpi-icon-wrap" style="background: rgba(52, 152, 219, 0.15); color: #3498DB;">
+                <i class="fa-solid fa-spinner"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" style="color: #3498DB;" id="stat-inprogress-tasks">0</div>
+              <small class="text-secondary" style="font-size: 0.75rem;">Đang xử lý trong ca</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thẻ 4: Đang chờ xử lý (Pending) -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Chờ xử lý</span>
+              <div class="kpi-icon-wrap" style="background: rgba(230, 126, 34, 0.15); color: #E67E22;">
+                <i class="fa-solid fa-hourglass-half"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" style="color: #E67E22;" id="stat-pending-tasks">0</div>
+              <small class="text-secondary" style="font-size: 0.75rem;">Chưa tiếp nhận</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thẻ 5: Quá hạn chưa hoàn thành (Overdue) -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Quá hạn</span>
+              <div class="kpi-icon-wrap" style="background: rgba(231, 111, 81, 0.15); color: #E76F51;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" style="color: #E76F51;" id="stat-overdue-tasks">0</div>
+              <small class="text-danger fw-semibold" style="font-size: 0.75rem;">Cần giải quyết ngay</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thẻ 6: Tỷ lệ hoàn thành (Rate) -->
+        <div class="col-12 col-sm-6 col-lg-2">
+          <div class="kpi-metric-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.7rem;">Tỷ lệ đạt</span>
+              <div class="kpi-icon-wrap" style="background: rgba(221, 162, 106, 0.2); color: var(--primary);">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+            </div>
+            <div>
+              <div class="kpi-value-number" style="color: var(--primary);" id="stat-completion-rate">0%</div>
+              <small class="text-secondary" style="font-size: 0.75rem;">Hiệu suất chung</small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- THANH TIẾN ĐỘ TỔNG THỂ -->
+      <div class="overall-progress-card">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+          <div>
+            <strong style="color: var(--text-primary); font-size: 0.95rem;">
+              <i class="fa-solid fa-bullseye me-1" style="color: var(--accent);"></i>
+              Tiến độ hoàn thành công việc hệ thống
+            </strong>
+            <span class="text-secondary small ms-2" id="stat-progress-desc">Đang tải tiến độ...</span>
+          </div>
+        </div>
+        <div class="custom-progress-track">
+          <div class="custom-progress-fill" id="stat-progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. KHU VỰC 3 BIỂU ĐỒ CHART.JS -->
+    <section class="mb-4" aria-label="Biểu đồ trực quan hóa dữ liệu Chart.js">
+
+      <!-- Trạng thái trống (Empty State khi tổng task = 0) -->
+      <div id="stats-empty-state" class="chart-empty-state mb-4" style="display: none;">
+        <div style="font-size: 3rem; color: var(--accent); margin-bottom: 0.5rem;">
+          <i class="fa-solid fa-mug-saucer"></i>
+        </div>
+        <h3 class="h5 fw-bold" style="color: var(--text-primary);">Chưa có công việc nào trong hệ thống!</h3>
+        <p class="text-secondary small mb-3" style="max-width: 480px; margin: 0 auto;">
+          Hiện tại cơ sở dữ liệu chưa ghi nhận công việc nào. Bạn hãy thêm công việc mới hoặc nạp seed.sql để xem biểu đồ.
+        </p>
+        <a href="tasks.html" class="btn btn-primary" style="background-color: var(--primary); border-color: var(--primary);">
+          <i class="fa-solid fa-plus me-1"></i> Tạo công việc ngay
+        </a>
+      </div>
+
+      <!-- Lưới 3 Biểu đồ -->
+      <div class="row g-4" id="stats-charts-row">
+        
+        <!-- Biểu đồ 1: Tròn (Doughnut) - Trạng thái -->
+        <div class="col-12 col-lg-4">
+          <div class="chart-panel-card">
+            <div class="chart-panel-header">
+              <h2 class="chart-panel-title">
+                <i class="fa-solid fa-chart-pie" style="color: #2A9D8F;"></i>
+                <span>Theo Trạng Thái</span>
+              </h2>
+              <span class="badge bg-light text-dark border">Pending / Doing / Done</span>
+            </div>
+            <div style="position: relative; height: 280px; width: 100%;">
+              <canvas id="chartStatus"></canvas>
+            </div>
+            <div class="text-center mt-2 small text-secondary">
+              Tỷ lệ giữa các đầu việc chờ, đang làm và hoàn thành.
+            </div>
+          </div>
+        </div>
+
+        <!-- Biểu đồ 2: Cột dọc (Bar) - Mức độ ưu tiên -->
+        <div class="col-12 col-lg-4">
+          <div class="chart-panel-card">
+            <div class="chart-panel-header">
+              <h2 class="chart-panel-title">
+                <i class="fa-solid fa-chart-column" style="color: var(--accent);"></i>
+                <span>Theo Mức Độ Ưu Tiên</span>
+              </h2>
+              <span class="badge bg-light text-dark border">Low / Medium / High</span>
+            </div>
+            <div style="position: relative; height: 280px; width: 100%;">
+              <canvas id="chartPriority"></canvas>
+            </div>
+            <div class="text-center mt-2 small text-secondary">
+              Phân bổ số lượng công việc theo mức độ cấp thiết.
+            </div>
+          </div>
+        </div>
+
+        <!-- Biểu đồ 3: Cột ngang (Horizontal Bar) - Theo Danh mục -->
+        <div class="col-12 col-lg-4">
+          <div class="chart-panel-card">
+            <div class="chart-panel-header">
+              <h2 class="chart-panel-title">
+                <i class="fa-solid fa-folder-tree" style="color: var(--primary);"></i>
+                <span>Theo Danh Mục</span>
+              </h2>
+              <span class="badge bg-light text-dark border">5 Nhóm danh mục</span>
+            </div>
+            <div style="position: relative; height: 280px; width: 100%;">
+              <canvas id="chartCategory"></canvas>
+            </div>
+            <div class="text-center mt-2 small text-secondary">
+              Khối lượng công việc phân chia theo từng bộ phận quán.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================================================================
+       FOOTER DÙNG CHUNG
+       ================================================================ -->
+  <footer class="bg-white border-top py-3 mt-auto">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2 small text-secondary">
+      <div>
+        <span>© 2026 <strong>Cafe Task Manager</strong>. Đồ án Lập trình Ứng dụng Web.</span>
+      </div>
+      <div>
+        <span>Phụ trách CSDL, Thống kê &amp; Kiểm thử: <strong>TV4</strong></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================================================================
+       SCRIPTS: THƯ VIỆN & CÁC MODULE DỰ ÁN
+       ================================================================ -->
+  <!-- 1. Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 2. Chart.js (CDN và vendor offline) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="assets/js/vendor/chart.umd.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- 3. Module dùng chung TV5: api.js và ui.js -->
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+
+  <!-- 4. Logic trang Thống kê TV4: Gọi GET /api/stats và vẽ Chart.js -->
+  <script src="assets/js/statistics.js"></script>
+
+</body>
+</html>

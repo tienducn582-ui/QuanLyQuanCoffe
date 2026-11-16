@@ -1,0 +1,71 @@
+### ====================================================================
+### CAFE TASK MANAGER - KIỂM THỬ API THỐNG KÊ (REST CLIENT VS CODE)
+### Thành viên phụ trách: TV4 (Cơ sở dữ liệu, Thống kê, Kiểm thử)
+### File: docs/tests/tv4.http
+### ====================================================================
+
+@baseUrl = http://localhost:3000
+@adminEmail = admin@cafe.com
+@adminPassword = Admin@123
+@staffEmail = staff@cafe.com
+@staffPassword = Staff@123
+
+### --------------------------------------------------------------------
+### BƯỚC 1: Đăng nhập tài khoản Admin để lấy Access Token
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Lưu token Admin từ phản hồi trên
+@adminToken = {{loginAdmin.response.body.data.token}}
+
+
+### --------------------------------------------------------------------
+### BƯỚC 2: Đăng nhập tài khoản Staff để lấy Access Token
+# @name loginStaff
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{staffEmail}}",
+  "password": "{{staffPassword}}"
+}
+
+### Lưu token Staff từ phản hồi trên
+@staffToken = {{loginStaff.response.body.data.token}}
+
+
+### ====================================================================
+### TEST CASE 1: Lấy dữ liệu thống kê bằng tài khoản Admin (Thành công 200)
+### Mong đợi: 200 OK, success: true, trả về totals, byStatus, byPriority, byCategory
+### ====================================================================
+GET {{baseUrl}}/api/stats
+Authorization: Bearer {{adminToken}}
+
+
+### ====================================================================
+### TEST CASE 2: Lấy dữ liệu thống kê bằng tài khoản Staff (Thành công 200)
+### Phân quyền: Cả Admin và Staff đều có quyền xem báo cáo thống kê
+### ====================================================================
+GET {{baseUrl}}/api/stats
+Authorization: Bearer {{staffToken}}
+
+
+### ====================================================================
+### TEST CASE 3: Lấy dữ liệu thống kê khi chưa đăng nhập (Không có token)
+### Mong đợi: 401 Unauthorized, message từ chối truy cập
+### ====================================================================
+GET {{baseUrl}}/api/stats
+
+
+### ====================================================================
+### TEST CASE 4: Lấy dữ liệu thống kê với token không hợp lệ / đã hết hạn
+### Mong đợi: 401 Unauthorized
+### ====================================================================
+GET {{baseUrl}}/api/stats
+Authorization: Bearer invalid_jwt_token_example_12345
