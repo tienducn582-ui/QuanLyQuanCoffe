@@ -38,56 +38,32 @@ function showToast(message, type = 'success') {
   if (!container) {
     container = document.createElement('div');
     container.id = 'toastContainer';
-    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    container.style.zIndex = '9999';
+    container.className = 'toast-container';
     document.body.appendChild(container);
   }
 
-  // Chuyển loại Bootstrap sang màu sắc & icon phù hợp
-  let bgClass = 'bg-success text-white';
-  let icon = 'bi-check-circle-fill';
-  if (type === 'danger' || type === 'error') {
-    bgClass = 'bg-danger text-white';
-    icon = 'bi-exclamation-triangle-fill';
-  } else if (type === 'warning') {
-    bgClass = 'bg-warning text-dark';
-    icon = 'bi-exclamation-circle-fill';
-  } else if (type === 'info') {
-    bgClass = 'bg-info text-dark';
-    icon = 'bi-info-circle-fill';
-  }
-
   const toastId = 'toast_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  const toastClass = type === 'danger' || type === 'error' ? 'toast-danger' :
+                     type === 'warning' ? 'toast-warning' : 'toast-success';
+
   const toastHtml = `
-    <div id="${toastId}" class="toast align-items-center ${bgClass} border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body d-flex align-items-center gap-2">
-          <span>${escapeHtml(message)}</span>
-        </div>
-        <button type="button" class="btn-close ${type === 'warning' || type === 'info' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
-      </div>
+    <div id="${toastId}" class="toast-custom ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true">
+      <span style="font-weight: 500;">${escapeHtml(message)}</span>
     </div>
   `;
 
   container.insertAdjacentHTML('beforeend', toastHtml);
   const toastEl = document.getElementById(toastId);
 
-  // Khởi tạo Bootstrap Toast nếu có bootstrap bundle, ngược lại fallback CSS
-  if (window.bootstrap && window.bootstrap.Toast) {
-    const bsToast = new window.bootstrap.Toast(toastEl, { delay: 3500 });
-    bsToast.show();
-    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-  } else {
-    toastEl.classList.add('show');
-    setTimeout(() => {
-      toastEl.classList.remove('show');
-      setTimeout(() => toastEl.remove(), 400);
-    }, 3500);
-  }
+  setTimeout(() => {
+    toastEl.style.opacity = '0';
+    toastEl.style.transition = 'opacity 300ms ease';
+    setTimeout(() => toastEl.remove(), 300);
+  }, 3500);
 }
 
 /**
- * Hiển thị khối trạng thái dữ liệu rỗng (Empty State)
+ * Hiển thị khối trạng thái dữ liệu rỗng (Empty State) với SVG nét mảnh
  * @param {HTMLElement|string} containerEl - Phần tử chứa
  * @param {string} text - Thông báo hiển thị
  */
@@ -96,10 +72,16 @@ function showEmpty(containerEl, text = 'Không có dữ liệu hiển thị.') {
   if (!el) return;
 
   el.innerHTML = `
-    <div class="empty-state text-center py-5 px-3">
-      <div class="empty-icon mb-3" style="font-size: 3rem; opacity: 0.6;">☕</div>
-      <h6 class="empty-text text-secondary mb-2">${escapeHtml(text)}</h6>
-      <p class="text-muted small">Hãy thêm mới hoặc thay đổi bộ lọc tìm kiếm của bạn.</p>
+    <div class="empty-state">
+      <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+        <line x1="6" y1="1" x2="6" y2="4"></line>
+        <line x1="10" y1="1" x2="10" y2="4"></line>
+        <line x1="14" y1="1" x2="14" y2="4"></line>
+      </svg>
+      <h3 style="font-family: var(--font-serif);">${escapeHtml(text)}</h3>
+      <p>Hãy thêm mới hoặc thay đổi bộ lọc tìm kiếm của bạn.</p>
     </div>
   `;
 }
@@ -116,17 +98,11 @@ function showLoading(el) {
   if (target.tagName === 'BUTTON' || target.tagName === 'A') {
     target.disabled = true;
     target.classList.add('disabled');
-    target.innerHTML = `
-      <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-      <span>Đang tải...</span>
-    `;
+    target.innerHTML = `<span>Đang tải...</span>`;
   } else {
     target.innerHTML = `
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status" style="color: var(--accent) !important;">
-          <span class="visually-hidden">Đang tải...</span>
-        </div>
-        <p class="mt-2 text-muted small">Đang xử lý dữ liệu...</p>
+      <div class="empty-state" style="padding: var(--space-32);">
+        <p style="color: var(--text-secondary);">Đang tải dữ liệu...</p>
       </div>
     `;
   }
@@ -152,10 +128,10 @@ function hideLoading(el) {
 }
 
 /**
- * Vẽ thanh phân trang Bootstrap
- * @param {HTMLElement|string} containerEl - Phần tử chứa thanh phân trang
+ * Vẽ thanh phân trang chuẩn
+ * @param {HTMLElement|string} containerEl
  * @param {Object} pagination - { page, pageSize, total, totalPages }
- * @param {Function} onPageChange - Callback hàm khi bấm trang: onPageChange(pageNumber)
+ * @param {Function} onPageChange
  */
 function renderPagination(containerEl, pagination, onPageChange) {
   const container = typeof containerEl === 'string' ? document.querySelector(containerEl) : containerEl;
@@ -171,73 +147,27 @@ function renderPagination(containerEl, pagination, onPageChange) {
   const endItem = Math.min(page * pageSize, total);
 
   let pagesHtml = '';
-
-  // Nút Previous
-  const prevDisabled = page <= 1 ? 'disabled' : '';
-  pagesHtml += `
-    <li class="page-item ${prevDisabled}">
-      <button class="page-link" data-page="${page - 1}" aria-label="Trang trước" ${prevDisabled ? 'tabindex="-1"' : ''}>
-        &laquo;
-      </button>
-    </li>
-  `;
-
-  // Giới hạn số lượng nút trang hiển thị (tối đa 5 nút xung quanh trang hiện tại)
-  let startPage = Math.max(1, page - 2);
-  let endPage = Math.min(totalPages, page + 2);
-
-  if (startPage > 1) {
-    pagesHtml += `<li class="page-item"><button class="page-link" data-page="1">1</button></li>`;
-    if (startPage > 2) {
-      pagesHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-    }
+  for (let i = 1; i <= totalPages; i++) {
+    const active = i === page ? 'btn-primary' : 'btn-outline';
+    pagesHtml += `<button class="btn btn-sm ${active}" data-page="${i}" style="min-height: 32px; padding: 4px 10px;">${i}</button>`;
   }
-
-  for (let i = startPage; i <= endPage; i++) {
-    const active = i === page ? 'active' : '';
-    pagesHtml += `
-      <li class="page-item ${active}">
-        <button class="page-link" data-page="${i}">${i}</button>
-      </li>
-    `;
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      pagesHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-    }
-    pagesHtml += `<li class="page-item"><button class="page-link" data-page="${totalPages}">${totalPages}</button></li>`;
-  }
-
-  // Nút Next
-  const nextDisabled = page >= totalPages ? 'disabled' : '';
-  pagesHtml += `
-    <li class="page-item ${nextDisabled}">
-      <button class="page-link" data-page="${page + 1}" aria-label="Trang sau" ${nextDisabled ? 'tabindex="-1"' : ''}>
-        &raquo;
-      </button>
-    </li>
-  `;
 
   container.innerHTML = `
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
-      <div class="text-muted small">
-        Hiển thị <strong>${total > 0 ? startItem : 0} - ${endItem}</strong> trên tổng số <strong>${total}</strong> mục
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-16); margin-top: var(--space-16); border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: var(--space-8);">
+      <span style="font-size: var(--text-xs); color: var(--text-secondary);">
+        Hiển thị <strong>${total > 0 ? startItem : 0} - ${endItem}</strong> / <strong>${total}</strong> mục
+      </span>
+      <div style="display: flex; gap: 4px;">
+        ${pagesHtml}
       </div>
-      <nav aria-label="Phân trang danh sách">
-        <ul class="pagination pagination-sm mb-0">
-          ${pagesHtml}
-        </ul>
-      </nav>
     </div>
   `;
 
-  // Gắn sự kiện click vào các nút phân trang
-  container.querySelectorAll('button.page-link').forEach(btn => {
+  container.querySelectorAll('button[data-page]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const p = parseInt(btn.getAttribute('data-page'), 10);
-      if (p && p !== page && p >= 1 && p <= totalPages && typeof onPageChange === 'function') {
+      if (p && p !== page && typeof onPageChange === 'function') {
         onPageChange(p);
       }
     });
@@ -245,10 +175,10 @@ function renderPagination(containerEl, pagination, onPageChange) {
 }
 
 /**
- * Kiểm tra tính hợp lệ của 1 trường nhập liệu (Client-side validation)
- * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} inputEl - Ô nhập liệu
- * @param {Object} rules - { required, minLength, maxLength, pattern, email, custom, label }
- * @returns {boolean} - true nếu hợp lệ, false nếu lỗi
+ * Kiểm tra tính hợp lệ của 1 trường nhập liệu (Client-side validation tiếng Việt)
+ * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} inputEl
+ * @param {Object} rules
+ * @returns {boolean}
  */
 function validateField(inputEl, rules = {}) {
   if (!inputEl) return true;
@@ -280,7 +210,6 @@ function validateField(inputEl, rules = {}) {
     }
   }
 
-  // Tìm hoặc tạo thẻ hiển thị lỗi invalid-feedback
   let feedbackEl = inputEl.parentElement.querySelector('.invalid-feedback');
   if (!feedbackEl) {
     feedbackEl = document.createElement('div');
@@ -290,13 +219,11 @@ function validateField(inputEl, rules = {}) {
 
   if (errorMessage) {
     inputEl.classList.add('is-invalid');
-    inputEl.classList.remove('is-valid');
     feedbackEl.textContent = errorMessage;
     feedbackEl.style.display = 'block';
     return false;
   } else {
     inputEl.classList.remove('is-invalid');
-    inputEl.classList.add('is-valid');
     feedbackEl.textContent = '';
     feedbackEl.style.display = 'none';
     return true;
@@ -304,110 +231,145 @@ function validateField(inputEl, rules = {}) {
 }
 
 /**
- * Tạo thanh điều hướng Navbar chung cho toàn bộ các trang
- * - Đổi trạng thái hiển thị tùy theo người dùng đã đăng nhập hay chưa
- * - Tự động active menu tương ứng với trang đang mở
+ * Tạo thanh điều hướng Navbar DUY NHẤT cho toàn bộ website
+ * Bố cục:
+ * - Logo ô vuông nâu chứa SVG + Tên chữ serif bên trái
+ * - Menu điều hướng ở giữa/trái
+ * - Nút đổi giao diện Sáng/Tối và nút tài khoản bên phải
+ * - Dưới 992px thu gọn thành hamburger menu
  */
 function renderNavbar() {
-  const navContainer = document.getElementById('navbar') || document.querySelector('header nav');
+  const navContainer = document.getElementById('navbar') || document.querySelector('nav#navbar, header.site-navbar');
   if (!navContainer) return;
 
   const user = typeof getUser === 'function' ? getUser() : null;
   const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-
   const isCurrent = (page) => (currentPath === page ? 'active' : '');
 
-  let navItemsHtml = '';
+  let navLinksHtml = '';
+  let rightActionsDesktopHtml = '';
+  let mobileExtraLinksHtml = '';
 
   if (!user) {
-    // Menu cho khách chưa đăng nhập
-    navItemsHtml = `
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a>
-        </li>
+    // Menu cho khách chưa đăng nhập: CHỈ CÓ Trang chủ
+    navLinksHtml = `
+      <ul class="navbar-menu">
+        <li><a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a></li>
       </ul>
-      <div class="d-flex align-items-center gap-2">
-        <button id="themeToggleBtn" class="btn btn-outline-secondary btn-sm" title="Chuyển chế độ Sáng/Tối" type="button">
-          <span class="theme-icon">🌙</span>
-        </button>
-        <a href="login.html" class="btn btn-outline-primary btn-sm ${isCurrent('login.html')}">Đăng nhập</a>
-        <a href="register.html" class="btn btn-primary btn-sm ${isCurrent('register.html')}" style="background-color: var(--accent); border-color: var(--accent);">Đăng ký</a>
+    `;
+    // Bên phải desktop: Nút Đăng nhập (viền) + Nút Đăng ký (đặc)
+    rightActionsDesktopHtml = `
+      <div class="navbar-auth-desktop">
+        <a href="login.html" class="btn btn-outline btn-sm">Đăng nhập</a>
+        <a href="register.html" class="btn btn-primary btn-sm">Đăng ký</a>
+      </div>
+    `;
+    // Bên trong mobile menu đổ xuống
+    mobileExtraLinksHtml = `
+      <div class="navbar-mobile-auth-links">
+        <a href="login.html" class="btn btn-outline" style="width: 100%; justify-content: center; margin-bottom: 8px;">Đăng nhập</a>
+        <a href="register.html" class="btn btn-primary" style="width: 100%; justify-content: center;">Đăng ký</a>
       </div>
     `;
   } else {
-    // Menu cho người dùng đã đăng nhập
-    const roleBadge = user.role === 'Admin'
-      ? '<span class="badge bg-danger ms-1">Admin</span>'
-      : '<span class="badge bg-secondary ms-1">Staff</span>';
-
-    navItemsHtml = `
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link ${isCurrent('tasks.html')}" href="tasks.html">Công việc</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link ${isCurrent('shifts.html')}" href="shifts.html">Ca làm</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link ${isCurrent('statistics.html')}" href="statistics.html">Thống kê</a>
-        </li>
+    // Menu cho người dùng đã đăng nhập: Trang chủ, Công việc, Ca làm, Thống kê
+    const roleBadge = user.role === 'Admin' ? 'Admin' : 'Staff';
+    navLinksHtml = `
+      <ul class="navbar-menu">
+        <li><a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a></li>
+        <li><a class="nav-link ${isCurrent('tasks.html')}" href="tasks.html">Công việc</a></li>
+        <li><a class="nav-link ${isCurrent('shifts.html')}" href="shifts.html">Ca làm</a></li>
+        <li><a class="nav-link ${isCurrent('statistics.html')}" href="statistics.html">Thống kê</a></li>
       </ul>
-      <div class="d-flex align-items-center gap-3">
-        <button id="themeToggleBtn" class="btn btn-outline-secondary btn-sm" title="Chuyển chế độ Sáng/Tối" type="button">
-          <span class="theme-icon">🌙</span>
+    `;
+    rightActionsDesktopHtml = `
+      <div class="navbar-auth-desktop" style="display: flex; align-items: center; gap: var(--space-8);">
+        <a href="profile.html" class="nav-link ${isCurrent('profile.html')}" style="font-size: var(--text-sm); font-weight: 600; color: var(--text-color);">
+          ${escapeHtml(user.fullName || user.email)} <span style="font-size: var(--text-xs); color: var(--accent-dark);">(${roleBadge})</span>
+        </a>
+        <button id="btnLogoutTop" class="btn btn-outline btn-sm" title="Đăng xuất" style="min-height: 32px; padding: 4px 10px;">
+          Thoát
         </button>
-        <div class="dropdown">
-          <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <span class="avatar-circle me-2 bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 32px; height: 32px; background-color: var(--primary) !important;">
-              ${escapeHtml((user.fullName || 'U').charAt(0).toUpperCase())}
-            </span>
-            <span class="fw-semibold me-1">${escapeHtml(user.fullName || user.email)}</span>
-            ${roleBadge}
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userMenuDropdown">
-            <li><a class="dropdown-item ${isCurrent('profile.html')}" href="profile.html">👤 Hồ sơ cá nhân</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="#" id="btnLogoutAction">🚪 Đăng xuất</a></li>
-          </ul>
-        </div>
+      </div>
+    `;
+    mobileExtraLinksHtml = `
+      <div class="navbar-mobile-auth-links" style="border-top: 1px solid var(--border-subtle); padding-top: var(--space-12); margin-top: var(--space-8);">
+        <a href="profile.html" class="nav-link" style="font-weight: 600; display: block; margin-bottom: 8px;">
+          ${escapeHtml(user.fullName || user.email)} (${roleBadge})
+        </a>
+        <button id="btnLogoutMobile" class="btn btn-outline" style="width: 100%; justify-content: center;">
+          Đăng xuất
+        </button>
       </div>
     `;
   }
 
-  navContainer.className = 'navbar navbar-expand-lg navbar-light bg-surface shadow-sm sticky-top';
+  // Khung HTML chuẩn cho Navbar
+  navContainer.className = 'site-navbar';
   navContainer.innerHTML = `
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="index.html" style="color: var(--primary);">
-        <span style="font-size: 1.4rem;">☕</span>
-        <span>Cafe Task Manager</span>
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarNav" aria-controls="mainNavbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="mainNavbarNav">
-        ${navItemsHtml}
+    <div class="navbar-container">
+      <div class="navbar-brand-group">
+        <a href="index.html" class="navbar-brand-logo" aria-label="Trang chủ Cafe Task Manager">
+          <div class="navbar-logo-box">
+            <img src="assets/img/logo.svg" alt="Logo" width="36" height="36">
+          </div>
+          <span class="navbar-brand-name">Cafe Task Manager</span>
+        </a>
+      </div>
+
+      <div class="navbar-menu-wrapper" id="navbarMenuWrapper">
+        ${navLinksHtml}
+        ${mobileExtraLinksHtml}
+      </div>
+
+      <div class="navbar-actions-group">
+        <button id="themeToggleBtn" class="btn-theme-toggle" type="button" aria-label="Chuyển chế độ Sáng/Tối" title="Chuyển chế độ Sáng/Tối">
+          <svg class="theme-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        ${rightActionsDesktopHtml}
+        <button class="navbar-mobile-toggle" id="navbarMobileToggle" type="button" aria-label="Mở menu điều hướng">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
   `;
 
   // Gắn sự kiện nút Đăng xuất
-  const btnLogout = document.getElementById('btnLogoutAction');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-        if (typeof logout === 'function') {
-          logout();
-        } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = 'login.html';
-        }
+  const handleLogout = (e) => {
+    e.preventDefault();
+    if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
+      if (typeof logout === 'function') {
+        logout();
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
       }
+    }
+  };
+
+  const btnLogout = document.getElementById('btnLogoutTop');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', handleLogout);
+  }
+
+  const btnLogoutMobile = document.getElementById('btnLogoutMobile');
+  if (btnLogoutMobile) {
+    btnLogoutMobile.addEventListener('click', handleLogout);
+  }
+
+  // Gắn sự kiện Hamburger menu di động
+  const mobileToggle = document.getElementById('navbarMobileToggle');
+  const menuWrapper = document.getElementById('navbarMenuWrapper');
+  if (mobileToggle && menuWrapper) {
+    mobileToggle.addEventListener('click', () => {
+      menuWrapper.classList.toggle('is-open');
     });
   }
 
@@ -425,10 +387,9 @@ function initThemeToggle() {
   const updateIcon = () => {
     const isDark = document.documentElement.classList.contains('dark-theme') ||
                    document.documentElement.getAttribute('data-theme') === 'dark';
-    const iconSpan = btn.querySelector('.theme-icon');
-    if (iconSpan) {
-      iconSpan.textContent = isDark ? '☀️' : '🌙';
-    }
+    btn.innerHTML = isDark
+      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
   };
 
   updateIcon();

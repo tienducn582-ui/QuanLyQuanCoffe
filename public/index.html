@@ -1,339 +1,157 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description"
-    content="Cafe Task Manager giúp quản lý công việc, ca trực và theo dõi hoạt động quán cafe thuận tiện, rõ ràng mỗi ngày.">
-  <meta name="theme-color" content="#f8f5ef">
   <title>Cafe Task Manager | Quản lý quán cafe hiệu quả</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-  <!-- CSS Dùng Chung (Người 1 phụ trách) -->
+  <meta name="description" content="Cafe Task Manager giúp quản lý công việc, ca trực và theo dõi hoạt động quán cafe thuận tiện, rõ ràng mỗi ngày.">
+  <meta name="theme-color" content="#FBF5EC">
+
+  <!-- CSS Dùng Chung & CSS Trang Chủ -->
   <link rel="stylesheet" href="assets/css/style.css">
-  <!-- CSS Trang Chủ (Người 4 phụ trách) -->
   <link rel="stylesheet" href="assets/css/home.css">
 
-  <!-- Chống giật sáng khi chuyển trang (Tránh FOUC) -->
+  <!-- Chống chớp sáng Dark/Light Mode -->
   <script>
     (function () {
-      const savedTheme = localStorage.getItem('theme') || localStorage.getItem('CAFE_THEME');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark-theme', 'dark-mode');
         document.documentElement.setAttribute('data-theme', 'dark');
       }
     })();
   </script>
 </head>
-
 <body>
-  <a class="skip-link" href="#noi-dung">Bỏ qua điều hướng, đến nội dung chính</a>
 
-  <!-- ================================================================
-       NAVBAR RESPONSIVE DÙNG CHUNG (NGƯỜI 1 PHỤ TRÁCH)
-       ================================================================ -->
-  <header class="site-navbar" id="site-navbar">
-    <div class="container navbar-container">
-
-      <!-- Brand Logo & Title -->
-      <a href="index.html" class="navbar-brand" aria-label="Về trang chủ Cafe Task Manager">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
-            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-            <line x1="6" y1="1" x2="6" y2="4"></line>
-            <line x1="10" y1="1" x2="10" y2="4"></line>
-            <line x1="14" y1="1" x2="14" y2="4"></line>
-          </svg>
-        </div>
-        <div class="brand-text">
-          <span class="brand-title">Cafe Task Manager</span>
-          <span class="brand-badge">Hệ thống vận hành</span>
-        </div>
-      </a>
-
-      <!-- Menu Điều Hướng (Dùng chung cho cả 3 trang) -->
-      <nav class="navbar-nav" id="navbar-nav" aria-label="Điều hướng chính">
-        <div class="mobile-nav-header">
-          <span class="brand-title" style="font-size: var(--text-lg);">Cafe Task Manager</span>
-          <button type="button" class="mobile-nav-close" id="mobile-nav-close" aria-label="Đóng menu">&times;</button>
-        </div>
-
-        <ul class="nav-list" id="mainNavList">
-          <li><a href="index.html" class="nav-link active" aria-current="page">Trang chủ</a></li>
-          <li><a href="tasks.html" class="nav-link">Quản lý công việc</a></li>
-          <li><a href="statistics.html" class="nav-link">Báo cáo &amp; Thống kê</a></li>
-          <li><a href="shifts.html" class="nav-link">Phân công ca trực</a></li>
-          <li class="auth-only-guest"><a href="login.html" class="nav-link">Đăng nhập</a></li>
-          <li class="auth-only-guest"><a href="register.html" class="nav-link">Đăng ký</a></li>
-          <li class="auth-only-user" style="display: none;"><a href="profile.html" class="nav-link">Hồ sơ</a></li>
-        </ul>
-      </nav>
-
-      <!-- Overlay che mờ khi mở mobile drawer -->
-      <div class="navbar-overlay" id="navbar-overlay" aria-hidden="true"></div>
-
-      <!-- Action Buttons (Dark Mode Toggle & Nút công cụ) -->
-      <div class="navbar-actions">
-        <!-- Nút chuyển đổi Dark Mode / Light Mode -->
-        <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Chuyển đổi giao diện Sáng/Tối"
-          title="Chuyển đổi giao diện">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-
-        <!-- Nút Hamburger Điều Khiển Mobile Menu -->
-        <button type="button" class="navbar-toggle" id="navbar-toggle" aria-label="Mở menu điều hướng"
-          aria-expanded="false" aria-controls="navbar-nav">
-          <span class="hamburger-box">
-            <span class="hamburger-inner"></span>
-          </span>
-        </button>
-      </div>
-
-    </div>
-  </header>
+  <!-- Thanh điều hướng dùng chung do ui.js tự động vẽ -->
+  <nav id="navbar"></nav>
 
   <main id="noi-dung">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="container hero-layout">
-        <div class="hero-copy animate__animated animate__fadeInUp">
-          <p class="eyebrow"><span class="eyebrow-dot"></span> Trợ lý vận hành dành cho quán cafe</p>
-          <h1 id="hero-title">Mỗi ca làm <span>trơn tru.</span><br>Quán cafe <span>thảnh thơi.</span></h1>
-          <p class="hero-description">Tập trung công việc trong một nơi dễ theo dõi — từ chuẩn bị nguyên liệu, phục vụ
-            khách đến tổng kết cuối ngày.</p>
-          <div class="hero-actions" id="heroActions">
-            <!-- Nút hiển thị cho khách chưa đăng nhập -->
-            <div id="heroGuestActions" class="d-flex align-items-center gap-2 flex-wrap">
-              <a class="button button-light" href="login.html">
-                Đăng Nhập
-                <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
-                  <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"
-                    stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </a>
-              <a class="button button-outline" href="register.html" style="border: 1px solid var(--accent); color: var(--accent); padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; text-decoration: none;">
-                Đăng Ký Tài Khoản
-              </a>
-              <a class="text-link ms-2" href="#tinh-nang">Khám phá tính năng <span aria-hidden="true">↓</span></a>
-            </div>
+    <!-- HERO SECTION (2 CỘT CÂN ĐỐI) -->
+    <section class="hero-section">
+      <div class="home-container">
+        <div class="hero-grid">
+          <!-- Cột Trái: Tiêu đề & Hành động chính -->
+          <div class="hero-content">
+            <h1 class="hero-title" id="hero-title">
+              Mỗi ca làm trơn tru.<br>
+              <span class="title-accent">Quán cafe thảnh thơi.</span>
+            </h1>
+            <p class="hero-desc">
+              Hệ thống điều phối công việc và ca trực tập trung, giúp nhân viên nắm rõ đầu việc và vận hành quán trơn tru mỗi ngày.
+            </p>
 
-            <!-- Nút hiển thị khi đã đăng nhập (sẽ được kích hoạt qua JS) -->
-            <div id="heroUserActions" style="display: none;" class="d-flex align-items-center gap-2 flex-wrap">
-              <a class="button button-light" href="tasks.html">
-                Vào Ứng Dụng (Công Việc)
-                <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
-                  <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"
-                    stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </a>
-              <a class="text-link ms-2" href="profile.html">👤 Hồ sơ của tôi</a>
-            </div>
-          </div>
-          <div class="hero-note">
-            <span class="note-icon" aria-hidden="true">✓</span>
-            <span>Rõ việc cần làm · Dễ phối hợp · Theo dõi tiến độ</span>
-          </div>
-        </div>
-
-        <div class="hero-visual animate__animated animate__fadeIn animate__delay-1s"
-          aria-label="Minh họa bảng theo dõi công việc trong quán">
-          <div class="visual-glow"></div>
-          <div class="dashboard-card">
-            <div class="dashboard-top">
-              <div>
-                <span class="dashboard-kicker">TỔNG QUAN CA SÁNG</span>
-                <h2>Chào ngày mới! <span aria-hidden="true">☀</span></h2>
+            <div class="hero-actions" id="heroActions">
+              <!-- Khách chưa đăng nhập: 1 nút đặc + 1 nút viền -->
+              <div id="heroGuestActions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <a href="login.html" class="btn btn-primary">Đăng Nhập</a>
+                <a href="register.html" class="btn btn-outline">Đăng Ký Tài Khoản</a>
               </div>
-              <span class="live-indicator"><i></i> Đang hoạt động</span>
+
+              <!-- Đã đăng nhập: Nút Vào ứng dụng -->
+              <div id="heroUserActions" style="display: none; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <a href="tasks.html" class="btn btn-primary">Vào Ứng Dụng</a>
+                <a href="profile.html" class="btn btn-outline">Hồ Sơ Của Tôi</a>
+              </div>
             </div>
-            <div class="dashboard-stats">
-              <div class="mini-stat"><span>Đầu việc hôm nay</span><strong>12</strong><small>Trong ca làm</small></div>
-              <div class="mini-stat mini-stat-accent"><span>Đã hoàn thành</span><strong>08</strong><small>Tiến độ tốt
-                  ✨</small></div>
-            </div>
-            <div class="task-preview-heading">
-              <strong>Việc cần ưu tiên</strong>
-              <span>Ca sáng</span>
-            </div>
-            <div class="task-preview">
-              <span class="task-check done" aria-hidden="true">✓</span>
-              <span class="task-label"><strong>Kiểm tra quầy pha chế</strong><small>Quầy bar · 07:00</small></span>
-              <span class="task-tag tag-done">Xong</span>
-            </div>
-            <div class="task-preview">
-              <span class="task-check" aria-hidden="true"></span>
-              <span class="task-label"><strong>Chuẩn bị nguyên liệu</strong><small>Kho · 07:30</small></span>
-              <span class="task-tag tag-progress">Đang làm</span>
-            </div>
-            <div class="task-preview">
-              <span class="task-check" aria-hidden="true"></span>
-              <span class="task-label"><strong>Sắp xếp khu vực khách</strong><small>Phục vụ · 08:00</small></span>
-              <span class="task-tag tag-pending">Chờ làm</span>
-            </div>
-            <div class="dashboard-footer"><span class="avatar-stack"
-                aria-hidden="true"><i>Q</i><i>B</i><i>N</i></span><span>Cả đội cùng nắm tiến độ</span></div>
           </div>
-          <div class="floating-coffee" aria-hidden="true">☕ <span>Vào guồng!</span></div>
-        </div>
-      </div>
-      <div class="hero-bottom" aria-hidden="true">
-        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
-    </section>
 
-    <section class="features section-space" id="tinh-nang" aria-labelledby="features-title">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow eyebrow-dark">Một hệ thống, đủ việc mỗi ngày</p>
-          <h2 id="features-title">Quản lý gọn gàng,<br><span>phục vụ tận tâm.</span></h2>
-          <p>Tổ chức công việc rõ ràng để đội ngũ tập trung vào điều quan trọng nhất: trải nghiệm của khách hàng.</p>
-        </div>
-
-        <div class="feature-grid">
-          <article class="feature-card">
-            <span class="feature-icon icon-coffee" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path
-                  d="M6 12h18v9a5 5 0 0 1-5 5h-8a5 5 0 0 1-5-5v-9Zm18 2h2a3 3 0 0 1 0 6h-2M11 5c0 2 2 2 2 4m5-4c0 2 2 2 2 4"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <span class="feature-number">01</span>
-            <h3>Danh mục &amp; chuẩn bị món</h3>
-            <p>Theo dõi công việc chuẩn bị quầy bar, nguyên liệu và các bước phục vụ theo quy trình của quán.</p>
-            <a href="tasks.html" class="feature-link">Quản lý công việc <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="feature-card">
-            <span class="feature-icon icon-table" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M5 12h22M8 12V7h16v5m-16 0v13m16-13v13M5 25h22M12 12v5h8v-5m-4 5v8" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <span class="feature-number">02</span>
-            <h3>Không gian &amp; phục vụ</h3>
-            <p>Phân chia đầu việc tại khu vực khách, quầy phục vụ và các bước cần hoàn tất trong ca.</p>
-            <a href="tasks.html" class="feature-link">Xem đầu việc <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="feature-card">
-            <span class="feature-icon icon-team" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <circle cx="12" cy="10" r="4" stroke="currentColor" stroke-width="2" />
-                <path d="M4 25v-2a8 8 0 0 1 16 0v2H4Zm17-19a4 4 0 0 1 0 8m2 3a7 7 0 0 1 5 7v1h-5" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <span class="feature-number">03</span>
-            <h3>Phối hợp theo ca</h3>
-            <p>Giúp mọi người biết việc cần làm, trạng thái hiện tại và bàn giao ca dễ dàng hơn.</p>
-            <a href="shifts.html" class="feature-link">Xem phân công ca <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="feature-card">
-            <span class="feature-icon icon-chart" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M6 26V16m7 10V7m7 19V12m7 14V4M4 27h25" stroke="currentColor" stroke-width="2.5"
-                  stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <span class="feature-number">04</span>
-            <h3>Báo cáo &amp; tiến độ</h3>
-            <p>Nắm nhanh tình hình công việc và theo dõi tiến độ vận hành để chủ động hơn mỗi ngày.</p>
-            <a href="statistics.html" class="feature-link">Xem báo cáo <span aria-hidden="true">→</span></a>
-          </article>
+          <!-- Cột Phải: Thẻ Minh Họa Phẳng 3 Dòng Việc Thực Tế -->
+          <div class="hero-visual">
+            <div class="preview-card">
+              <div class="preview-card-header">
+                <h3 class="preview-card-title">Công việc trong ca</h3>
+                <span class="badge-demo">Minh họa</span>
+              </div>
+              <div class="preview-task-list">
+                <div class="preview-task-item">
+                  <span class="preview-task-name">Chuẩn bị nguyên liệu ca sáng</span>
+                  <span><span class="status-dot warning"></span>Đang làm</span>
+                </div>
+                <div class="preview-task-item">
+                  <span class="preview-task-name">Kiểm tra máy pha espresso</span>
+                  <span><span class="status-dot success"></span>Hoàn thành</span>
+                </div>
+                <div class="preview-task-item">
+                  <span class="preview-task-name">Nhập hóa đơn hạt Robusta</span>
+                  <span><span class="status-dot danger"></span>Chờ xử lý</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="closing-cta" aria-labelledby="closing-title">
-      <div class="container closing-inner">
-        <div>
-          <p class="eyebrow">Bắt đầu từ những việc nhỏ</p>
-          <h2 id="closing-title">Ca làm gọn gàng,<br>khách hàng hài lòng.</h2>
+    <!-- KHỐI 3 THẺ TÍNH NĂNG NHỎ ĐỀU NHAU -->
+    <section class="features-section">
+      <div class="home-container">
+        <div class="features-grid">
+          <!-- Tính năng 1: Công việc -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">Quản lý công việc</h3>
+            <p class="feature-card-desc">Phân công rõ ràng, theo dõi trạng thái và thời hạn từng đầu việc trong ca.</p>
+          </div>
+
+          <!-- Tính năng 2: Ca làm -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">Phân công ca làm</h3>
+            <p class="feature-card-desc">Sắp xếp khung giờ làm việc linh hoạt, điều phối nhân sự hợp lý theo ca.</p>
+          </div>
+
+          <!-- Tính năng 3: Thống kê -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">Báo cáo & thống kê</h3>
+            <p class="feature-card-desc">Tổng hợp tỷ lệ hoàn thành công việc và đánh giá tiến độ vận hành quán trực quan.</p>
+          </div>
         </div>
-        <a class="button button-light" href="tasks.html">Mở trang quản lý công việc
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M4 10h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </a>
       </div>
     </section>
   </main>
 
+  <!-- FOOTER MỘT DÒNG DUY NHẤT -->
   <footer class="site-footer">
-    <div class="container">
-      <div class="footer-main">
-        <div class="footer-about">
-          <a class="brand footer-brand" href="index.html">
-            <span class="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M7 12h17v9a5 5 0 0 1-5 5h-7a5 5 0 0 1-5-5v-9Z" stroke="currentColor" stroke-width="2" />
-                <path d="M24 14h2a3 3 0 0 1 0 6h-2M11 5c0 2 2 2 2 4m5-4c0 2 2 2 2 4" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" />
-              </svg>
-            </span>
-            <span class="brand-copy">
-              <span class="brand-name">Cafe Task Manager</span>
-              <span class="brand-caption">Vận hành quán, nhẹ nhàng hơn</span>
-            </span>
-          </a>
-          <p>Công cụ hỗ trợ quản lý công việc và phối hợp vận hành quán cafe mỗi ngày.</p>
-        </div>
-        <div class="footer-column">
-          <h2>Khám phá</h2>
-          <a href="#tinh-nang">Tính năng</a>
-          <a href="tasks.html">Quản lý công việc</a>
-          <a href="statistics.html">Báo cáo &amp; thống kê</a>
-          <a href="shifts.html">Phân công ca trực</a>
-        </div>
-        <div class="footer-column footer-contact">
-          <h2>Liên hệ &amp; dự án</h2>
-          <p>Gửi góp ý hoặc tìm hiểu thêm về Cafe Task Manager qua kho mã nguồn của dự án.</p>
-          <a href="https://github.com/tienducn582-ui/QuanLyQuanCoffe" target="_blank" rel="noopener noreferrer">Mở trang
-            GitHub dự án <span aria-hidden="true">→</span></a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Cafe Task Manager. Bản quyền dự án Lập trình Web.</span>
-        <a href="#noi-dung">Lên đầu trang ↑</a>
-      </div>
+    <div class="home-container">
+      <span>© 2026 Cafe Task Manager · Bài tập lớn môn Phát triển ứng dụng Web (PROG2008)</span>
     </div>
   </footer>
 
-  <!-- JavaScript Dùng Chung & API Core -->
-  <script src="assets/js/theme.js"></script>
-  <script src="assets/js/main.js"></script>
+  <!-- Scripts -->
   <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
   <script>
-    // Kiểm tra và hiển thị nút hành động trang chủ theo trạng thái đăng nhập
     document.addEventListener('DOMContentLoaded', () => {
       const user = typeof getUser === 'function' ? getUser() : null;
       const guestBox = document.getElementById('heroGuestActions');
       const userBox = document.getElementById('heroUserActions');
-      const guestNavs = document.querySelectorAll('.auth-only-guest');
-      const userNavs = document.querySelectorAll('.auth-only-user');
-
       if (user) {
         if (guestBox) guestBox.style.display = 'none';
         if (userBox) userBox.style.display = 'flex';
-        guestNavs.forEach(el => el.style.display = 'none');
-        userNavs.forEach(el => el.style.display = 'block');
       } else {
         if (guestBox) guestBox.style.display = 'flex';
         if (userBox) userBox.style.display = 'none';
-        guestNavs.forEach(el => el.style.display = 'block');
-        userNavs.forEach(el => el.style.display = 'none');
       }
     });
   </script>
 </body>
-
 </html>

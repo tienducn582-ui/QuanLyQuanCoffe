@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hồ Sơ Cá Nhân - Cafe Task Manager</title>
+  <title>Hồ Sơ Cá Nhân | Cafe Task Manager</title>
   <meta name="description" content="Xem và cập nhật thông tin cá nhân, đổi mật khẩu.">
 
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- CSS Dùng Chung -->
   <link rel="stylesheet" href="assets/css/style.css">
 
-  <!-- Chống FOUC Dark Mode -->
+  <!-- Chống chớp sáng Dark/Light Mode -->
   <script>
     (function () {
       const savedTheme = localStorage.getItem('theme');
@@ -22,88 +20,88 @@
     })();
   </script>
 </head>
-<body class="bg-primary">
+<body>
 
   <!-- Navbar dùng chung -->
   <nav id="navbar"></nav>
 
-  <!-- Main Content -->
-  <main class="container py-4">
-    <div class="auth-card" style="max-width: 600px;">
-      <div class="auth-header">
-        <div class="auth-logo">👤</div>
-        <h3>Hồ Sơ Cá Nhân</h3>
-        <p class="text-secondary small mb-0">Xem và cập nhật thông tin tài khoản của bạn</p>
+  <div class="auth-page-wrapper" style="padding-top: var(--space-48);">
+    <div></div>
+
+    <main class="auth-card auth-card-wide">
+      <div class="auth-card-header">
+        <div class="auth-card-logo" style="background-color: var(--border-subtle); color: var(--accent);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <h2>Hồ Sơ Cá Nhân</h2>
+        <p>Quản lý thông tin tài khoản và bảo mật của bạn</p>
       </div>
 
-      <div class="auth-body">
-        <!-- Thông báo lỗi tổng quát -->
-        <div id="formError" class="alert alert-danger d-none py-2 px-3 small" role="alert"></div>
+      <!-- Vùng thông báo lỗi -->
+      <div id="formError" class="invalid-feedback" style="display: none; margin-bottom: var(--space-16); text-align: center; font-weight: 600;"></div>
 
-        <form id="profileForm" novalidate>
-          <div class="row g-3">
-            <!-- Email (readonly) -->
-            <div class="col-md-7">
-              <label for="email" class="form-label fw-semibold">Địa chỉ Email</label>
-              <input type="email" class="form-control bg-light" id="email" name="email" readonly>
-            </div>
-
-            <!-- Role (readonly) -->
-            <div class="col-md-5">
-              <label for="role" class="form-label fw-semibold">Vai trò hệ thống</label>
-              <input type="text" class="form-control bg-light fw-bold text-primary" id="role" name="role" readonly>
-            </div>
-
-            <!-- Họ và tên -->
-            <div class="col-12">
-              <label for="fullName" class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Nhập họ và tên đầy đủ" required>
-              <div class="invalid-feedback"></div>
-            </div>
-
-            <div class="col-12 mt-4 pt-3 border-top">
-              <h6 class="fw-bold mb-2 text-primary" style="color: var(--primary);">Đổi mật khẩu (không bắt buộc)</h6>
-              <p class="text-muted small mb-3">Nếu muốn đổi mật khẩu, vui lòng nhập mật khẩu hiện tại và mật khẩu mới.</p>
-            </div>
-
-            <!-- Mật khẩu hiện tại -->
-            <div class="col-md-6">
-              <label for="currentPassword" class="form-label fw-semibold">Mật khẩu hiện tại</label>
-              <input type="password" class="form-control" id="currentPassword" name="currentPassword" placeholder="Nhập mật khẩu cũ">
-              <div class="invalid-feedback"></div>
-            </div>
-
-            <!-- Mật khẩu mới -->
-            <div class="col-md-6">
-              <label for="newPassword" class="form-label fw-semibold">Mật khẩu mới</label>
-              <input type="password" class="form-control" id="newPassword" name="newPassword" placeholder="Tối thiểu 8 ký tự chữ & số">
-              <div class="invalid-feedback"></div>
-            </div>
+      <form id="profileForm" novalidate>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16);">
+          <div class="form-group">
+            <label for="email" class="form-label">Địa chỉ Email</label>
+            <input type="email" class="form-control" id="email" name="email" readonly style="background-color: var(--border-subtle); cursor: not-allowed;">
           </div>
-
-          <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
-            <a href="tasks.html" class="btn btn-outline-secondary">Hủy bỏ</a>
-            <button type="submit" id="btnSaveProfile" class="btn btn-primary fw-semibold px-4">
-              Lưu Thay Đổi
-            </button>
+          <div class="form-group">
+            <label for="role" class="form-label">Vai trò hệ thống</label>
+            <input type="text" class="form-control" id="role" name="role" readonly style="background-color: var(--border-subtle); font-weight: 600; cursor: not-allowed;">
           </div>
-        </form>
-      </div>
-    </div>
-  </main>
+        </div>
 
-  <!-- Footer -->
-  <footer class="footer py-4 mt-auto border-top">
-    <div class="container text-center text-muted small">
-      <p class="mb-1">© 2026 Cafe Task Manager - Môn Phát triển ứng dụng Web (PROG2008).</p>
-      <p class="mb-0">Dự án nhóm 5 người · Thiết kế giao diện thân thiện, responsive.</p>
-    </div>
-  </footer>
+        <div class="form-group">
+          <label for="fullName" class="form-label">Họ và tên</label>
+          <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Nhập họ và tên đầy đủ" required autocomplete="name">
+          <div class="invalid-feedback"></div>
+        </div>
 
-  <!-- Scripts nạp theo thứ tự: Bootstrap Bundle -> api.js -> ui.js -> auth.js -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <hr class="section-divider">
+
+        <h3 class="section-title">Đổi mật khẩu (không bắt buộc)</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16);">
+          <div class="form-group">
+            <label for="currentPassword" class="form-label">Mật khẩu hiện tại</label>
+            <input type="password" class="form-control" id="currentPassword" name="currentPassword" placeholder="Nhập mật khẩu cũ">
+            <div class="invalid-feedback"></div>
+          </div>
+          <div class="form-group">
+            <label for="newPassword" class="form-label">Mật khẩu mới</label>
+            <input type="password" class="form-control" id="newPassword" name="newPassword" placeholder="Tối thiểu 8 ký tự">
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-16); margin-top: var(--space-24); padding-top: var(--space-16); border-top: 1px solid var(--border-subtle);">
+          <a href="tasks.html" class="btn btn-outline">Hủy bỏ</a>
+          <button type="submit" id="btnSaveProfile" class="btn btn-primary">Lưu Thay Đổi</button>
+        </div>
+      </form>
+    </main>
+
+    <!-- Footer một dòng sát đáy -->
+    <footer class="site-footer">
+      <span>© 2026 Cafe Task Manager · Bài tập lớn môn Phát triển ứng dụng Web (PROG2008)</span>
+    </footer>
+  </div>
+
+  <!-- Scripts nạp theo thứ tự: api.js -> ui.js -> auth.js -->
   <script src="assets/js/api.js"></script>
   <script src="assets/js/ui.js"></script>
   <script src="assets/js/auth.js"></script>
+  <script>
+    // Kiểm tra bảo vệ trang: nếu chưa đăng nhập lập tức chuyển về login.html
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof requireLogin === 'function') {
+        requireLogin();
+      }
+    });
+  </script>
 </body>
 </html>

@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng Ký Tài Khoản - Cafe Task Manager</title>
+  <title>Đăng Ký Tài Khoản | Cafe Task Manager</title>
   <meta name="description" content="Đăng ký tài khoản nhân viên mới cho hệ thống Cafe Task Manager.">
 
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- CSS Dùng Chung -->
   <link rel="stylesheet" href="assets/css/style.css">
 
-  <!-- Chống FOUC Dark Mode -->
+  <!-- Chống chớp sáng Dark/Light Mode -->
   <script>
     (function () {
       const savedTheme = localStorage.getItem('theme');
@@ -22,76 +20,72 @@
     })();
   </script>
 </head>
-<body class="bg-primary">
+<body>
 
   <!-- Navbar dùng chung -->
   <nav id="navbar"></nav>
 
-  <!-- Main Content -->
-  <main class="container py-4">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="auth-logo">☕</div>
-        <h3>Tạo Tài Khoản</h3>
-        <p class="text-secondary small mb-0">Đăng ký tài khoản nhân viên (Staff) mới</p>
-      </div>
+  <!-- Vùng nội dung căn giữa tuyệt đối, không cuộn dọc ở 1366px và 1920px -->
+  <div class="auth-page-wrapper">
+    <div></div> <!-- Giữ đối xứng trên -->
 
-      <div class="auth-body">
-        <!-- Thông báo lỗi tổng quát -->
-        <div id="formError" class="alert alert-danger d-none py-2 px-3 small" role="alert"></div>
-
-        <form id="registerForm" novalidate>
-          <div class="mb-3">
-            <label for="fullName" class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="fullName" name="fullName" placeholder="ví dụ: Nguyễn Văn A" required autocomplete="name">
-            <div class="invalid-feedback"></div>
-          </div>
-
-          <div class="mb-3">
-            <label for="email" class="form-label fw-semibold">Địa chỉ Email <span class="text-danger">*</span></label>
-            <input type="email" class="form-control" id="email" name="email" placeholder="ví dụ: staff@cafe.com" required autocomplete="email">
-            <div class="invalid-feedback"></div>
-          </div>
-
-          <div class="mb-3">
-            <label for="password" class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-            <input type="password" class="form-control" id="password" name="password" placeholder="Tối thiểu 8 ký tự, gồm cả chữ và số" required autocomplete="new-password">
-            <div class="invalid-feedback"></div>
-          </div>
-
-          <div class="mb-3">
-            <label for="confirmPassword" class="form-label fw-semibold">Xác nhận mật khẩu <span class="text-danger">*</span></label>
-            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Nhập lại mật khẩu ở trên" required autocomplete="new-password">
-            <div class="invalid-feedback"></div>
-          </div>
-
-          <div class="d-grid gap-2 mt-4">
-            <button type="submit" id="btnRegister" class="btn btn-primary py-2 fw-semibold">
-              Đăng Ký
-            </button>
-          </div>
-        </form>
-
-        <div class="text-center mt-3 pt-3 border-top">
-          <p class="text-muted small mb-0">
-            Đã có tài khoản? 
-            <a href="login.html" class="fw-semibold text-decoration-none" style="color: var(--accent);">Đăng nhập ngay</a>
-          </p>
+    <main class="auth-card">
+      <div class="auth-card-header">
+        <div class="auth-card-logo">
+          <img src="assets/img/logo.svg" alt="Cafe Logo" width="48" height="48">
         </div>
+        <h2>Tạo Tài Khoản</h2>
+        <p>Đăng ký tài khoản nhân viên mới cho quán</p>
       </div>
-    </div>
-  </main>
 
-  <!-- Footer -->
-  <footer class="footer py-4 mt-auto border-top">
-    <div class="container text-center text-muted small">
-      <p class="mb-1">© 2026 Cafe Task Manager - Môn Phát triển ứng dụng Web (PROG2008).</p>
-      <p class="mb-0">Dự án nhóm 5 người · Thiết kế giao diện thân thiện, responsive.</p>
-    </div>
-  </footer>
+      <!-- Vùng hiển thị lỗi đăng ký -->
+      <div id="formError" class="invalid-feedback" style="display: none; margin-bottom: var(--space-16); text-align: center; font-weight: 600;"></div>
 
-  <!-- Scripts nạp theo thứ tự: Bootstrap Bundle -> api.js -> ui.js -> auth.js -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="fullName" class="form-label">Họ và tên</label>
+          <input type="text" class="form-control" id="fullName" name="fullName" placeholder="ví dụ: Nguyễn Văn A" required autocomplete="name">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="email" class="form-label">Địa chỉ Email</label>
+          <input type="email" class="form-control" id="email" name="email" placeholder="ví dụ: staff@cafe.com" required autocomplete="email">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Mật khẩu</label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="Tối thiểu 8 ký tự, gồm cả chữ và số" required autocomplete="new-password">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Xác nhận mật khẩu</label>
+          <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Nhập lại mật khẩu ở trên" required autocomplete="new-password">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div style="margin-top: var(--space-24);">
+          <button type="submit" id="btnRegister" class="btn btn-primary" style="width: 100%;">
+            Đăng Ký
+          </button>
+        </div>
+      </form>
+
+      <div style="text-align: center; margin-top: var(--space-24); padding-top: var(--space-16); border-top: 1px solid var(--border-subtle); font-size: var(--text-sm);">
+        <span style="color: var(--text-secondary);">Đã có tài khoản? </span>
+        <a href="login.html" style="font-weight: 600;">Đăng nhập ngay</a>
+      </div>
+    </main>
+
+    <!-- Footer một dòng sát đáy -->
+    <footer class="site-footer">
+      <span>© 2026 Cafe Task Manager · Bài tập lớn môn Phát triển ứng dụng Web (PROG2008)</span>
+    </footer>
+  </div>
+
+  <!-- Scripts nạp theo thứ tự: api.js -> ui.js -> auth.js -->
   <script src="assets/js/api.js"></script>
   <script src="assets/js/ui.js"></script>
   <script src="assets/js/auth.js"></script>

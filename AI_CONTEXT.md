@@ -68,3 +68,45 @@ QUY TẮC LÀM VIỆC TRÊN REPO (agent bắt buộc tuân thủ)
 6. Máy dùng Windows PowerShell. Test API bằng file .http (REST Client) trong docs/tests/, không dùng curl.
 7. Tên file, endpoint, hàm, id HTML trong tài liệu này là hợp đồng giữa 5 người; không đổi. Muốn đổi thì dừng và báo.
 8. Cuối mỗi lần làm, liệt kê: file đã đổi, cách kiểm tra, việc tôi phải làm tay.
+
+
+KIỂM THỬ TỰ ĐỘNG (BẮT BUỘC SAU MỖI LẦN LÀM XONG MỘT PHẦN)
+Phạm vi của mỗi người = các file ghi trong mục "Phân công và file sở hữu" của tài liệu kế hoạch (cột file code và file tài liệu của người đó). Làm xong code hoặc giao diện thì phải tự test phần thuộc phạm vi mình trước khi báo xong. Chưa chạy thì ghi "chưa kiểm tra", không được khẳng định đã đạt.
+
+A. Công cụ và nơi lưu
+- Mọi script, ảnh chụp, log của test nằm trong thư mục .local-test/ ở gốc repo. Thư mục này nằm trong .gitignore và KHÔNG BAO GIỜ git add.
+- Dùng Playwright cài riêng trong .local-test/ (npm init -y; npm i -D playwright; mở Chrome có sẵn bằng channel 'chrome' để khỏi tải trình duyệt). Không thêm gì vào server/package.json. Không có Playwright thì dùng browser agent của Antigravity, nhưng vẫn phải chụp ảnh và đo.
+- Tự bật server (npm start trong server/) trước khi test, tắt sau khi xong. Không đọc .env thật. Dùng tài khoản mẫu admin@cafe.com và staff@cafe.com.
+- Dữ liệu tạo khi test có tiền tố TEST_ và phải xóa lại; không xóa hay sửa dữ liệu seed.
+- Được dùng mock API (page.route) để test giao diện khi backend chưa có, nhưng mock chỉ tồn tại trong .local-test/, không đưa vào mã nguồn, và báo cáo phải ghi rõ "test bằng mock".
+
+B. Test giao diện cho MỌI trang thuộc phạm vi, ở 5 cỡ 375x667, 768x1024, 1200x800, 1366x768, 1920x1080, cả chế độ sáng và tối
+1. Không tràn ngang: document.documentElement.scrollWidth <= window.innerWidth. Liệt kê phần tử có getBoundingClientRect().right > innerWidth (bỏ qua phần tử nằm trong khối cố ý cuộn ngang overflow-x:auto).
+2. Không dính, không chồng: mọi nút, ô nhập, liên kết nhìn thấy được không giao nhau (trừ quan hệ cha-con); hai phần tử tương tác cạnh nhau cách nhau ít nhất 8px; ở 375px vùng chạm cao ít nhất 40px.
+3. Chữ không bị cắt ngoài ý muốn (scrollWidth > clientWidth ở phần tử overflow:hidden không do text-overflow có chủ ý). Nhập chuỗi 80 ký tự không dấu cách vào mọi ô nhập và tên hiển thị: bố cục không vỡ.
+4. Thanh điều hướng: ở 375px thu gọn; bấm nút mở menu thì hiện đủ mục; bấm từng liên kết đến đúng trang; mục của trang hiện tại có trạng thái active.
+5. Không lỗi console; không request 4xx hoặc 5xx ngoài dự kiến (404 file tĩnh là lỗi).
+6. Màu: (1) lấy màu nền hiệu lực (computed background-color, đi ngược lên phần tử cha cho tới khi có màu đặc) của body, main và mọi khối chiếm trên 20% diện tích viewport: không được là #0d6efd hoặc gần nó (mỗi kênh RGB lệch tối đa 40); (2) đếm pixel trên ảnh chụp từng trang: quá 2% pixel gần #0d6efd (mỗi kênh lệch tối đa 25) là LỖI; (3) nút, liên kết, tiêu đề phụ, viền focus, trạng thái active và hover không được là xanh Bootstrap; (4) tỷ lệ tương phản WCAG của mọi đoạn chữ và nút so với nền hiệu lực tối thiểu 4.5 (chữ cỡ lớn tối thiểu 3), cả chế độ sáng và tối.
+7. Chụp ảnh từng trang x từng cỡ vào .local-test/screenshots/ và PHẢI tự xem ảnh để nhận xét bằng mắt (số đo đạt chưa đủ).
+8. Trạng thái rỗng, đang tải và lỗi hiển thị đúng ở trang có các trạng thái đó.
+9. Nhất quán giữa các trang: navbar của mọi trang cùng cấu trúc DOM, font-family, chiều cao, logo, thứ tự mục (chỉ khác theo trạng thái đăng nhập và vai trò); script so sánh giữa các trang, lệch là LỖI. Chưa đăng nhập: navbar chỉ có Trang chủ, Đăng nhập, Đăng ký. Tiêu đề h1, h2 cùng một bộ font.
+10. Icon và hình minh họa thuộc bảng màu nâu của dự án (không có tím hoặc màu mặc định của emoji); kiểm bằng ảnh chụp và ghi nhận xét từng ảnh vào baseline.md.
+11. Khoảng cách và bố cục: nội dung chính cách navbar ít nhất 24px; login.html và register.html không cuộn dọc ở 1366x768 và 1920x1080 và footer nằm ở đáy trang; mọi cặp phần tử tương tác nằm cạnh nhau (nút, liên kết) cách nhau ít nhất 8px, tính bằng getBoundingClientRect cho TẤT CẢ cặp cùng hàng (script cũ bỏ sót cặp nút-liên kết ở index); h1 và h2 dùng text-wrap: balance, dòng cuối của tiêu đề nhiều dòng phải có từ 2 từ trở lên.
+12. Gọn (mỗi trang, mỗi chế độ sáng hoặc tối): tối đa 2 họ font; tối đa 8 cỡ chữ khác nhau; tối đa 3 giá trị border-radius khác nhau; tối đa 2 kiểu box-shadow; tối đa 6 màu nền khác nhau (không tính trắng, đen, trong suốt); không còn emoji trong DOM hiển thị; đúng 1 nút đặc (nền nâu đậm) trong vùng nội dung chính, không tính navbar.
+13. Cân đối: ở trang auth, thẻ căn giữa (chênh lệch lề trái và lề phải tối đa 2px; khoảng trống trên và dưới thẻ chênh tối đa 15% nếu trang không cuộn); ở hero hai cột trên 992px, tâm dọc hai cột lệch nhau tối đa 24px; các thẻ tính năng cùng hàng có cùng chiều cao và cùng chiều rộng (sai lệch tối đa 2px); lề trái logo navbar thẳng hàng với lề trái nội dung chính (sai lệch tối đa 2px).
+
+C. Test luồng nghiệp vụ thật thuộc phạm vi mình (chạy thật qua trình duyệt hoặc file .http với server và CSDL thật)
+- TV1: xem ca; Admin thêm, sửa, xóa ca; Staff không thấy và không gọi được thao tác quản trị; xóa ca thì công việc còn.
+- TV2: đăng ký (đúng, trùng email, sai định dạng), đăng nhập đúng và sai, sửa hồ sơ, đổi mật khẩu, đăng xuất, giới hạn đăng nhập sai, mật khẩu trong CSDL đã băm.
+- TV3: thêm, sửa, xóa, đổi trạng thái công việc; tìm kiếm, lọc, phân trang; xóa hết bản ghi ở trang cuối thì lùi trang; Staff bị 403 khi sửa và xóa.
+- TV4: số liệu /api/stats khớp truy vấn GROUP BY trong SSMS; trang thống kê hiện đúng và có trạng thái chưa có dữ liệu; schema.sql và seed.sql chạy lại nhiều lần được.
+- TV5: đăng ký hiện lỗi validation tiếng Việt từng ô; đăng nhập sai hiện lỗi trong #formError; navbar đổi theo trạng thái đăng nhập và vai trò; trang cần đăng nhập mà chưa đăng nhập thì về login.html; đăng xuất xóa token và user trong localStorage rồi về login.html; gặp 401 thì tự đăng xuất; đổi tên ở hồ sơ thì navbar cập nhật; trang chủ đổi nút theo trạng thái đăng nhập.
+Luồng cần file hoặc API của người khác mà chưa có thật trên main thì DỪNG phần đó và nhắc: "ĐANG CHỜ: <file> của <TV>"; chỉ test giao diện bằng mock rồi ghi rõ.
+
+D. Test ngoài phạm vi của mình
+Được chạy để phát hiện lỗi, nhưng script, ảnh, log của chúng chỉ nằm trong .local-test/, không git add. Không sửa file của người khác để test đạt: ghi lỗi vào bảng (người sở hữu | file | lỗi | mức độ | cách sửa) để tôi gửi chủ file.
+
+E. Ghi kết quả và báo cáo
+- Kết quả test thuộc phạm vi của mình được tóm tắt thành bảng (Mã | Trang hoặc luồng | Cỡ màn hình | Kết quả thực tế | Đạt? | Ghi chú) vào file tài liệu thuộc phạm vi của mình (TV5: docs/ra-soat-giao-dien.md); file này được commit.
+- Lỗi trong file của mình: sửa rồi chạy lại, tối đa 3 vòng; còn lỗi thì báo rõ.
+- Trước khi đưa lệnh git cho tôi: chạy git status --short, bảo đảm .local-test/, node_modules, .env không nằm trong danh sách chuẩn bị add.
