@@ -11,3 +11,9 @@ dist/
 backup_*/
 *.bak
 *.tmp
+
+# Môi trường bí mật
+.env
+.env.local
+server/.env
+server/.env.local
