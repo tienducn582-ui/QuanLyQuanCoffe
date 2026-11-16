@@ -1,152 +1,317 @@
-(function () {
-  'use strict';
-  const service = window.ShiftService;
-  const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-  const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const localTime = value => { const date = new Date(value); return `${dateKey(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };
-  const display = value => new Date(value).toLocaleString('vi-VN');
-  const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-  let week = new Date();
-  week.setHours(0, 0, 0, 0);
-  week.setDate(week.getDate() - (week.getDay() + 6) % 7);
-  let editingId = null;
-  let selectedShift = '';
-  const root = document.getElementById('hr-app');
-  root.innerHTML = `
-    <p class="hr-note">Dữ liệu lưu trên trình duyệt này. Chấm công dùng giờ thiết bị, chưa xác thực danh tính hoặc đồng bộ nhiều máy.</p>
-    <div id="hr-message" role="status" aria-live="polite" hidden></div>
-    <section class="hr-panel"><h2>Nhân viên</h2>
-      <form id="employee-form" class="hr-form"><label>Họ tên<input name="name" maxlength="100" required></label><label>Vai trò<select name="role">${service.roles.map(role => `<option>${role}</option>`).join('')}</select></label><button class="btn btn-primary">Thêm nhân viên</button></form>
-      <div id="employee-list" class="hr-scroll"></div>
-    </section>
-    <section class="hr-panel"><h2>Lịch làm việc theo tuần</h2>
-      <div class="hr-tools"><button type="button" class="btn btn-secondary" id="previous-week">Tuần trước</button><label>Tuần chứa ngày<input type="date" id="week-date" required></label><button type="button" class="btn btn-secondary" id="next-week">Tuần sau</button></div>
-      <div id="weekly-schedule" class="hr-scroll"></div>
-      <h3 id="schedule-title">Thêm ca làm việc</h3>
-      <form id="schedule-form" class="hr-form">
-        <label>Tên ca<input name="name" maxlength="100" required placeholder="Ca sáng"></label>
-        <label>Bắt đầu<input name="start" type="datetime-local" required></label><label>Kết thúc<input name="end" type="datetime-local" required></label>
-        <label>Tiền mặt đầu ca (VND)<input name="openingCash" type="number" min="0" step="1" required value="0"></label>
-        <fieldset><legend>Nhân viên trong ca</legend><div id="schedule-employees"></div></fieldset>
-        <button class="btn btn-primary">Lưu ca</button><button type="button" id="cancel-edit" class="btn btn-secondary" hidden>Hủy sửa</button>
-      </form>
-    </section>
-    <section class="hr-panel"><h2>Chấm công điện tử</h2><p class="hr-note">Cho phép vào ca sớm tối đa 30 phút. Mỗi nhân viên có một lượt vào/ra cho mỗi ca. Giờ thực tế chỉ cộng khi đã ra ca; số ca và giờ dưới đây tính theo ca bắt đầu trong tuần đang xem.</p><div id="attendance-list" class="hr-scroll"></div><div id="attendance-summary" class="hr-scroll"></div></section>
-    <section class="hr-panel"><h2>Bàn giao &amp; đối soát ca</h2>
-      <div class="hr-tools"><label>Chọn ca<select id="handover-shift"></select></label></div>
-      <div id="reconciliation" class="hr-record"></div>
-      <div id="shift-payments" class="hr-scroll"></div>
-      <form id="handover-form" class="hr-form">
-        <label>Người giao<select name="senderId" required></select></label><label>Người nhận<select name="receiverId" required></select></label>
-        <label>Tiền thực đếm trong két (VND)<input name="countedCash" type="number" min="0" step="1" required></label>
-        <label>Tình trạng máy móc<textarea name="equipment" required maxlength="2000" placeholder="Máy pha, máy xay, tủ lạnh; lỗi cần theo dõi..."></textarea></label>
-        <label>Giải trình chênh lệch<textarea name="explanation" maxlength="2000"></textarea></label>
-        <fieldset><legend>Checklist bắt buộc</legend><label class="hr-check"><input name="cashChecked" type="checkbox" required>Đã kiểm kê két tiền</label><label class="hr-check"><input name="revenueChecked" type="checkbox" required>Đã đối soát doanh thu</label><label class="hr-check"><input name="equipmentChecked" type="checkbox" required>Đã kiểm tra máy móc</label></fieldset>
-        <button class="btn btn-primary">Xác nhận bàn giao &amp; khóa ca</button>
-      </form><div id="handover-history"></div>
-    </section>`;
-  const $ = selector => root.querySelector(selector);
-  function message(text, error = false) {
-    const element = $('#hr-message');
-    element.hidden = false;
-    element.className = error ? 'hr-error' : '';
-    element.textContent = text;
-    if (error) element.scrollIntoView({ block: 'nearest' });
+/**
+ * shifts.js - Logic trang Quản lý Ca làm việc (public/shifts.html)
+ * TV1 phụ trách
+ */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Kiểm tra đăng nhập bắt buộc
+  if (typeof requireLogin === 'function') {
+    requireLogin();
   }
-  function run(action, text) {
-    try { action(); render(); message(text); } catch (error) { console.error('[ShiftHR]', error); message(error.message, true); }
+
+  // 2. Render Navbar dùng chung
+  if (typeof renderNavbar === 'function') {
+    renderNavbar();
   }
-  function weekShifts(data) {
-    const end = new Date(week); end.setDate(end.getDate() + 7);
-    return data.shifts.filter(item => new Date(item.start) >= week && new Date(item.start) < end).sort((a, b) => a.start.localeCompare(b.start));
+
+  const isAdminUser = typeof isAdmin === 'function' ? isAdmin() : false;
+  const btnAddShift = document.getElementById('btnAddShift');
+  const shiftsList = document.getElementById('shiftsList');
+  const shiftsLoading = document.getElementById('shiftsLoading');
+  const shiftsEmpty = document.getElementById('shiftsEmpty');
+  const shiftModalEl = document.getElementById('shiftModal');
+  const shiftModal = shiftModalEl && window.bootstrap ? new bootstrap.Modal(shiftModalEl) : null;
+  const shiftForm = document.getElementById('shiftForm');
+  const shiftFormError = document.getElementById('shiftFormError');
+
+  // Nếu là Admin, hiện nút Thêm ca
+  if (isAdminUser && btnAddShift) {
+    btnAddShift.classList.remove('d-none');
   }
-  function options(people) { return people.map(person => `<option value="${escape(person.id)}">${escape(person.name)} (${escape(person.role)})</option>`).join(''); }
-  function render() {
-    const data = service.getData(), active = data.employees.filter(person => person.active), shifts = weekShifts(data);
-    const personName = personId => data.employees.find(person => person.id === personId)?.name || 'Không xác định';
-    $('#employee-list').innerHTML = `<table class="hr-table"><thead><tr><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${data.employees.map(person => `<tr><td>${escape(person.name)}</td><td>${escape(person.role)}</td><td>${person.active ? 'Đang làm việc' : 'Đã ngừng'}</td><td>${person.active ? `<button type="button" class="btn btn-secondary" data-deactivate="${person.id}">Ngừng làm việc</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
-    const checkedIds = [...root.querySelectorAll('[name="employeeIds"]:checked')].map(input => input.value);
-    $('#schedule-employees').innerHTML = active.length ? active.map(person => `<label class="hr-check"><input type="checkbox" name="employeeIds" value="${person.id}" ${checkedIds.includes(person.id) ? 'checked' : ''}>${escape(person.name)} (${escape(person.role)})</label>`).join('') : 'Thêm nhân viên trước khi phân ca.';
-    $('#week-date').value = dateKey(week);
-    const days = Array.from({ length: 7 }, (_, index) => { const day = new Date(week); day.setDate(day.getDate() + index); return day; });
-    $('#weekly-schedule').innerHTML = `<table class="hr-table hr-week"><caption>Tuần ${dateKey(days[0])} – ${dateKey(days[6])} (ca qua đêm hiển thị tại ngày bắt đầu)</caption><thead><tr><th>Nhân viên</th>${days.map(day => `<th>${day.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</th>`).join('')}</tr></thead><tbody>${data.employees.filter(person => person.active || shifts.some(item => item.employeeIds.includes(person.id))).map(person => `<tr><th>${escape(person.name)}<br><small>${escape(person.role)}</small></th>${days.map(day => `<td>${shifts.filter(item => item.employeeIds.includes(person.id) && dateKey(new Date(item.start)) === dateKey(day)).map(item => `<div class="hr-shift"><strong>${escape(item.name)}</strong><br>${new Date(item.start).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} – ${new Date(item.end).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${dateKey(new Date(item.start)) !== dateKey(new Date(item.end)) ? ' (+1 ngày)' : ''}<br>${item.handover ? 'Đã chốt' : 'Chưa chốt'}<br>${!item.handover && !data.attendance.some(entry => entry.shiftId === item.id) ? `<button type="button" data-edit="${item.id}">Sửa</button><button type="button" data-delete="${item.id}">Xóa</button>` : ''}</div>`).join('') || '—'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-    $('#attendance-list').innerHTML = `<table class="hr-table"><thead><tr><th>Ca / nhân viên</th><th>Vào ca</th><th>Ra ca</th><th>Thực tế</th><th>Thao tác</th></tr></thead><tbody>${shifts.flatMap(item => item.employeeIds.map(personId => {
-      const entry = data.attendance.find(record => record.shiftId === item.id && record.employeeId === personId);
-      const late = entry ? Math.max(0, Math.floor((new Date(entry.clockIn) - new Date(item.start)) / 60000)) : 0;
-      return `<tr><td>${escape(item.name)}<br>${display(item.start)}<br>${escape(personName(personId))}</td><td>${entry ? display(entry.clockIn) + (late ? `<br>Muộn ${late} phút` : '') : '—'}</td><td>${entry?.clockOut ? display(entry.clockOut) : '—'}</td><td>${entry?.clockOut ? ((new Date(entry.clockOut) - new Date(entry.clockIn)) / 3600000).toFixed(2) + ' giờ' : entry ? 'Đang làm' : 'Chưa vào ca'}</td><td>${!item.handover && !entry?.clockOut ? `<button type="button" class="btn btn-secondary" data-clock="${entry ? 'out' : 'in'}" data-shift="${item.id}" data-person="${personId}">${entry ? 'Clock-out' : 'Clock-in'}</button>` : ''}</td></tr>`;
-    })).join('') || '<tr><td colspan="5">Chưa có ca trong tuần.</td></tr>'}</tbody></table>`;
-    $('#attendance-summary').innerHTML = `<table class="hr-table"><caption>Tổng hợp tuần theo nhân viên</caption><thead><tr><th>Nhân viên</th><th>Ca phân công</th><th>Đã vào</th><th>Hoàn thành</th><th>Giờ thực tế</th></tr></thead><tbody>${data.employees.map(person => {
-      const assigned = shifts.filter(item => item.employeeIds.includes(person.id));
-      const entries = data.attendance.filter(entry => entry.employeeId === person.id && assigned.some(item => item.id === entry.shiftId));
-      const done = entries.filter(entry => entry.clockOut);
-      return `<tr><td>${escape(person.name)}</td><td>${assigned.length}</td><td>${entries.length}</td><td>${done.length}</td><td>${(done.reduce((sum, entry) => sum + (new Date(entry.clockOut) - new Date(entry.clockIn)), 0) / 3600000).toFixed(2)}</td></tr>`;
-    }).join('')}</tbody></table>`;
-    const allShifts = [...data.shifts].sort((a, b) => b.start.localeCompare(a.start));
-    if (!allShifts.some(item => item.id === selectedShift)) selectedShift = allShifts[0]?.id || '';
-    $('#handover-shift').innerHTML = allShifts.length ? allShifts.map(item => `<option value="${item.id}">${escape(item.name)} — ${display(item.start)}${item.handover ? ' (Đã chốt)' : ''}</option>`).join('') : '<option value="">Chưa có ca</option>';
-    $('#handover-shift').value = selectedShift;
-    renderHandover(data);
+
+  // Tải danh sách ca và các công việc của ca
+  await loadShifts();
+
+  // Mở modal thêm ca: reset form
+  if (btnAddShift) {
+    btnAddShift.addEventListener('click', () => {
+      shiftForm.reset();
+      document.getElementById('shiftId').value = '';
+      document.getElementById('shiftModalTitle').textContent = 'Thêm ca làm việc mới';
+      if (shiftFormError) {
+        shiftFormError.classList.add('d-none');
+        shiftFormError.textContent = '';
+      }
+    });
   }
-  function renderHandover(data) {
-    const item = data.shifts.find(entry => entry.id === selectedShift), form = $('#handover-form');
-    form.hidden = !item || !!item.handover;
-    $('#handover-history').textContent = '';
-    $('#shift-payments').replaceChildren();
-    if (!item) { $('#reconciliation').textContent = 'Chọn hoặc tạo ca để đối soát.'; return; }
-    const totals = service.reconcile(item.id);
-    $('#reconciliation').textContent = `Tiền đầu ca: ${money(item.openingCash)} | ${totals.paymentCount} giao dịch\nDoanh thu tiền mặt: ${money(totals.cash)} | Chuyển khoản: ${money(totals.transfer)}\nTổng doanh thu: ${money(totals.revenue)} | Tiền mặt phải có: ${money(totals.expectedCash)}`;
-    $('#shift-payments').innerHTML = `<table class="hr-table"><caption>Giao dịch để đối soát ca</caption><thead><tr><th>Thời gian / mã giao dịch</th><th>Bàn</th><th>Thu ngân</th><th>Phương thức</th><th>Số tiền</th></tr></thead><tbody>${data.payments.filter(payment => payment.shiftId === item.id).map(payment => `<tr><td>${display(payment.paidAt)}<br><small>${escape(payment.id)}</small></td><td>${escape(payment.tableId)}</td><td>${escape(data.employees.find(person => person.id === payment.employeeId)?.name || 'Không xác định')}</td><td>${payment.method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}</td><td>${money(payment.amount)}</td></tr>`).join('') || '<tr><td colspan="5">Chưa có giao dịch.</td></tr>'}</tbody></table>`;
-    const sender = form.elements.senderId.value, receiver = form.elements.receiverId.value;
-    form.elements.senderId.innerHTML = options(data.employees.filter(person => data.attendance.some(entry => entry.shiftId === item.id && entry.employeeId === person.id)));
-    form.elements.receiverId.innerHTML = options(data.employees.filter(person => person.active));
-    if ([...form.elements.senderId.options].some(option => option.value === sender)) form.elements.senderId.value = sender;
-    if ([...form.elements.receiverId.options].some(option => option.value === receiver)) form.elements.receiverId.value = receiver;
-    if (item.handover) {
-      const record = item.handover;
-      const name = personId => data.employees.find(person => person.id === personId)?.name || 'Không xác định';
-      $('#handover-history').className = 'hr-record';
-      $('#handover-history').textContent = `Đã khóa ca lúc ${display(record.closedAt)}\nNgười giao: ${name(record.senderId)} → Người nhận: ${name(record.receiverId)}\nĐã kiểm kê két / đối soát doanh thu / kiểm tra máy móc\nThực đếm: ${money(record.countedCash)} | Chênh lệch: ${money(record.difference)}\nGiải trình: ${record.explanation || 'Không có chênh lệch'}\nMáy móc: ${record.equipment}`;
+
+  // Submit form Thêm/Sửa Ca
+  if (shiftForm) {
+    shiftForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!isAdminUser) return;
+
+      const shiftId = document.getElementById('shiftId').value;
+      const name = document.getElementById('shiftName').value.trim();
+      const startTime = document.getElementById('shiftStartTime').value;
+      const endTime = document.getElementById('shiftEndTime').value;
+      const note = document.getElementById('shiftNote').value.trim();
+
+      if (startTime >= endTime) {
+        if (shiftFormError) {
+          shiftFormError.textContent = 'Giờ bắt đầu phải nhỏ hơn giờ kết thúc!';
+          shiftFormError.classList.remove('d-none');
+        }
+        return;
+      }
+
+      const payload = { name, startTime, endTime, note };
+      const btnSave = document.getElementById('btnSaveShift');
+      if (typeof showLoading === 'function') showLoading(btnSave);
+
+      try {
+        if (shiftId) {
+          // Cập nhật
+          await apiFetch(`/api/shifts/${shiftId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+          if (typeof showToast === 'function') showToast('Cập nhật ca làm việc thành công', 'success');
+        } else {
+          // Thêm mới
+          await apiFetch('/api/shifts', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          if (typeof showToast === 'function') showToast('Thêm ca làm việc thành công', 'success');
+        }
+
+        if (shiftModal) shiftModal.hide();
+        await loadShifts();
+      } catch (err) {
+        if (shiftFormError) {
+          shiftFormError.textContent = err.message || 'Lỗi khi lưu ca làm việc';
+          shiftFormError.classList.remove('d-none');
+        } else if (typeof showToast === 'function') {
+          showToast(err.message, 'danger');
+        }
+      } finally {
+        if (typeof hideLoading === 'function') hideLoading(btnSave);
+      }
+    });
+  }
+
+  /**
+   * Tải danh sách ca và các công việc thuộc ca
+   */
+  async function loadShifts() {
+    if (shiftsLoading) shiftsLoading.classList.remove('d-none');
+    if (shiftsList) shiftsList.innerHTML = '';
+    if (shiftsEmpty) shiftsEmpty.classList.add('d-none');
+
+    try {
+      const res = await apiFetch('/api/shifts');
+      const shifts = res.data || [];
+
+      if (shiftsLoading) shiftsLoading.classList.add('d-none');
+
+      if (shifts.length === 0) {
+        if (typeof showEmpty === 'function') {
+          showEmpty(shiftsEmpty, 'Chưa có ca làm việc nào. Vui lòng thêm ca mới.');
+        } else {
+          shiftsEmpty.innerHTML = '<div class="alert alert-info text-center">Chưa có ca làm việc nào.</div>';
+          shiftsEmpty.classList.remove('d-none');
+        }
+        return;
+      }
+
+      // Render từng thẻ ca
+      for (const shift of shifts) {
+        const cardCol = document.createElement('div');
+        cardCol.className = 'col-md-6 col-lg-4';
+
+        const safeName = typeof escapeHtml === 'function' ? escapeHtml(shift.name) : shift.name;
+        const safeStart = typeof escapeHtml === 'function' ? escapeHtml(shift.startTime) : shift.startTime;
+        const safeEnd = typeof escapeHtml === 'function' ? escapeHtml(shift.endTime) : shift.endTime;
+        const safeNote = typeof escapeHtml === 'function' ? escapeHtml(shift.note) : shift.note;
+
+        let adminActions = '';
+        if (isAdminUser) {
+          adminActions = `
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Thao tác
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item btn-edit-shift" data-id="${shift.id}">Sửa ca</button></li>
+                <li><button class="dropdown-item text-danger btn-delete-shift" data-id="${shift.id}" data-name="${safeName}">Xóa ca</button></li>
+              </ul>
+            </div>
+          `;
+        }
+
+        cardCol.innerHTML = `
+          <div class="card h-100 shadow-sm border-0 border-top border-4 border-primary">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title fw-bold text-primary mb-0">${safeName}</h5>
+                ${adminActions}
+              </div>
+              <div class="text-muted small mb-2">
+                <i class="bi bi-clock"></i> <strong>Thời gian:</strong> ${safeStart} - ${safeEnd}
+              </div>
+              ${safeNote ? `<p class="card-text text-secondary small mb-3 fst-italic">${safeNote}</p>` : ''}
+              
+              <hr class="my-2">
+              
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small">Công việc trong ca (${shift.taskCount}):</span>
+              </div>
+              
+              <div class="shift-tasks-container flex-grow-1" id="shift-tasks-${shift.id}">
+                <div class="text-center py-2 text-muted small"><span class="spinner-border spinner-border-sm"></span> Đang tải việc...</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        shiftsList.appendChild(cardCol);
+
+        // Tải các công việc thuộc ca này (GET /api/tasks?shiftId=...&pageSize=50)
+        loadTasksForShift(shift.id);
+      }
+
+      // Gắn sự kiện sửa / xóa ca cho Admin
+      attachAdminEvents();
+
+    } catch (err) {
+      if (shiftsLoading) shiftsLoading.classList.add('d-none');
+      if (typeof showToast === 'function') {
+        showToast('Lỗi khi tải danh sách ca làm việc: ' + err.message, 'danger');
+      }
     }
   }
-  function cancelEdit() { editingId = null; $('#schedule-form').reset(); $('#schedule-title').textContent = 'Thêm ca làm việc'; $('#cancel-edit').hidden = true; }
-  $('#employee-form').addEventListener('submit', event => {
-    event.preventDefault();
-    run(() => { service.addEmployee(Object.fromEntries(new FormData(event.target))); event.target.reset(); }, 'Đã thêm nhân viên.');
-  });
-  $('#schedule-form').addEventListener('submit', event => {
-    event.preventDefault();
-    run(() => { const fields = new FormData(event.target); service.saveShift({ ...Object.fromEntries(fields), employeeIds: fields.getAll('employeeIds') }, editingId); cancelEdit(); }, 'Đã lưu lịch ca.');
-  });
-  $('#cancel-edit').addEventListener('click', cancelEdit);
-  $('#handover-form').addEventListener('submit', event => {
-    event.preventDefault();
-    if (!window.confirm('Xác nhận bàn giao? Ca sẽ bị khóa, không thể sửa chấm công hay thêm thanh toán.')) return;
-    run(() => { const fields = Object.fromEntries(new FormData(event.target)); ['cashChecked', 'revenueChecked', 'equipmentChecked'].forEach(key => { fields[key] = event.target.elements[key].checked; }); service.closeShift(selectedShift, fields); event.target.reset(); }, 'Đã bàn giao và khóa ca.');
-  });
-  $('#handover-shift').addEventListener('change', event => { selectedShift = event.target.value; $('#handover-form').reset(); run(() => {}, 'Đã chọn ca.'); });
-  $('#week-date').addEventListener('change', event => run(() => { const day = new Date(`${event.target.value}T00:00:00`); if (!Number.isFinite(+day)) throw new Error('Ngày không hợp lệ.'); day.setDate(day.getDate() - (day.getDay() + 6) % 7); week = day; }, 'Đã chuyển tuần.'));
-  ['previous-week', 'next-week'].forEach(buttonId => $(`#${buttonId}`).addEventListener('click', () => run(() => week.setDate(week.getDate() + (buttonId === 'next-week' ? 7 : -7)), 'Đã chuyển tuần.')));
-  root.addEventListener('click', event => {
-    const button = event.target.closest('button');
-    if (!button) return;
-    const attr = button.dataset;
-    if (attr.clock) run(() => service[attr.clock === 'in' ? 'clockIn' : 'clockOut'](attr.shift, attr.person), attr.clock === 'in' ? 'Đã ghi nhận giờ vào ca.' : 'Đã ghi nhận giờ ra ca.');
-    if (attr.delete && window.confirm('Xóa ca chưa có dữ liệu vận hành này?')) run(() => { service.deleteShift(attr.delete); if (editingId === attr.delete) cancelEdit(); }, 'Đã xóa ca.');
-    if (attr.deactivate && window.confirm('Ngừng làm việc nhân viên này? Lịch sử vẫn được giữ lại.')) run(() => service.deactivateEmployee(attr.deactivate), 'Đã cập nhật nhân viên.');
-    if (attr.edit) run(() => {
-      const item = service.getData().shifts.find(entry => entry.id === attr.edit);
-      if (!item) throw new Error('Ca không còn tồn tại.');
-      editingId = item.id;
-      const form = $('#schedule-form');
-      form.elements.name.value = item.name;
-      form.elements.start.value = localTime(item.start);
-      form.elements.end.value = localTime(item.end);
-      form.elements.openingCash.value = item.openingCash;
-      root.querySelectorAll('[name="employeeIds"]').forEach(input => { input.checked = item.employeeIds.includes(input.value); });
-      $('#schedule-title').textContent = 'Sửa ca làm việc'; $('#cancel-edit').hidden = false;
-      form.scrollIntoView({ block: 'center' });
-    }, 'Đang sửa lịch ca.');
-  });
-  window.addEventListener('storage', event => { if (event.key === 'CAFE_HR_V1' || event.key === null) run(() => {}, 'Dữ liệu đã cập nhật từ tab khác.'); });
-  run(() => {}, 'Sẵn sàng phân lịch và chấm công.');
-})();
+
+  /**
+   * Tải công việc theo từng ca
+   */
+  async function loadTasksForShift(shiftId) {
+    const taskContainer = document.getElementById(`shift-tasks-${shiftId}`);
+    if (!taskContainer) return;
+
+    try {
+      const res = await apiFetch(`/api/tasks?shiftId=${shiftId}&pageSize=50`);
+      const tasks = res.data || [];
+
+      if (tasks.length === 0) {
+        taskContainer.innerHTML = '<p class="text-muted small text-center my-2">Không có công việc nào trong ca này.</p>';
+        return;
+      }
+
+      taskContainer.innerHTML = '';
+      const listGroup = document.createElement('div');
+      listGroup.className = 'list-group list-group-flush small';
+
+      tasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item px-0 py-2 d-flex justify-content-between align-items-center';
+
+        const safeTitle = typeof escapeHtml === 'function' ? escapeHtml(task.title || task.Title) : (task.title || task.Title);
+        const taskId = task.id || task.Id;
+        const currentStatus = task.status || task.Status || 'Pending';
+
+        let badgeClass = 'bg-secondary';
+        if (currentStatus === 'InProgress') badgeClass = 'bg-warning text-dark';
+        if (currentStatus === 'Done') badgeClass = 'bg-success';
+
+        item.innerHTML = `
+          <div class="text-truncate me-2" style="max-width: 170px;" title="${safeTitle}">
+            <span>${safeTitle}</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <select class="form-select form-select-sm py-0 px-1 status-select" style="font-size: 0.75rem; width: auto;" data-id="${taskId}">
+              <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+              <option value="InProgress" ${currentStatus === 'InProgress' ? 'selected' : ''}>InProgress</option>
+              <option value="Done" ${currentStatus === 'Done' ? 'selected' : ''}>Done</option>
+            </select>
+          </div>
+        `;
+        listGroup.appendChild(item);
+      });
+
+      taskContainer.appendChild(listGroup);
+
+      // Bắt sự kiện đổi trạng thái công việc (PATCH /api/tasks/:id/status)
+      taskContainer.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', async (e) => {
+          const tId = e.target.getAttribute('data-id');
+          const newStatus = e.target.value;
+          try {
+            await apiFetch(`/api/tasks/${tId}/status`, {
+              method: 'PATCH',
+              body: JSON.stringify({ status: newStatus })
+            });
+            if (typeof showToast === 'function') {
+              showToast('Đổi trạng thái công việc thành công', 'success');
+            }
+          } catch (error) {
+            if (typeof showToast === 'function') {
+              showToast('Lỗi cập nhật trạng thái: ' + error.message, 'danger');
+            }
+          }
+        });
+      });
+
+    } catch (err) {
+      taskContainer.innerHTML = '<p class="text-danger small my-2">Lỗi tải công việc</p>';
+    }
+  }
+
+  /**
+   * Gắn sự kiện Sửa/Xóa cho Admin
+   */
+  function attachAdminEvents() {
+    if (!isAdminUser) return;
+
+    // Sửa ca
+    document.querySelectorAll('.btn-edit-shift').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.getAttribute('data-id');
+        try {
+          const res = await apiFetch(`/api/shifts/${id}`);
+          const shift = res.data;
+          document.getElementById('shiftId').value = shift.id;
+          document.getElementById('shiftName').value = shift.name;
+          document.getElementById('shiftStartTime').value = shift.startTime;
+          document.getElementById('shiftEndTime').value = shift.endTime;
+          document.getElementById('shiftNote').value = shift.note || '';
+
+          document.getElementById('shiftModalTitle').textContent = 'Sửa ca làm việc';
+          if (shiftFormError) shiftFormError.classList.add('d-none');
+          if (shiftModal) shiftModal.show();
+        } catch (err) {
+          if (typeof showToast === 'function') showToast(err.message, 'danger');
+        }
+      });
+    });
+
+    // Xóa ca
+    document.querySelectorAll('.btn-delete-shift').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.getAttribute('data-id');
+        const name = e.target.getAttribute('data-name');
+        if (!confirm(`Bạn có chắc chắn muốn xóa ca "${name}" không?\nCác công việc thuộc ca này sẽ được chuyển thành Chưa phân ca.`)) {
+          return;
+        }
+
+        try {
+          await apiFetch(`/api/shifts/${id}`, { method: 'DELETE' });
+          if (typeof showToast === 'function') showToast('Xóa ca làm việc thành công', 'success');
+          await loadShifts();
+        } catch (err) {
+          if (typeof showToast === 'function') showToast(err.message, 'danger');
+        }
+      });
+    });
+  }
+});

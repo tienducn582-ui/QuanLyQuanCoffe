@@ -1,0 +1,59 @@
+### Biến môi trường dùng cho REST Client (VS Code)
+@baseUrl = http://localhost:3000/api
+@adminToken = your_admin_jwt_token_here
+@staffToken = your_staff_jwt_token_here
+
+### 1. Health check hệ thống
+GET {{baseUrl}}/health
+
+### 2. Lấy danh sách ca làm việc (Yêu cầu xác thực)
+GET {{baseUrl}}/shifts
+Authorization: Bearer {{adminToken}}
+
+### 3. Lấy chi tiết ca làm việc (ID = 1)
+GET {{baseUrl}}/shifts/1
+Authorization: Bearer {{adminToken}}
+
+### 4. Thêm ca làm việc mới (Admin - Thành công 201)
+POST {{baseUrl}}/shifts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Chiều",
+  "startTime": "12:00",
+  "endTime": "18:00",
+  "note": "Ca giờ cao điểm buổi chiều"
+}
+
+### 5. Thêm ca làm việc bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
+POST {{baseUrl}}/shifts
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Đêm",
+  "startTime": "22:00",
+  "endTime": "23:59",
+  "note": "Staff thử tạo ca"
+}
+
+### 6. Cập nhật ca làm việc (Admin - Thành công 200)
+PUT {{baseUrl}}/shifts/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Sáng Sớm",
+  "startTime": "06:00",
+  "endTime": "14:00",
+  "note": "Cập nhật mở quán từ 6h"
+}
+
+### 7. Xóa ca làm việc (Admin - Thành công 200)
+DELETE {{baseUrl}}/shifts/4
+Authorization: Bearer {{adminToken}}
+
+### 8. Thử xóa ca bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
+DELETE {{baseUrl}}/shifts/1
+Authorization: Bearer {{staffToken}}
