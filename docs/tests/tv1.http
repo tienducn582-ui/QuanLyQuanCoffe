@@ -10,11 +10,19 @@ GET {{baseUrl}}/health
 GET {{baseUrl}}/shifts
 Authorization: Bearer {{adminToken}}
 
-### 3. Lấy chi tiết ca làm việc (ID = 1)
+### 3. Lấy chi tiết ca làm việc (ID = 1 - Hợp lệ)
 GET {{baseUrl}}/shifts/1
 Authorization: Bearer {{adminToken}}
 
-### 4. Thêm ca làm việc mới (Admin - Thành công 201)
+### 4. Ca biên: Lấy chi tiết ca với ID không phải số nguyên dương (Kỳ vọng: 400 Bad Request)
+GET {{baseUrl}}/shifts/abc
+Authorization: Bearer {{adminToken}}
+
+### 5. Ca biên: Lấy chi tiết ca không tồn tại (Kỳ vọng: 404 Not Found)
+GET {{baseUrl}}/shifts/9999
+Authorization: Bearer {{adminToken}}
+
+### 6. Thêm ca làm việc mới (Admin - Hợp lệ 201)
 POST {{baseUrl}}/shifts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -26,7 +34,40 @@ Content-Type: application/json
   "note": "Ca giờ cao điểm buổi chiều"
 }
 
-### 5. Thêm ca làm việc bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
+### 7. Ca biên: Thêm ca với tên rỗng hoặc vượt quá 50 ký tự (Kỳ vọng: 400 Bad Request)
+POST {{baseUrl}}/shifts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "startTime": "12:00",
+  "endTime": "18:00"
+}
+
+### 8. Ca biên: Thêm ca với giờ sai định dạng (Kỳ vọng: 400 Bad Request)
+POST {{baseUrl}}/shifts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Lỗi Giờ",
+  "startTime": "25:70",
+  "endTime": "18:00"
+}
+
+### 9. Ca biên: Thêm ca với StartTime >= EndTime (Kỳ vọng: 400 Bad Request)
+POST {{baseUrl}}/shifts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Nghịch Lý",
+  "startTime": "18:00",
+  "endTime": "12:00"
+}
+
+### 10. Thêm ca làm việc bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
 POST {{baseUrl}}/shifts
 Authorization: Bearer {{staffToken}}
 Content-Type: application/json
@@ -38,7 +79,7 @@ Content-Type: application/json
   "note": "Staff thử tạo ca"
 }
 
-### 6. Cập nhật ca làm việc (Admin - Thành công 200)
+### 11. Cập nhật ca làm việc (Admin - Thành công 200)
 PUT {{baseUrl}}/shifts/1
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -50,10 +91,21 @@ Content-Type: application/json
   "note": "Cập nhật mở quán từ 6h"
 }
 
-### 7. Xóa ca làm việc (Admin - Thành công 200)
-DELETE {{baseUrl}}/shifts/4
+### 12. Ca biên: Cập nhật ca với ID không hợp lệ (Kỳ vọng: 400 Bad Request)
+PUT {{baseUrl}}/shifts/invalid-id
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ca Test",
+  "startTime": "08:00",
+  "endTime": "12:00"
+}
+
+### 13. Xóa ca làm việc đang có công việc (Admin - 200 OK, Task được SET NULL)
+DELETE {{baseUrl}}/shifts/1
 Authorization: Bearer {{adminToken}}
 
-### 8. Thử xóa ca bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
+### 14. Thử xóa ca bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
 DELETE {{baseUrl}}/shifts/1
 Authorization: Bearer {{staffToken}}

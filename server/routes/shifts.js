@@ -7,6 +7,12 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const {
+  isString,
+  isPositiveInt,
+  isTimeHHmm,
+  sendBadRequest
+} = require('../utils/validators');
 
 /**
  * Định dạng đối tượng Time từ mssql sang chuỗi 'HH:mm'
@@ -16,7 +22,6 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 function formatTimeHHmm(timeVal) {
   if (!timeVal) return '';
   if (typeof timeVal === 'string') {
-    // Nếu đã là chuỗi dạng 'HH:mm:ss' hoặc 'HH:mm'
     return timeVal.substring(0, 5);
   }
   if (timeVal instanceof Date) {
@@ -73,15 +78,13 @@ router.get('/', verifyToken, async (req, res, next) => {
  */
 router.get('/:id', verifyToken, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mã ca làm việc không hợp lệ'
-      });
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
     }
 
-    const result = await query('SELECT Id, Name, StartTime, EndTime, Note FROM Shifts WHERE Id = @id', { id });
+    const shiftId = Number(id);
+    const result = await query('SELECT Id, Name, StartTime, EndTime, Note FROM Shifts WHERE Id = @id', { id: shiftId });
     if (result.recordset.length === 0) {
       return res.status(404).json({
         success: false,
@@ -111,33 +114,32 @@ router.get('/:id', verifyToken, async (req, res, next) => {
  */
 router.post('/', verifyToken, requireRole('Admin'), async (req, res, next) => {
   try {
-    const { name, startTime, endTime, note } = req.body;
+    const { name, startTime, endTime, note } = req.body || {};
     const errors = [];
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0 || name.trim().length > 50) {
-      errors.push('Tên ca làm việc phải từ 1 đến 50 ký tự');
+    if (!isString(name, 1, 50)) {
+      errors.push('Tên ca làm việc phải từ 1 đến 50 ký tự.');
     }
 
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!startTime || !timeRegex.test(startTime)) {
-      errors.push('Giờ bắt đầu không đúng định dạng HH:mm (00:00 - 23:59)');
+    if (!isTimeHHmm(startTime)) {
+      errors.push('Giờ bắt đầu không đúng định dạng HH:mm (00:00 - 23:59).');
     }
-    if (!endTime || !timeRegex.test(endTime)) {
-      errors.push('Giờ kết thúc không đúng định dạng HH:mm (00:00 - 23:59)');
+    if (!isTimeHHmm(endTime)) {
+      errors.push('Giờ kết thúc không đúng định dạng HH:mm (00:00 - 23:59).');
     }
 
-    if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
-      if (startTime >= endTime) {
-        errors.push('Giờ bắt đầu phải nhỏ hơn giờ kết thúc');
+    if (isTimeHHmm(startTime) && isTimeHHmm(endTime)) {
+      if (startTime.trim() >= endTime.trim()) {
+        errors.push('Giờ bắt đầu phải nhỏ hơn giờ kết thúc.');
       }
     }
 
+    if (note !== undefined && note !== null && typeof note === 'string' && note.trim().length > 255) {
+      errors.push('Ghi chú không được vượt quá 255 ký tự.');
+    }
+
     if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dữ liệu không hợp lệ',
-        errors
-      });
+      return sendBadRequest(res, errors);
     }
 
     const insertSql = `
@@ -150,7 +152,7 @@ router.post('/', verifyToken, requireRole('Admin'), async (req, res, next) => {
       name: name.trim(),
       startTime: startTime.trim(),
       endTime: endTime.trim(),
-      note: note ? note.trim() : null
+      note: note && typeof note === 'string' && note.trim() ? note.trim() : null
     });
 
     const inserted = result.recordset[0];
@@ -176,45 +178,42 @@ router.post('/', verifyToken, requireRole('Admin'), async (req, res, next) => {
  */
 router.put('/:id', verifyToken, requireRole('Admin'), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mã ca làm việc không hợp lệ'
-      });
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
     }
 
-    const { name, startTime, endTime, note } = req.body;
+    const shiftId = Number(id);
+    const { name, startTime, endTime, note } = req.body || {};
     const errors = [];
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0 || name.trim().length > 50) {
-      errors.push('Tên ca làm việc phải từ 1 đến 50 ký tự');
+    if (!isString(name, 1, 50)) {
+      errors.push('Tên ca làm việc phải từ 1 đến 50 ký tự.');
     }
 
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!startTime || !timeRegex.test(startTime)) {
-      errors.push('Giờ bắt đầu không đúng định dạng HH:mm (00:00 - 23:59)');
+    if (!isTimeHHmm(startTime)) {
+      errors.push('Giờ bắt đầu không đúng định dạng HH:mm (00:00 - 23:59).');
     }
-    if (!endTime || !timeRegex.test(endTime)) {
-      errors.push('Giờ kết thúc không đúng định dạng HH:mm (00:00 - 23:59)');
+    if (!isTimeHHmm(endTime)) {
+      errors.push('Giờ kết thúc không đúng định dạng HH:mm (00:00 - 23:59).');
     }
 
-    if (startTime && endTime && timeRegex.test(startTime) && timeRegex.test(endTime)) {
-      if (startTime >= endTime) {
-        errors.push('Giờ bắt đầu phải nhỏ hơn giờ kết thúc');
+    if (isTimeHHmm(startTime) && isTimeHHmm(endTime)) {
+      if (startTime.trim() >= endTime.trim()) {
+        errors.push('Giờ bắt đầu phải nhỏ hơn giờ kết thúc.');
       }
     }
 
+    if (note !== undefined && note !== null && typeof note === 'string' && note.trim().length > 255) {
+      errors.push('Ghi chú không được vượt quá 255 ký tự.');
+    }
+
     if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dữ liệu không hợp lệ',
-        errors
-      });
+      return sendBadRequest(res, errors);
     }
 
     // Kiểm tra ca tồn tại
-    const checkExist = await query('SELECT Id FROM Shifts WHERE Id = @id', { id });
+    const checkExist = await query('SELECT Id FROM Shifts WHERE Id = @id', { id: shiftId });
     if (checkExist.recordset.length === 0) {
       return res.status(404).json({
         success: false,
@@ -229,21 +228,21 @@ router.put('/:id', verifyToken, requireRole('Admin'), async (req, res, next) => 
     `;
 
     await query(updateSql, {
-      id,
+      id: shiftId,
       name: name.trim(),
       startTime: startTime.trim(),
       endTime: endTime.trim(),
-      note: note ? note.trim() : null
+      note: note && typeof note === 'string' && note.trim() ? note.trim() : null
     });
 
     res.json({
       success: true,
       data: {
-        id,
+        id: shiftId,
         name: name.trim(),
         startTime: startTime.trim(),
         endTime: endTime.trim(),
-        note: note ? note.trim() : ''
+        note: note && typeof note === 'string' && note.trim() ? note.trim() : ''
       },
       message: 'Cập nhật ca làm việc thành công'
     });
@@ -258,15 +257,13 @@ router.put('/:id', verifyToken, requireRole('Admin'), async (req, res, next) => 
  */
 router.delete('/:id', verifyToken, requireRole('Admin'), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mã ca làm việc không hợp lệ'
-      });
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
     }
 
-    const checkExist = await query('SELECT Id FROM Shifts WHERE Id = @id', { id });
+    const shiftId = Number(id);
+    const checkExist = await query('SELECT Id FROM Shifts WHERE Id = @id', { id: shiftId });
     if (checkExist.recordset.length === 0) {
       return res.status(404).json({
         success: false,
@@ -275,7 +272,7 @@ router.delete('/:id', verifyToken, requireRole('Admin'), async (req, res, next) 
     }
 
     // Xóa ca làm việc (Do FK Tasks có ON DELETE SET NULL nên Tasks tự động được cập nhật ShiftId = NULL)
-    await query('DELETE FROM Shifts WHERE Id = @id', { id });
+    await query('DELETE FROM Shifts WHERE Id = @id', { id: shiftId });
 
     res.json({
       success: true,
