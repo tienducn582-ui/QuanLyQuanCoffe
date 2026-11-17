@@ -1,1326 +1,697 @@
 /**
  * ====================================================================
- * DỰ ÁN: CAFE TASK MANAGER (HỆ THỐNG QUẢN LÝ CÔNG VIỆC QUÁN CAFE)
- * NHIỆM VỤ 1: KHUNG HỆ THỐNG DÙNG CHUNG, NAVBAR, FOOTER, DARK MODE, CSS RESET
- * File: assets/css/style.css
- * Phụ trách: Người 1 (Leader / Frontend & System Core)
+ * DỰ ÁN: CAFE TASK MANAGER (PROG2008)
+ * HỆ THỐNG THIẾT KẾ DÙNG CHUNG (DESIGN SYSTEM CORE)
+ * File: public/assets/css/style.css
+ * Phụ trách: TV5 (Giao diện chung & Client Core)
  * ====================================================================
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+
 /* ------------------------------------------------------------------
-   1. IMPORT FONTS & CSS VARIABLES (LIGHT & DARK THEME)
+   1. BIẾN MÀU, TYPOGRAPHY, KHOẢNG CÁCH & GHI ĐÈ GỐC BOOTSTRAP
    ------------------------------------------------------------------ */
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
-
 :root {
-  /* Màu mặc định (Giao diện Sáng) theo yêu cầu */
-  --bg-color: #FAF7F2;          /* Nền trang: Màu kem sữa ngà ấm áp */
-  --text-color: #2C1810;        /* Văn bản chính: Nâu đen đậm */
-  --card-bg: #FFFFFF;           /* Bề mặt thẻ, thanh điều hướng: Trắng */
-  --border-color: #E6DCce;       /* Đường viền ngăn cách */
+  /* Bảng màu chuẩn dự án (Chế độ Sáng - Light Mode) */
+  --bg-color: #FBF5EC;             /* Nền trang: Kem ấm áp */
+  --card-bg: #FFFFFF;              /* Nền thẻ / Bề mặt: Trắng */
+  --border-color: #E9DDCC;         /* Đường viền ngăn cách */
+  --border-subtle: #F0E8DC;
 
-  --bg-primary: var(--bg-color);
-  --bg-surface: var(--card-bg);
-  --bg-surface-secondary: #F4EFEB;/* Bề mặt phụ, ô input, dropdown */
-  --bg-card-hover: #FBF9F6;
-  --border-focus: #C78243;
+  --text-color: #3B2418;           /* Chữ chính: Nâu Espresso đậm */
+  --text-primary: #3B2418;
+  --text-secondary: #7A6657;         /* Chữ phụ / mô tả */
+  --text-muted: #9E8E84;             /* Chữ mờ / placeholder */
 
-  --text-primary: #2C1810;        /* Văn bản chính: Nâu đen đậm */
-  --text-secondary: #6E5D53;      /* Văn bản phụ / mô tả */
-  --text-muted: #9E8E84;          /* Văn bản mờ / placeholder */
-  --text-inverse: #FFFFFF;        /* Chữ trên nền tối */
-
-  /* Màu thương hiệu & Điểm nhấn (Brand Colors) */
-  --primary: #4A2C1A;             /* Nâu cà phê đậm - Espresso */
-  --primary-hover: #361F12;
-  --primary-soft: rgba(74, 44, 26, 0.08);
-
-  --accent: #C78243;              /* Nâu vàng caramel - Crema */
-  --accent-hover: #B06F33;
+  /* Màu thương hiệu & Điểm nhấn */
+  --primary: #4A2C1A;              /* Nút chính & Điểm nhấn: Nâu đậm */
+  --primary-hover: #3B2418;
+  --accent: #C78243;               /* Nâu đồng: Icon, viền nhấn, chữ lớn */
+  --accent-dark: #9A5B22;          /* Nâu đồng đậm: Chữ nhỏ & Liên kết (tương phản >= 4.5) */
   --accent-soft: rgba(199, 130, 67, 0.12);
 
-  /* Trạng thái công việc (Task Statuses) */
-  --status-pending: #E67E22;      /* Chờ thực hiện - Cam */
-  --status-pending-bg: rgba(230, 126, 34, 0.12);
-  --status-in-progress: #2980B9;  /* Đang làm - Xanh lam */
-  --status-in-progress-bg: rgba(41, 128, 185, 0.12);
-  --status-completed: #27AE60;    /* Đã hoàn thành - Xanh lá */
-  --status-completed-bg: rgba(39, 174, 96, 0.12);
+  /* Trạng thái màu dịu (Không dùng xanh dương hay tím) */
+  --status-success: #5E8B6A;       /* Xanh lá xám */
+  --status-warning: #C78243;       /* Nâu đồng */
+  --status-danger: #B5442E;        /* Đỏ gạch */
 
-  /* Mức độ ưu tiên (Priority Levels) */
-  --priority-low: #7F8C8D;
-  --priority-medium: #F39C12;
-  --priority-high: #C0392B;
-
-  --danger: #C0392B;
-  --danger-hover: #A93226;
-  --danger-soft: rgba(192, 57, 43, 0.12);
-
-  --success: #27AE60;
-  --warning: #F39C12;
-  --info: #2980B9;
-
-  /* Typography Scale */
-  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography (Đúng 2 họ font & tối đa 7 cỡ chữ) */
   --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --text-xs: 0.75rem;    /* 12px */
   --text-sm: 0.875rem;   /* 14px */
   --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
+  --text-md: 1.125rem;   /* 18px */
+  --text-lg: 1.5rem;     /* 24px */
+  --text-xl: 2rem;       /* 32px */
+  --text-2xl: 2.5rem;    /* 40px */
 
-  /* Khoảng cách (Spacing) */
-  --space-2xs: 0.25rem;  /* 4px */
-  --space-xs: 0.5rem;    /* 8px */
-  --space-sm: 0.75rem;   /* 12px */
-  --space-md: 1rem;      /* 16px */
-  --space-lg: 1.5rem;    /* 24px */
-  --space-xl: 2rem;      /* 32px */
-  --space-2xl: 3rem;     /* 48px */
+  /* Thang khoảng cách (Bội số 8px) */
+  --space-8: 8px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
 
-  /* Bo góc (Radius) */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
+  --navbar-height: 64px;
+  --container-max: 1140px;
 
-  /* Bóng đổ (Shadows) */
-  --shadow-sm: 0 1px 3px rgba(44, 24, 16, 0.06);
-  --shadow-md: 0 4px 12px rgba(44, 24, 16, 0.08);
-  --shadow-lg: 0 10px 25px rgba(44, 24, 16, 0.12);
-  --shadow-nav: 0 2px 14px rgba(44, 24, 16, 0.06);
+  /* Bo góc (Đúng 3 giá trị duy nhất) */
+  --radius-btn: 10px;    /* Nút bấm, ô input */
+  --radius-card: 16px;   /* Thẻ card, modal */
+  --radius-full: 9999px; /* Badge, avatar tròn */
 
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
+  /* Đổ bóng (Đúng 2 kiểu duy nhất) */
+  --shadow-card: 0 4px 20px rgba(59, 36, 24, 0.06);
+  --shadow-btn: 0 2px 8px rgba(74, 44, 26, 0.15);
 
-  --container-max: 1200px;
-  --navbar-height: 70px;
+  /* Chuyển động */
+  --transition: 150ms ease-in-out;
+
+  /* GHI ĐÈ BIẾN GỐC BOOTSTRAP ĐỂ TRIỆT TIÊU MÀU XANH #0d6efd */
+  --bs-primary: #4A2C1A;
+  --bs-primary-rgb: 74, 44, 26;
+  --bs-link-color: #9A5B22;
+  --bs-link-hover-color: #3B2418;
+  --bs-focus-ring-color: rgba(199, 130, 67, 0.25);
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--text-color);
+  --bs-border-color: var(--border-color);
 }
 
-/* Màu khi bật chế độ Tối (Áp dụng cho body.dark-theme, html.dark-theme, body.dark-mode, html.dark-mode, [data-theme="dark"]) */
-body.dark-theme,
-html.dark-theme,
-body.dark-mode,
-html.dark-mode,
-[data-theme="dark"] {
-  --bg-color: #15110E;          /* Nền trang: Nâu đen sôcôla sâu */
-  --text-color: #F5EFEB;        /* Văn bản chính: Trắng kem sáng */
-  --card-bg: #221B17;           /* Bề mặt thẻ / Navbar */
-  --border-color: #382D26;
+/* Chế độ Tối (Dark Theme) */
+[data-theme="dark"],
+.dark-theme {
+  --bg-color: #1E1612;             /* Nền tối xám nâu */
+  --card-bg: #2A201A;              /* Nền thẻ đậm hơn */
+  --border-color: #3A2C24;
+  --border-subtle: #32251D;
 
-  --bg-primary: var(--bg-color);
-  --bg-surface: var(--card-bg);
-  --bg-surface-secondary: #2E2520;/* Ô input, hover */
-  --bg-card-hover: #29211C;
+  --text-color: #F3E9DC;           /* Chữ trắng ngà */
+  --text-primary: #F3E9DC;
+  --text-secondary: #BFAEA0;
+  --text-muted: #8A786B;
 
-  --border-color: #382D26;
-  --border-focus: #DDA26A;
+  --primary: #4A2C1A;
+  --primary-hover: #5A3620;
+  --accent: #D9954F;               /* Nâu đồng sáng cho dark mode */
+  --accent-dark: #D9954F;
+  --accent-soft: rgba(217, 149, 79, 0.15);
 
-  --text-primary: #F5EFEB;        /* Văn bản chính: Trắng kem sáng */
-  --text-secondary: #B8ABA2;      /* Văn bản phụ */
-  --text-muted: #83746B;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
 
-  --primary: #DDA26A;             /* Điểm nhấn vàng caramel sáng trong nền tối */
-  --primary-hover: #EDB988;
-  --primary-soft: rgba(221, 162, 106, 0.15);
-
-  --accent: #E5A870;
-  --accent-hover: #F2BD8D;
-  --accent-soft: rgba(229, 168, 112, 0.18);
-
-  --status-pending: #F39C12;
-  --status-pending-bg: rgba(243, 156, 18, 0.18);
-  --status-in-progress: #3498DB;
-  --status-in-progress-bg: rgba(52, 152, 219, 0.18);
-  --status-completed: #2ECC71;
-  --status-completed-bg: rgba(46, 204, 113, 0.18);
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.55);
-  --shadow-nav: 0 2px 16px rgba(0, 0, 0, 0.5);
+  --bs-body-bg: #1E1612;
+  --bs-body-color: #F3E9DC;
+  --bs-border-color: #3A2C24;
+  --bs-link-color: #D9954F;
+  --bs-link-hover-color: #F3E9DC;
 }
 
 /* ------------------------------------------------------------------
-   2. CSS RESET & NỀN TẢNG (BASE)
+   2. RESET & CẤU TRÚC CƠ BẢN
    ------------------------------------------------------------------ */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Đảm bảo nội dung chính luôn cách navbar >= 24px theo tiêu chuẩn B11 */
+main,
+.site-main {
+  margin-top: var(--space-32);
+}
+
+.auth-page-wrapper main.auth-card {
+  margin-top: 0; /* auth-page-wrapper flexbox đã đảm bảo khoảng cách >= 32px */
+}
+
+/* Tiêu đề dùng font serif ấm cúng và cân bằng dòng chữ */
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--text-color);
+  text-wrap: balance;
+  line-height: 1.25;
+}
+
+p, span, label, input, button, select, textarea {
+  font-family: var(--font-sans);
+}
+
+a {
+  color: var(--accent-dark);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Focus rõ nét tông nâu đồng */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Triệt tiêu hoàn toàn class bg-primary / text-primary của Bootstrap */
+.bg-primary {
+  background-color: var(--bg-color) !important;
+}
+
+.text-primary {
+  color: var(--text-color) !important;
+}
+
+/* ------------------------------------------------------------------
+   3. THANH ĐIỀU HƯỚNG NAVBAR DUY NHẤT (64px)
+   ------------------------------------------------------------------ */
+.site-navbar,
+nav#navbar {
+  height: var(--navbar-height);
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-16);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.navbar-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.navbar-logo-box {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-btn);
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.navbar-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.navbar-brand-name {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: var(--text-md);
+  color: var(--text-color);
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  list-style: none;
   margin: 0;
   padding: 0;
 }
 
-html {
-  font-size: 16px;
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: 1.6;
-  overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Các thành phần điều hướng dùng biến tương ứng */
-nav, .navbar, .site-navbar, .header {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  border-color: var(--border-color);
-}
-
-/* Các thẻ Card, Box, Panel, Modal đồng bộ màu theo biến */
-.card, .panel, .box, .modal-card {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  border-color: var(--border-color);
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-img, svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-button, input, select, textarea {
-  font: inherit;
-  color: inherit;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-}
-
-ul, ol {
-  list-style: none;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  color: var(--text-primary);
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-/* ------------------------------------------------------------------
-   3. BỐ CỤC CHUNG (LAYOUT)
-   ------------------------------------------------------------------ */
-.container {
-  width: 100%;
-  max-width: var(--container-max);
-  margin-inline: auto;
-  padding-inline: var(--space-lg);
-}
-
-.main-content {
-  flex: 1 0 auto;
-  padding-block: var(--space-xl);
-}
-
-/* Tiêu đề phần (Section Headers) */
-.page-header {
-  margin-bottom: var(--space-xl);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-}
-
-.page-title-group h1 {
-  font-family: var(--font-serif);
-  font-size: var(--text-3xl);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.page-title-desc {
-  color: var(--text-secondary);
+.navbar-menu a.nav-link {
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-btn);
   font-size: var(--text-sm);
-  margin-top: 4px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition);
+}
+
+.navbar-menu a.nav-link:hover {
+  color: var(--primary);
+  background-color: var(--border-subtle);
+}
+
+.navbar-menu a.nav-link.active {
+  color: var(--primary);
+  background-color: var(--border-color);
+  font-weight: 600;
+}
+
+.navbar-actions-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.navbar-auth-desktop {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.navbar-mobile-auth-links {
+  display: none;
+}
+
+.btn-theme-toggle {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-btn);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+
+.btn-theme-toggle:hover {
+  background-color: var(--border-subtle);
+  color: var(--primary);
+}
+
+/* Mobile Hamburger Toggle (< 992px) */
+.navbar-mobile-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  padding: var(--space-8);
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+@media (max-width: 991.98px) {
+  .navbar-auth-desktop {
+    display: none !important;
+  }
+
+  .navbar-mobile-auth-links {
+    display: block;
+  }
+
+  .navbar-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navbar-menu-wrapper {
+    display: none;
+    position: absolute;
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--space-16);
+    box-shadow: var(--shadow-card);
+  }
+
+  .navbar-menu-wrapper.is-open {
+    display: block;
+  }
+
+  .navbar-menu {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
+  }
+
+  .navbar-menu a.nav-link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-16);
+  }
+}
+
+@media (max-width: 400px) {
+  .navbar-container {
+    padding: 0 var(--space-8);
+  }
+
+  .navbar-brand-name {
+    font-size: var(--text-base);
+  }
+
+  .navbar-actions-group {
+    gap: var(--space-8);
+  }
 }
 
 /* ------------------------------------------------------------------
-   4. THÀNH PHẦN GIAO DIỆN CHUNG (UI COMPONENTS)
+   4. NÚT BẤM (BUTTONS) - ĐÚNG NGUYÊN TẮC 1 ĐẶC / 1 VIỀN
    ------------------------------------------------------------------ */
-
-/* 4.1. Nút bấm (Buttons) */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
-  padding: 0.55rem 1.15rem;
+  gap: var(--space-8);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 600;
-  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  border-radius: var(--radius-btn);
   border: 1px solid transparent;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-  user-select: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  min-height: 42px;
 }
 
-.btn:focus-visible {
-  outline: 3px solid var(--accent-soft);
-  outline-offset: 2px;
+.btn:hover {
+  text-decoration: none;
 }
 
+/* Nút chính đặc (Màu nâu đậm #4A2C1A) */
 .btn-primary {
-  background-color: var(--primary);
-  color: var(--text-inverse);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #FFFFFF !important;
+  box-shadow: var(--shadow-btn);
 }
 
-.btn-accent {
-  background-color: var(--accent);
-  color: #FFFFFF;
-}
-.btn-accent:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-1px);
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  color: #FFFFFF !important;
 }
 
-.btn-outline {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-.btn-outline:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background-color: var(--primary-soft);
+/* Nút phụ viền */
+.btn-outline,
+.btn-outline-primary {
+  background-color: transparent !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
 }
 
-.btn-danger {
-  background-color: var(--danger-soft);
-  color: var(--danger);
-  border-color: rgba(192, 57, 43, 0.25);
-}
-.btn-danger:hover {
-  background-color: var(--danger);
-  color: #FFFFFF;
+.btn-outline:hover,
+.btn-outline-primary:hover,
+.btn-outline:focus,
+.btn-outline-primary:focus {
+  background-color: var(--border-subtle) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
 }
 
+/* Nút nhỏ */
 .btn-sm {
-  padding: 0.35rem 0.75rem;
+  padding: 6px 14px;
   font-size: var(--text-xs);
-  border-radius: var(--radius-sm);
+  min-height: 34px;
 }
 
-.btn-icon {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border-radius: var(--radius-md);
+/* ------------------------------------------------------------------
+   5. BỐ CỤC TRANG AUTH (LOGIN, REGISTER, PROFILE)
+   ------------------------------------------------------------------ */
+.auth-page-wrapper {
+  min-height: calc(100vh - var(--navbar-height));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-32) var(--space-16) var(--space-16);
+}
+
+.auth-card {
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  background-color: var(--card-bg);
   border: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  display: inline-flex;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-32);
+}
+
+.auth-card-wide {
+  max-width: 640px;
+}
+
+.auth-card-header {
+  text-align: center;
+  margin-bottom: var(--space-24);
+}
+
+.auth-card-logo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-16);
+  border-radius: var(--radius-btn);
+  display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
-}
-.btn-icon:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background-color: var(--accent-soft);
 }
 
-/* 4.2. Form Controls (Input, Select, Textarea) */
+.auth-card-logo img,
+.auth-card-logo svg {
+  width: 48px;
+  height: 48px;
+}
+
+.auth-card-header h2 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-8);
+}
+
+.auth-card-header p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Ô nhập liệu */
 .form-group {
-  margin-bottom: var(--space-md);
-  text-align: left;
+  margin-bottom: var(--space-16);
 }
 
 .form-label {
   display: block;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-2xs);
+  color: var(--text-color);
+  margin-bottom: var(--space-8);
 }
 
-.form-input,
-.form-select,
-.form-textarea {
+.form-control,
+.form-select {
   width: 100%;
-  padding: 0.6rem 0.9rem;
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  background-color: var(--bg-surface-secondary);
+  padding: 10px 14px;
+  font-size: var(--text-base);
+  font-family: var(--font-sans);
+  color: var(--text-color);
+  background-color: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  border-radius: var(--radius-btn);
+  transition: border-color var(--transition);
 }
 
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(199, 130, 67, 0.15);
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.form-textarea {
-  resize: vertical;
-  min-height: 90px;
-}
-
-/* 4.3. Badges Trạng thái & Ưu tiên (Status & Priority Badges) */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0.2rem 0.6rem;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.badge-pending {
-  background-color: var(--status-pending-bg);
-  color: var(--status-pending);
-  border: 1px solid rgba(230, 126, 34, 0.3);
-}
-
-.badge-in-progress {
-  background-color: var(--status-in-progress-bg);
-  color: var(--status-in-progress);
-  border: 1px solid rgba(41, 128, 185, 0.3);
-}
-
-.badge-completed {
-  background-color: var(--status-completed-bg);
-  color: var(--status-completed);
-  border: 1px solid rgba(39, 174, 96, 0.3);
-}
-
-/* Ưu tiên */
-.badge-priority-low {
-  background-color: rgba(127, 140, 141, 0.15);
-  color: var(--text-secondary);
-}
-
-.badge-priority-medium {
-  background-color: rgba(243, 156, 18, 0.15);
-  color: #D35400;
-}
-
-.badge-priority-high {
-  background-color: var(--danger-soft);
-  color: var(--danger);
-}
-
-/* 4.4. Thẻ nội dung (Cards) */
-.card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-/* 4.5. Thẻ Thống kê (Stat Cards) */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.stat-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md) var(--space-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast);
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-count {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 2px;
-}
-
-/* ------------------------------------------------------------------
-   5. NAVBAR RESPONSIVE DÙNG CHUNG (SITE NAVBAR)
-   ------------------------------------------------------------------ */
-.site-navbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  height: var(--navbar-height);
-  min-height: var(--navbar-height);
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: var(--shadow-nav);
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
-}
-
-.navbar-container {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  line-height: 1.2;
-}
-
-/* Logo & Tên dự án */
-.navbar-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  line-height: 1.2;
-  text-decoration: none;
-}
-
-.brand-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--accent), var(--primary));
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.brand-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-
-.brand-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-/* Menu Điều Hướng Desktop (Thẳng hàng, không tràn) */
-.navbar-nav {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.mobile-nav-header {
-  display: none; /* Ẩn trên desktop */
-}
-
-.nav-list {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  line-height: 1.2;
-}
-
-.nav-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 0.95rem;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  position: relative;
-  white-space: nowrap;
-  text-decoration: none;
-}
-
-.nav-link:hover {
-  color: var(--text-primary);
-  background-color: var(--primary-soft);
-}
-
-.nav-link.active {
-  color: var(--accent);
-  background-color: var(--accent-soft);
-  font-weight: 700;
-}
-
-/* Nền pill bo tròn (accent-soft) đã đủ làm nổi bật trang hiện tại,
-   loại bỏ thanh gạch chân ::after để tránh bị lệch và giúp giao diện thanh thoát */
-.nav-link.active::after {
-  display: none;
-}
-
-/* Navbar Actions (Theme Toggle & Nút công cụ) */
-.navbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  position: relative; /* Neo tuyệt đối cho popover Cốc Cốc */
-}
-
-/* Nút Chuyển Đổi Dark / Light Mode */
-.theme-toggle-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-surface-secondary);
-  color: var(--text-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-  user-select: none;
-}
-
-.theme-toggle-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background-color: var(--accent-soft);
-  transform: rotate(15deg) scale(1.05);
-}
-
-.theme-toggle-btn:active {
-  transform: scale(0.95);
-}
-
-
-
-/* Hamburger Toggle cho Mobile */
-.navbar-toggle {
-  display: none;
-  width: 38px;
-  height: 38px;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-}
-
-.hamburger-box {
-  width: 20px;
-  height: 14px;
-  display: inline-block;
-  position: relative;
-}
-
-.hamburger-inner,
-.hamburger-inner::before,
-.hamburger-inner::after {
-  width: 20px;
-  height: 2px;
-  background-color: var(--text-primary);
-  border-radius: 2px;
-  position: absolute;
-  transition: transform 0.2s ease;
-}
-
-.hamburger-inner {
-  top: 50%;
-  transform: translateY(-50%);
-}
-.hamburger-inner::before {
-  content: '';
-  top: -5px;
-}
-.hamburger-inner::after {
-  content: '';
-  bottom: -5px;
-}
-
-.navbar-toggle[aria-expanded="true"] .hamburger-inner {
-  transform: rotate(45deg);
-}
-.navbar-toggle[aria-expanded="true"] .hamburger-inner::before {
-  top: 0;
-  opacity: 0;
-}
-.navbar-toggle[aria-expanded="true"] .hamburger-inner::after {
-  bottom: 0;
-  transform: rotate(-90deg);
-}
-
-/* Mobile Overlay */
-.navbar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
-  z-index: 1050;
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-}
-.navbar-overlay.is-active {
-  opacity: 1;
-}
-
-/* ------------------------------------------------------------------
-   6. FOOTER DÙNG CHUNG (SITE FOOTER)
-   ------------------------------------------------------------------ */
-.site-footer {
-  background-color: var(--bg-surface);
-  color: var(--text-secondary);
-  border-top: 1px solid var(--border-color);
-  padding-block: var(--space-xl) var(--space-md);
-  margin-top: auto;
-  font-size: var(--text-base);
-  line-height: 1.7;
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
-}
-
-.footer-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.footer-nav {
-  display: flex;
-  gap: var(--space-md);
-  font-size: var(--text-base);
-}
-
-.footer-nav a {
-  color: var(--text-secondary);
-  font-weight: 500;
-  transition: color var(--transition-fast);
-}
-
-.footer-nav a:hover {
-  color: var(--accent);
-}
-
-.footer-bottom {
-  padding-top: var(--space-md);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-/* ------------------------------------------------------------------
-   7. MODAL DÙNG CHUNG (MODAL DIALOGS)
-   ------------------------------------------------------------------ */
-.modal-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 2000;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-md);
-}
-
-.modal-backdrop.is-open {
-  display: flex;
-}
-
-.modal {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  max-width: 520px;
-  width: 100%;
-  box-shadow: var(--shadow-lg);
-  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-@keyframes modalPop {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-lg) var(--space-lg) var(--space-sm);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.modal-title {
-  font-size: var(--text-lg);
-  color: var(--text-primary);
-}
-
-.modal-close {
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--text-muted);
-  padding: 4px;
-}
-.modal-close:hover {
-  color: var(--danger);
-}
-
-.modal-body {
-  padding: var(--space-lg);
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-lg) var(--space-lg);
-}
-
-/* ------------------------------------------------------------------
-   8. TOAST NOTIFICATION (THÔNG BÁO)
-   ------------------------------------------------------------------ */
-.toast-container {
-  position: fixed;
-  bottom: var(--space-lg);
-  right: var(--space-lg);
-  z-index: 3000;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  pointer-events: none;
-}
-
-.toast {
-  pointer-events: auto;
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  animation: toastSlideIn 0.25s ease;
-  max-width: 380px;
-}
-
-.toast.toast-success { border-left-color: var(--success); }
-.toast.toast-error { border-left-color: var(--danger); }
-.toast.toast-warning { border-left-color: var(--warning); }
-
-@keyframes toastSlideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* ------------------------------------------------------------------
-   9. RESPONSIVE DESIGN (MEDIA QUERIES)
-   ------------------------------------------------------------------ */
-@media (max-width: 991px) {
-  .navbar-toggle {
-    display: inline-flex;
-  }
-
-  /* Drawer trượt cạnh phải trên tablet/mobile */
-  .navbar-nav {
-    position: fixed;
-    top: 0;
-    right: -300px;
-    width: 270px;
-    height: 100vh;
-    background-color: var(--bg-surface);
-    box-shadow: var(--shadow-lg);
-    z-index: 1100;
-    padding: var(--space-lg);
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    transition: right var(--transition-normal);
-    overflow-y: auto;
-  }
-
-  .navbar-nav.is-open {
-    right: 0;
-  }
-
-  .mobile-nav-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: var(--space-sm);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: var(--space-md);
-  }
-
-  .mobile-nav-close {
-    font-size: 1.6rem;
-    color: var(--text-muted);
-  }
-
-  .nav-list {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-xs);
-  }
-
-  .nav-link {
-    width: 100%;
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-base);
-  }
-
-  .nav-link.active {
-    background-color: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 700;
-  }
-
-  .navbar-overlay {
-    display: block;
-    pointer-events: none;
-  }
-
-  .navbar-overlay.is-active {
-    pointer-events: auto;
-  }
-}
-
-@media (max-width: 639px) {
-  .container {
-    padding-inline: var(--space-md);
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .footer-content, .footer-bottom {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .brand-badge {
-    display: none;
-  }
-}
-
-/* ------------------------------------------------------------------
-   10. PHẦN BỔ SUNG NGƯỜI 2: FORM VALIDATION, BẢNG & THẺ TASK CHI TIẾT
-   ------------------------------------------------------------------ */
-
-/* 10.1. Validation State Controls */
-.form-input.is-invalid,
-.form-select.is-invalid,
-.form-textarea.is-invalid {
-  border-color: var(--danger) !important;
-  background-color: var(--danger-soft) !important;
-}
-
-.form-input.is-invalid:focus,
-.form-select.is-invalid:focus,
-.form-textarea.is-invalid:focus {
-  border-color: var(--danger) !important;
-  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.2) !important;
-}
-
-.form-input.is-valid,
-.form-select.is-valid,
-.form-textarea.is-valid {
-  border-color: var(--success);
+.form-control.is-invalid {
+  border-color: var(--status-danger) !important;
 }
 
 .invalid-feedback {
-  display: none;
-  color: var(--danger);
   font-size: var(--text-xs);
-  font-weight: 600;
+  color: var(--status-danger);
   margin-top: 4px;
-  animation: feedbackFade 0.2s ease-in-out;
+  display: none;
 }
 
-.invalid-feedback.is-visible {
+.is-invalid ~ .invalid-feedback,
+.form-control.is-invalid + .invalid-feedback {
   display: block;
 }
 
-@keyframes feedbackFade {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Phân cách hồ sơ */
+.section-divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: var(--space-24) 0;
 }
 
-.form-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2xs);
-}
-
-.char-count {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-weight: 500;
-  transition: color var(--transition-fast);
-}
-
-.char-count.is-limit {
-  color: var(--danger);
+.section-title {
+  font-size: var(--text-base);
   font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: var(--space-16);
 }
 
-/* 10.2. Chuyển đổi giao diện (Card View / Table View) */
-.view-mode-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.view-mode-toggle {
-  display: inline-flex;
-  background-color: var(--bg-surface-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 3px;
-}
-
-.view-mode-btn {
-  padding: 0.35rem 0.8rem;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all var(--transition-fast);
-}
-
-.view-mode-btn:hover {
-  color: var(--text-primary);
-}
-
-.view-mode-btn.active {
-  background-color: var(--bg-surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
-}
-
-/* 10.3. Thẻ Công Việc (Task Card) */
-.task-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md) var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
-  position: relative;
-  border-left-width: 6px;
-}
-
-.task-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-.task-card.is-done {
-  border-left-color: var(--status-completed) !important;
-  background-color: rgba(39, 174, 96, 0.02);
-}
-
-.task-card.is-done .task-title {
-  text-decoration: line-through;
-  color: var(--text-muted);
-}
-
-.task-card.is-done .task-desc {
-  opacity: 0.8;
-}
-
-.task-card.priority-high {
-  border-left-color: var(--danger);
-}
-.task-card.priority-medium {
-  border-left-color: var(--warning);
-}
-.task-card.priority-low {
-  border-left-color: var(--priority-low);
-}
-
-.task-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.task-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.task-title {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-.task-desc {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-top: 4px;
-  word-break: break-word;
-}
-
-.task-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  flex-shrink: 0;
-}
-
-.task-checkbox-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.35rem 0.75rem;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-surface-secondary);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.task-checkbox-btn:hover {
-  border-color: var(--accent);
-  background-color: var(--accent-soft);
-}
-
-.task-checkbox-btn.is-checked {
-  background-color: var(--status-completed-bg);
-  border-color: var(--status-completed);
-  color: var(--status-completed);
-}
-
-/* 10.4. Bảng Công Việc (Table View) */
+/* ------------------------------------------------------------------
+   6. BẢNG DỮ LIỆU RESPONSIVE DẠNG THẺ (.table-cards)
+   ------------------------------------------------------------------ */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
-.task-table {
+.table-custom {
   width: 100%;
   border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table-custom th {
   text-align: left;
-  font-size: var(--text-sm);
-}
-
-.task-table th {
-  background-color: var(--bg-surface-secondary);
+  padding: var(--space-16);
+  background-color: var(--border-subtle);
   color: var(--text-secondary);
-  font-weight: 700;
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 2px solid var(--border-color);
-  white-space: nowrap;
-}
-
-.task-table td {
-  padding: var(--space-sm) var(--space-md);
+  font-weight: 600;
   border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-  vertical-align: middle;
 }
 
-.task-table tbody tr:hover {
-  background-color: var(--bg-card-hover);
+.table-custom td {
+  padding: var(--space-16);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-color);
 }
 
-.task-table tbody tr.is-done td {
-  background-color: rgba(39, 174, 96, 0.02);
+@media (max-width: 575.98px) {
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards,
+  .table-cards tbody,
+  .table-cards tr,
+  .table-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-cards tr {
+    margin-bottom: var(--space-16);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn);
+    padding: var(--space-16);
+  }
+
+  .table-cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) 0;
+    border-bottom: 1px dashed var(--border-subtle);
+  }
+
+  .table-cards td:last-child {
+    border-bottom: none;
+    padding-top: var(--space-16);
+    justify-content: flex-end;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
 }
 
-.task-table tbody tr.is-done .task-title-cell {
-  text-decoration: line-through;
-  color: var(--text-muted);
-}
-
-.task-table-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  justify-content: flex-end;
-}
-
-/* 10.5. Modal Xác Nhận Xóa (Confirm Modal) */
-.confirm-dialog {
-  max-width: 440px;
+/* ------------------------------------------------------------------
+   7. TRẠNG THÁI RỖNG (EMPTY STATE) & TOAST
+   ------------------------------------------------------------------ */
+.empty-state {
   text-align: center;
-  padding: var(--space-xl);
+  padding: var(--space-48) var(--space-16);
 }
 
-.confirm-dialog-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-full);
-  background-color: var(--danger-soft);
-  color: var(--danger);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.8rem;
-  margin-bottom: var(--space-md);
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--accent);
+  margin-bottom: var(--space-16);
 }
 
-.confirm-dialog-title {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  margin-bottom: var(--space-xs);
-  color: var(--text-primary);
+.empty-state h3 {
+  font-size: var(--text-md);
+  margin-bottom: var(--space-8);
 }
 
-.confirm-dialog-desc {
-  font-size: var(--text-sm);
+.empty-state p {
   color: var(--text-secondary);
-  margin-bottom: var(--space-lg);
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  margin: 0;
 }
 
-.confirm-dialog-actions {
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: var(--space-24);
+  right: var(--space-24);
+  z-index: 1100;
   display: flex;
-  gap: var(--space-sm);
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.toast-custom {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-btn);
+  padding: var(--space-16);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-sm);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 280px;
+}
+
+.toast-custom.toast-success { border-left-color: var(--status-success); }
+.toast-custom.toast-danger { border-left-color: var(--status-danger); }
+.toast-custom.toast-warning { border-left-color: var(--status-warning); }
+
+/* ------------------------------------------------------------------
+   8. FOOTER MỘT DÒNG DUY NHẤT
+   ------------------------------------------------------------------ */
+.site-footer {
+  text-align: center;
+  padding: var(--space-16);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background-color: var(--card-bg);
 }

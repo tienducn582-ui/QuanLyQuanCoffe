@@ -1,7 +1,7 @@
 {
   "name": "cafe-task-manager-server",
   "version": "1.0.0",
-  "description": "Backend API for Cafe Task Manager",
+  "description": "Backend API cho hệ thống Cafe Task Manager (PROG2008)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập | Cafe Task Manager</title>
+  <meta name="description" content="Đăng nhập hệ thống quản lý công việc và ca trực quán cafe.">
+
+  <!-- CSS Dùng Chung -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <!-- Chống chớp sáng Dark/Light Mode -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Navbar dùng chung -->
+  <nav id="navbar"></nav>
+
+  <!-- Vùng nội dung căn giữa tuyệt đối, không cuộn dọc ở 1366px và 1920px -->
+  <div class="auth-page-wrapper">
+    <div></div> <!-- Giữ khoảng trống đối xứng trên -->
+
+    <main class="auth-card">
+      <div class="auth-card-header">
+        <div class="auth-card-logo">
+          <img src="assets/img/logo.svg" alt="Cafe Logo" width="48" height="48">
+        </div>
+        <h2>Đăng Nhập</h2>
+        <p>Nhập thông tin tài khoản để truy cập hệ thống</p>
+      </div>
+
+      <!-- Vùng hiển thị lỗi đăng nhập -->
+      <div id="formError" class="invalid-feedback" style="display: none; margin-bottom: var(--space-16); text-align: center; font-weight: 600;"></div>
+
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label for="email" class="form-label">Địa chỉ Email</label>
+          <input type="email" class="form-control" id="email" name="email" placeholder="ví dụ: admin@cafe.com" required autocomplete="email">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Mật khẩu</label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="Nhập mật khẩu của bạn" required autocomplete="current-password">
+          <div class="invalid-feedback"></div>
+        </div>
+
+        <div style="margin-top: var(--space-24);">
+          <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%;">
+            Đăng Nhập
+          </button>
+        </div>
+      </form>
+
+      <div style="text-align: center; margin-top: var(--space-24); padding-top: var(--space-16); border-top: 1px solid var(--border-subtle); font-size: var(--text-sm);">
+        <span style="color: var(--text-secondary);">Chưa có tài khoản? </span>
+        <a href="register.html" style="font-weight: 600;">Đăng ký ngay</a>
+      </div>
+    </main>
+
+    <!-- Footer một dòng sát đáy -->
+    <footer class="site-footer">
+      <span>© 2026 Cafe Task Manager · Bài tập lớn môn Phát triển ứng dụng Web (PROG2008)</span>
+    </footer>
+  </div>
+
+  <!-- Scripts nạp theo thứ tự: api.js -> ui.js -> auth.js -->
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/auth.js"></script>
+</body>
+</html>

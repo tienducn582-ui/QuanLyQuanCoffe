@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khung Trang Chuẩn | Cafe Task Manager</title>
+  <meta name="description" content="Mẫu khung chung chuẩn HTML5 và CSS cho toàn bộ các trang trong hệ thống.">
+
+  <!-- CSS Dùng Chung Tông Màu Nâu Cafe -->
+  <link rel="stylesheet" href="/assets/css/style.css">
+
+  <!-- Chống chớp sáng Dark/Light Mode (Tránh FOUC) -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- THANH ĐIỀU HƯỚNG CHUNG: ui.js sẽ tự động render vào thẻ nav#navbar này -->
+  <nav id="navbar"></nav>
+
+  <!-- NỘI DUNG CHÍNH CỦA TRANG (Khoảng cách tới navbar tối thiểu 24px) -->
+  <div style="min-height: calc(100vh - var(--navbar-height)); display: flex; flex-direction: column; justify-content: space-between;">
+    <main style="max-width: var(--container-max); width: 100%; margin: var(--space-32) auto 0; padding: 0 var(--space-16) var(--space-32);">
+      
+      <!-- KHỐI TIÊU ĐỀ TRANG & NÚT HÀNH ĐỘNG CHÍNH -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-24); flex-wrap: wrap; gap: var(--space-16);">
+        <div>
+          <h1 style="font-size: var(--text-xl); margin: 0 0 var(--space-8);">Tiêu Đề Trang Chức Năng</h1>
+          <p style="color: var(--text-secondary); font-size: var(--text-sm); margin: 0;">
+            Mô tả ngắn gọn chức năng của trang này với độ tương phản cao, dễ đọc.
+          </p>
+        </div>
+        <div>
+          <!-- Nút hành động chính (đặc màu nâu) -->
+          <button class="btn btn-primary" id="btnActionPrimary">
+            + Thêm Mới
+          </button>
+        </div>
+      </div>
+
+      <!-- VÙNG BÁO LỖI NẾU CÓ -->
+      <div id="pageError" class="invalid-feedback" style="display: none; margin-bottom: var(--space-16); font-weight: 600;"></div>
+
+      <!-- THẺ NỘI DUNG CHÍNH (Card phẳng bóng mềm) -->
+      <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-24); margin-bottom: var(--space-24);">
+        
+        <!-- BẢNG DỮ LIỆU MẪU CÓ LỚP .table-cards (DƯỚI 576PX TỰ ĐỔI THÀNH DẠNG THẺ) -->
+        <div class="table-responsive">
+          <table class="table-custom table-cards">
+            <thead>
+              <tr>
+                <th>Mã</th>
+                <th>Tên công việc / Mục</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Mã">#101</td>
+                <td data-label="Tên công việc">Pha chế cà phê sáng</td>
+                <td data-label="Trạng thái"><span class="status-dot success"></span> Hoàn thành</td>
+                <td data-label="Thao tác">
+                  <button class="btn btn-outline btn-sm">Xem</button>
+                </td>
+              </tr>
+              <tr>
+                <td data-label="Mã">#102</td>
+                <td data-label="Tên công việc">Kiểm kê kho hạt cà phê</td>
+                <td data-label="Trạng thái"><span class="status-dot warning"></span> Đang làm</td>
+                <td data-label="Thao tác">
+                  <button class="btn btn-outline btn-sm">Xem</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PHÂN TRANG MẪU -->
+        <div id="paginationContainer"></div>
+      </div>
+
+      <!-- MẪU TRẠNG THÁI RỖNG (EMPTY STATE VỚI ICON SVG NÉT MẢNH) -->
+      <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); padding: var(--space-16);">
+        <div class="empty-state">
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+          </svg>
+          <h3>Chưa có dữ liệu</h3>
+          <p>Danh sách hiện tại đang trống. Bấm nút Thêm mới ở trên để bắt đầu.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER MỘT DÒNG DUY NHẤT -->
+    <footer class="site-footer">
+      <span>© 2026 Cafe Task Manager · Bài tập lớn môn Phát triển ứng dụng Web (PROG2008)</span>
+    </footer>
+  </div>
+
+  <!-- THỨ TỰ NẠP SCRIPT BẮT BUỘC -->
+  <!-- 1. api.js: Cung cấp apiFetch, getUser, isAdmin, requireLogin, logout -->
+  <script src="/assets/js/api.js"></script>
+  <!-- 2. ui.js: Cung cấp showToast, renderNavbar, renderPagination, showEmpty, escapeHtml, showLoading, hideLoading, validateField -->
+  <script src="/assets/js/ui.js"></script>
+  <!-- 3. Script riêng của trang (auth.js, tasks.js, shifts.js hoặc statistics.js) -->
+</body>
+</html>
