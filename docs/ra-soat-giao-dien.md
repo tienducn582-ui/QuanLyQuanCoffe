@@ -102,3 +102,16 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 * **Hợp đồng & API:** Tuyến `/api/stats` trả về đúng định dạng `{ success, data: { totals, byStatus, byPriority, byCategory } }`. Client script gọi đúng `apiFetch('/api/stats')`.
 * **CSDL:** Schema tạo đúng 5 bảng chuẩn theo `AI_CONTEXT.md` (Roles, Users, Categories, Shifts, Tasks), không có bảng lạ (không POS, không kho, không tích điểm).
 * **Lưu ý ghi nhận:** Cần kết nối CSDL SQL Server để đối chiếu số liệu thống kê API với câu lệnh GROUP BY thực tế.
+
+---
+
+## 5. BẢNG SỐ LIỆU ĐO ĐẠC GIAO DIỆN & A11Y CÁC TRANG CỦA TV1, TV3, TV4 (10 LƯỢT / TRANG)
+
+Đo đạc tự động bằng Playwright trên Google Chrome (kênh `chrome` cục bộ) qua 5 kích thước màn hình (Mobile 375x667, Tablet 768x1024, Desktop 1200x800, Laptop 1366x768, FHD 1920x1080) x 2 Theme Sáng/Tối = **10 lượt kiểm tra / trang**:
+
+| Trang | Chủ sở hữu | Lỗi B1 (Tràn ngang) | Lỗi B6 (Xanh Bootstrap) | Lỗi B9 (Navbar chung) | Lỗi B10 (Emoji hiển thị) | Lỗi B11 (Khoảng cách navbar) | Lỗi A11y (WCAG AA) | Ảnh đại diện minh chứng | Nhận xét bằng mắt cụ thể một dòng |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|:---|
+| `shifts.html` | **TV1** | **0** | **0** | **0** | **0** | **0** (gap = 32px) | **0** | `.local-test/screenshots/shifts_desktop_light.png` | Danh sách thẻ ca trực tông nâu kem ấm áp, modal thêm/sửa ca căn giữa cân đối, nút bấm to bản rõ ràng ở mọi cỡ màn hình. |
+| `tasks.html` | **TV3** | **0** | **0** | **0** | **0** | **0** (gap = 32px) | **0** | `.local-test/screenshots/tasks_desktop_light.png` | Bảng công việc phân cột thoáng đãng, các badge trạng thái hài hòa, thanh lọc tìm kiếm và phân trang co giãn chuẩn xác. |
+| `statistics.html` | **TV4** | **0** | **0** | **0** | **0** | **0** (gap = 56px) | **0** | `.local-test/screenshots/statistics_desktop_light.png` | 6 thẻ chỉ số KPI chia đều 2 hàng ngay ngắn, 3 biểu đồ Chart.js tự động co giãn theo khung nhìn và màu tương phản Dark mode rất sắc nét. |
+
