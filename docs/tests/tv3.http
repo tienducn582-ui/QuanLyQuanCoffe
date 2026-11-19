@@ -1,0 +1,283 @@
+### =====================================================================
+### docs/tests/tv3.http - Kiểm thử API Công việc và Danh mục (TV3)
+### Dùng tiện ích REST Client của VS Code: bấm "Send Request" phía trên mỗi request.
+### Chạy 2 request đăng nhập (mục 0) TRƯỚC, các request sau tự lấy token từ đó.
+### Kết quả mong đợi ghi trong dòng "# Mong đợi" của từng request.
+### =====================================================================
+
+@baseUrl = http://localhost:3000/api
+
+### ---------------------------------------------------------------------
+### 0. ĐĂNG NHẬP LẤY TOKEN (tài khoản mẫu từ seedUsers.js)
+### ---------------------------------------------------------------------
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cafe.com",
+  "password": "Admin@123"
+}
+
+###
+
+# @name loginStaff
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@cafe.com",
+  "password": "Staff@123"
+}
+
+###
+
+@adminToken = {{loginAdmin.response.body.data.token}}
+@staffToken = {{loginStaff.response.body.data.token}}
+
+### ---------------------------------------------------------------------
+### 1. DANH MỤC (TV3-P1)
+### ---------------------------------------------------------------------
+
+### 1.1 Lấy danh mục - Mong đợi: 200, 5 danh mục của seed.sql
+GET {{baseUrl}}/categories
+Authorization: Bearer {{staffToken}}
+
+### 1.2 Lấy danh mục khi chưa đăng nhập - Mong đợi: 401
+GET {{baseUrl}}/categories
+
+### ---------------------------------------------------------------------
+### 2. CRUD CÔNG VIỆC (TV3-P1)
+### ---------------------------------------------------------------------
+
+### 2.1 Danh sách mặc định - Mong đợi: 200, 10 bản ghi, pagination {page:1,pageSize:10,total:30,totalPages:3}
+GET {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+
+### 2.2 Chi tiết công việc id=1 - Mong đợi: 200, có categoryName, shiftName
+GET {{baseUrl}}/tasks/1
+Authorization: Bearer {{staffToken}}
+
+### 2.3 Staff tạo công việc - Mong đợi: 201, trả về công việc mới có id (ghi lại id để dùng ở 2.4 - 2.7)
+# @name createTask
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Kiểm tra máy pha 50% công suất",
+  "description": "Thử chuỗi có dấu nháy: O'Neil",
+  "priority": "High",
+  "deadline": "2026-12-01",
+  "categoryId": 1,
+  "shiftId": 1,
+  "assigneeId": null
+}
+
+###
+
+@newId = {{createTask.response.body.data.id}}
+
+### 2.4 Staff đổi trạng thái - Mong đợi: 200, status = InProgress
+PATCH {{baseUrl}}/tasks/{{newId}}/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "InProgress"
+}
+
+### 2.5 Admin sửa toàn bộ - Mong đợi: 200, title đã đổi, categoryId = null
+PUT {{baseUrl}}/tasks/{{newId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Kiểm tra máy pha (đã sửa)",
+  "description": "Admin cập nhật",
+  "status": "Done",
+  "priority": "Medium",
+  "deadline": null,
+  "categoryId": null,
+  "shiftId": 2,
+  "assigneeId": null
+}
+
+### 2.6 Staff gọi DELETE - Mong đợi: 403 'Bạn không có quyền thực hiện thao tác này.'
+DELETE {{baseUrl}}/tasks/{{newId}}
+Authorization: Bearer {{staffToken}}
+
+### 2.7 Admin xóa - Mong đợi: 200 (gọi lại lần 2 thì 404)
+DELETE {{baseUrl}}/tasks/{{newId}}
+Authorization: Bearer {{adminToken}}
+
+### 2.8 Lấy công việc vừa xóa - Mong đợi: 404 'Không tìm thấy công việc.'
+GET {{baseUrl}}/tasks/{{newId}}
+Authorization: Bearer {{adminToken}}
+
+### 2.9 Gọi danh sách khi chưa đăng nhập - Mong đợi: 401
+GET {{baseUrl}}/tasks
+
+### ---------------------------------------------------------------------
+### 3. TÌM KIẾM, LỌC, PHÂN TRANG (TV3-P2)
+### ---------------------------------------------------------------------
+
+### 3.1 Tìm kiếm tiếng Việt - Mong đợi: 200, mọi bản ghi có "cà phê" trong Title hoặc Description
+GET {{baseUrl}}/tasks?search=cà phê
+Authorization: Bearer {{staffToken}}
+
+### 3.2 Lọc theo trạng thái - Mong đợi: 200, mọi bản ghi status = Done
+GET {{baseUrl}}/tasks?status=Done
+Authorization: Bearer {{staffToken}}
+
+### 3.3 Lọc kết hợp ưu tiên + danh mục - Mong đợi: 200, priority = High và categoryId = 1
+GET {{baseUrl}}/tasks?priority=High&categoryId=1
+Authorization: Bearer {{staffToken}}
+
+### 3.4 Lọc theo ca (trang Ca làm của TV1 dùng) - Mong đợi: 200, mọi bản ghi shiftId = 1
+GET {{baseUrl}}/tasks?shiftId=1&pageSize=50
+Authorization: Bearer {{staffToken}}
+
+### 3.5 Phân trang trang 2, mỗi trang 5 - Mong đợi: 200, 5 bản ghi, pagination.page = 2, totalPages = 6
+GET {{baseUrl}}/tasks?page=2&pageSize=5
+Authorization: Bearer {{staffToken}}
+
+### 3.6 Trang cuối - Mong đợi: 200, các việc không có Deadline nằm cuối danh sách (deadline = null)
+GET {{baseUrl}}/tasks?page=3
+Authorization: Bearer {{staffToken}}
+
+### ---------------------------------------------------------------------
+### 4. CA BIÊN (TV3-P3)
+### ---------------------------------------------------------------------
+
+### 4.1 page = 0 - Mong đợi: 400 'page phải là số nguyên dương.'
+GET {{baseUrl}}/tasks?page=0
+Authorization: Bearer {{staffToken}}
+
+### 4.2 page không phải số - Mong đợi: 400
+GET {{baseUrl}}/tasks?page=abc
+Authorization: Bearer {{staffToken}}
+
+### 4.3 pageSize vượt 50 - Mong đợi: 400 'pageSize phải là số nguyên từ 1 đến 50.'
+GET {{baseUrl}}/tasks?pageSize=100
+Authorization: Bearer {{staffToken}}
+
+### 4.4 page vượt tổng số trang - Mong đợi: 200, data = [], pagination.totalPages = 3 (Frontend tự lùi về trang cuối)
+GET {{baseUrl}}/tasks?page=99
+Authorization: Bearer {{staffToken}}
+
+### 4.5 search chứa % - Mong đợi: 200, tìm đúng chữ "%" chứ không khớp tất cả (seed hiện không có -> total = 0)
+GET {{baseUrl}}/tasks?search=%25
+Authorization: Bearer {{staffToken}}
+
+### 4.6 search chứa _ - Mong đợi: 200, tìm đúng ký tự "_" (total = 0 với seed)
+GET {{baseUrl}}/tasks?search=_
+Authorization: Bearer {{staffToken}}
+
+### 4.7 search chứa dấu nháy và [ - Mong đợi: 200, không lỗi 500, không bị SQL injection
+GET {{baseUrl}}/tasks?search=a'; DROP TABLE Tasks;--[
+Authorization: Bearer {{staffToken}}
+
+### 4.8 status lạ khi lọc - Mong đợi: 400 'status chỉ nhận Pending, InProgress hoặc Done.'
+GET {{baseUrl}}/tasks?status=Started
+Authorization: Bearer {{staffToken}}
+
+### 4.9 id không phải số - Mong đợi: 400 'Mã công việc (id) phải là số nguyên dương.'
+GET {{baseUrl}}/tasks/abc
+Authorization: Bearer {{staffToken}}
+
+### 4.10 id không tồn tại - Mong đợi: 404
+GET {{baseUrl}}/tasks/999999
+Authorization: Bearer {{staffToken}}
+
+### 4.11 Tạo việc thiếu tiêu đề - Mong đợi: 400 'Tên công việc là bắt buộc và dài từ 1 đến 200 ký tự.'
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "   "
+}
+
+### 4.12 Deadline sai định dạng - Mong đợi: 400 'Hạn chót phải là ngày hợp lệ dạng YYYY-MM-DD.'
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc thử deadline",
+  "deadline": "01/12/2026"
+}
+
+### 4.13 Deadline là ngày không có thật (30/02) - Mong đợi: 400
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc thử deadline",
+  "deadline": "2026-02-30"
+}
+
+### 4.14 Status và Priority lạ - Mong đợi: 400, errors có 2 thông báo
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc thử giá trị lạ",
+  "status": "Started",
+  "priority": "Urgent"
+}
+
+### 4.15 AssigneeId không tồn tại - Mong đợi: 400 'Người thực hiện với id 999999 không tồn tại.'
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc giao cho người không tồn tại",
+  "assigneeId": 999999
+}
+
+### 4.16 CategoryId không phải số - Mong đợi: 400
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc sai danh mục",
+  "categoryId": "abc"
+}
+
+### 4.17 PATCH với status lạ - Mong đợi: 400
+PATCH {{baseUrl}}/tasks/1/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "Finished"
+}
+
+### 4.18 Staff gọi PUT - Mong đợi: 403
+PUT {{baseUrl}}/tasks/1
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Staff cố sửa"
+}
+
+### 4.19 Staff gọi DELETE - Mong đợi: 403 (công việc id=1 vẫn còn)
+DELETE {{baseUrl}}/tasks/1
+Authorization: Bearer {{staffToken}}
+
+### 4.20 Admin PUT id không tồn tại - Mong đợi: 404
+PUT {{baseUrl}}/tasks/999999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Không có việc này"
+}
