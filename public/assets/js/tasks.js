@@ -60,12 +60,20 @@ document.addEventListener('DOMContentLoaded', () => {
     assignee: document.getElementById('taskAssignee'),
     btnSave: document.getElementById('btnSaveTask')
   };
-  const modal = new bootstrap.Modal(el.modalEl);
+  // Modal Bootstrap (nếu CDN Bootstrap không tải được thì danh sách vẫn hiển thị, chỉ báo lỗi khi mở modal)
+  const modal = window.bootstrap ? new bootstrap.Modal(el.modalEl) : null;
+  function showModal() {
+    if (modal) modal.show();
+    else showToast('Không tải được thư viện Bootstrap, không mở được biểu mẫu.', 'danger');
+  }
 
   // Danh sách công việc của trang hiện tại (dùng khi bấm Sửa để điền form)
   let currentTasks = [];
   // Cờ chống gửi form hai lần
   let saving = false;
+  // Số thứ tự lần tải danh sách: chỉ hiển thị kết quả của lần gọi mới nhất
+  // (tránh trường hợp đổi bộ lọc nhanh, phản hồi cũ về sau ghi đè phản hồi mới)
+  let loadCounter = 0;
 
   /* ------------------------------------------------------------------
      TIỆN ÍCH NHỎ
@@ -133,11 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
      TẢI VÀ HIỂN THỊ DANH SÁCH CÔNG VIỆC
      ------------------------------------------------------------------ */
   async function loadTasks() {
+    const myLoad = ++loadCounter;
     el.loading.classList.remove('d-none');
     el.empty.classList.add('d-none');
 
     try {
       const result = await apiFetch(`/api/tasks?${buildQuery()}`);
+      if (myLoad !== loadCounter) return; // đã có lần tải mới hơn, bỏ kết quả cũ
       const p = result.pagination;
 
       // Trang hiện tại không còn bản ghi (vd: vừa xóa hết trang cuối) -> lùi về trang cuối cùng còn dữ liệu
@@ -157,13 +167,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `Tìm thấy ${p.total} công việc · Trang ${p.page}/${p.totalPages}`
         : 'Không có công việc nào khớp điều kiện.';
     } catch (err) {
+      if (myLoad !== loadCounter) return;
       currentTasks = [];
       el.tableBody.innerHTML = '';
       el.pagination.innerHTML = '';
       el.summary.textContent = 'Không tải được dữ liệu.';
       showToast(err.message, 'danger');
     } finally {
-      el.loading.classList.add('d-none');
+      if (myLoad === loadCounter) el.loading.classList.add('d-none');
     }
   }
 
@@ -182,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const overdue = task.deadline && task.deadline < today && task.status !== 'Done';
       const deadlineHtml = task.deadline
         ? `${escapeHtml(formatDateVi(task.deadline))}${overdue ? ' <span class="badge bg-danger">Quá hạn</span>' : ''}`
-        : '<span class="text-muted">Không có</span>';
+        : '<span class="task-muted">Không có</span>';
 
       // Ô đổi trạng thái: mọi người dùng đều được (PATCH /status)
       const statusOptions = Object.entries(STATUS_LABELS)
@@ -193,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const adminButtons = admin
         ? `<button type="button" class="btn btn-outline btn-sm" data-action="edit" data-id="${task.id}">Sửa</button>
            <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="${task.id}">Xóa</button>`
-        : '<span class="text-muted small">—</span>';
+        : '<span class="task-muted small">—</span>';
 
       return `
         <tr>
@@ -201,13 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <td data-label="Công việc">
             <div>
               <strong>${escapeHtml(task.title)}</strong>
-              ${task.description ? `<div class="text-muted small">${escapeHtml(task.description)}</div>` : ''}
+              ${task.description ? `<div class="task-muted small">${escapeHtml(task.description)}</div>` : ''}
             </div>
           </td>
           <td data-label="Danh mục / Ca">
             <div>
               ${escapeHtml(task.categoryName || 'Chưa phân loại')}
-              <div class="text-muted small">${escapeHtml(task.shiftName || 'Không thuộc ca')}</div>
+              <div class="task-muted small">${escapeHtml(task.shiftName || 'Không thuộc ca')}</div>
             </div>
           </td>
           <td data-label="Người thực hiện">${escapeHtml(task.assigneeName || 'Chưa giao')}</td>
@@ -283,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.status.value = 'Pending';
     el.modalTitle.textContent = 'Thêm công việc mới';
     resetFormValidation();
-    modal.show();
+    showModal();
   }
 
   function openEditModal(task) {
@@ -298,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.assignee.value = task.assigneeId || '';
     el.modalTitle.textContent = `Sửa công việc #${task.id}`;
     resetFormValidation();
-    modal.show();
+    showModal();
   }
 
   // Kiểm tra dữ liệu phía Client trước khi gửi (Server vẫn kiểm tra lại)
@@ -343,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(payload) });
         showToast('Thêm công việc thành công', 'success');
       }
-      modal.hide();
+      if (modal) modal.hide();
       await loadTasks(); // giữ nguyên bộ lọc và trang hiện tại
     } catch (err) {
       // Hiện lỗi Server trả về (có thể là danh sách errors) ngay trong form

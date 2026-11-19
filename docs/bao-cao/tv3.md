@@ -112,9 +112,11 @@ Dữ liệu một công việc trả về:
 
 ### Kiểm thử phần API công việc
 
-- `docs/tests/tv3.http` có 39 request (đăng nhập, CRUD, tìm kiếm, lọc, phân trang và 20 ca biên), mỗi request ghi mã mong đợi. Token được lấy tự động từ request đăng nhập (`# @name loginAdmin`), không phải dán tay.
-- Đã chạy toàn bộ file trên SQL Server 2022 với `schema.sql` và `seed.sql` của TV4: 39/39 đúng mã mong đợi.
-- Đã chạy thử trang `tasks.html` bằng trình duyệt tự động (Playwright) với cả hai vai trò: lọc, tìm kiếm, trạng thái rỗng, chuyển trang, thêm, sửa, đổi trạng thái, xóa, tự lùi trang, Staff không thấy nút Sửa/Xóa, không cuộn ngang ở 375px, không có lỗi console.
+- `docs/tests/tv3.http` có 39 request (đăng nhập, CRUD, tìm kiếm, lọc, phân trang và 20 ca biên), mỗi request ghi mã mong đợi. Token được lấy tự động từ request đăng nhập bằng biến `{{loginAdmin.response.body.$.data.token}}` của REST Client, không phải dán tay (phải gửi 2 request đăng nhập trước).
+- Đã chạy toàn bộ file bằng công cụ dòng lệnh httpyac trên SQL Server 2022 với `schema.sql` và `seed.sql` của TV4: 39/39 đúng mã mong đợi.
+- Đã thử thêm 34 ca biên khó (page cực lớn, id vượt kiểu INT, tham số lặp dạng mảng, body rỗng, body là mảng, JSON hỏng, tiêu đề đúng 200 ký tự, ngày 29/02 năm nhuận, emoji, `<script>`): không ca nào gây lỗi 500.
+- Đã chạy thử trang `tasks.html` bằng trình duyệt tự động (Playwright) với cả hai vai trò: lọc, tìm kiếm, trạng thái rỗng, chuyển trang, thêm, sửa, đổi trạng thái, xóa, tự lùi trang, Staff không thấy nút Sửa/Xóa, chưa đăng nhập bị chuyển về `login.html`, debounce (gõ 5 ký tự chỉ gọi API 1 lần), bấm Lưu 3 lần liên tiếp chỉ gửi 1 request, phản hồi chậm của bộ lọc cũ không ghi đè kết quả mới, lỗi 400 từ server hiện trong form. Không trang nào bị cuộn ngang ở 375, 768, 992, 1200, 1280, 1440px; từ 1200px bảng nằm gọn, nhỏ hơn thì bảng cuộn ngang trong khung riêng (dưới 576px chuyển sang dạng thẻ).
+- Đã kiểm tra trang Ca làm (TV1) hiển thị đúng công việc theo ca qua `GET /api/tasks?shiftId=...` và trang Thống kê (TV4) không lỗi sau khi có dữ liệu thật.
 
 ---
 
@@ -151,4 +153,6 @@ Dữ liệu một công việc trả về:
 | :--- | :--- | :--- |
 | TV1 / TV5 | `public/assets/js/main.js`, `theme.js`, `shiftService.js` | Sau khi viết lại `tasks.html`, không còn trang nào nạp `main.js` và `theme.js`; `main.js` vẫn tham chiếu `window.TaskService` (đã xóa). `shiftService.js` chỉ còn được `tests/shiftService.test.cjs` dùng. Đề nghị chủ file xem xét xóa để đạt mục checklist "không còn taskService.js hay LocalStorage cho dữ liệu nghiệp vụ". |
 | TV5 | `public/assets/css/style.css` | Ở 375px, nhãn `td::before` của `.table-cards` bị co lại khi nội dung ô dài (vd. chữ "Công việc" xuống dòng). Có thể thêm `flex-shrink: 0; margin-right: 1rem;` cho `.table-cards td::before`. |
+| TV5 | `public/assets/css/style.css`, `ui.js` | Ở giao diện tối: chữ của mục đang chọn trên navbar gần như không thấy (nền và chữ cùng tông nâu); placeholder của ô nhập (`.form-control`) quá tối. Lớp `text-muted` của Bootstrap cũng khó đọc trên nền tối, `shifts.html` (TV1) đang dùng lớp này; trang công việc đã tránh bằng lớp riêng `task-muted` dùng biến `--text-secondary`. |
+| TV1 | `server/middleware/errorHandler.js` | Gửi JSON hỏng (vd. `{title:`) trả 400 nhưng `message` là thông báo tiếng Anh của Node ("Expected property name..."). Có thể bắt `err.type === 'entity.parse.failed'` để trả "Dữ liệu JSON không hợp lệ." |
 | TV1, TV2, TV4 | `docs/ra-soat-toan-du-an.md`, `docs/bao-mat-ra-soat.md`, `docs/bao-cao/kiem-tra-ghep.md` | Các dòng "Đang chờ TV3" về `routes/tasks.js`, `tasks.js`, `tv3.md` đã hoàn thành, có thể cập nhật trạng thái. |

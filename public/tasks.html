@@ -12,6 +12,14 @@
   <!-- CSS Dùng Chung (TV5) -->
   <link rel="stylesheet" href="assets/css/style.css">
 
+  <style>
+    /* Chữ phụ dùng biến màu của style.css nên đọc rõ ở cả giao diện sáng và tối */
+    .task-muted { color: var(--text-secondary) !important; }
+    /* Độ rộng tối thiểu của cột trên màn hình vừa; bảng cuộn ngang trong khung nếu thiếu chỗ */
+    #tasksTableWrap th.col-title { min-width: 13rem; }
+    #tasksTableWrap th.col-meta { min-width: 6.5rem; }
+  </style>
+
   <!-- Chống chớp sáng khi dùng giao diện tối -->
   <script>
     (function () {
@@ -32,7 +40,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <div>
         <h1 class="h3 mb-1 text-primary fw-bold">Quản Lý Công Việc</h1>
-        <p class="text-muted mb-0">Tìm kiếm, lọc và cập nhật công việc của quán theo từng ca.</p>
+        <p class="task-muted mb-0">Tìm kiếm, lọc và cập nhật công việc của quán theo từng ca.</p>
       </div>
       <button type="button" class="btn btn-primary" id="btnAddTask">+ Thêm công việc</button>
     </div>
@@ -76,7 +84,7 @@
         </div>
       </div>
       <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-        <small class="text-muted" id="tasksSummary">Đang tải...</small>
+        <small class="task-muted" id="tasksSummary">Đang tải...</small>
         <button type="button" class="btn btn-outline btn-sm" id="btnResetFilters">Xóa bộ lọc</button>
       </div>
     </section>
@@ -87,7 +95,7 @@
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Đang tải dữ liệu...</span>
         </div>
-        <p class="text-muted mt-2 mb-0">Đang tải danh sách công việc...</p>
+        <p class="task-muted mt-2 mb-0">Đang tải danh sách công việc...</p>
       </div>
 
       <div id="tasksEmpty" class="d-none"></div>
@@ -97,9 +105,9 @@
           <thead>
             <tr>
               <th>Mã</th>
-              <th>Công việc</th>
-              <th>Danh mục / Ca</th>
-              <th>Người thực hiện</th>
+              <th class="col-title">Công việc</th>
+              <th class="col-meta">Danh mục / Ca</th>
+              <th class="col-meta">Người thực hiện</th>
               <th>Ưu tiên</th>
               <th>Hạn chót</th>
               <th>Trạng thái</th>

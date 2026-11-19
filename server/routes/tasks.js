@@ -224,7 +224,7 @@ router.get('/', async (req, res, next) => {
       errors.push('shiftId phải là số nguyên dương.');
     }
     if (!isEmpty(q.search) && !isString(q.search, 1, 200)) {
-      errors.push('search không được dài quá 200 ký tự.');
+      errors.push('search phải là một chuỗi không quá 200 ký tự.');
     }
     if (errors.length > 0) return sendBadRequest(res, errors);
 
