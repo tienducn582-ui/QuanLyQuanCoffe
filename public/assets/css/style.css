@@ -482,6 +482,7 @@ nav#navbar {
   height: 48px;
 }
 
+.auth-card-header h1,
 .auth-card-header h2 {
   font-size: var(--text-xl);
   margin: 0 0 var(--space-8);
