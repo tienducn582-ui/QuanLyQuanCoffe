@@ -105,13 +105,29 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 
 ---
 
-## 5. BẢNG SỐ LIỆU ĐO ĐẠC GIAO DIỆN & A11Y CÁC TRANG CỦA TV1, TV3, TV4 (10 LƯỢT / TRANG)
+## 5. BẢNG SỐ LIỆU ĐO ĐẠC GIAO DIỆN & A11Y CÁC TRANG CỦA TV1, TV3, TV4 (ĐÍNH CHÍNH)
 
-Đo đạc tự động bằng Playwright trên Google Chrome (kênh `chrome` cục bộ) qua 5 kích thước màn hình (Mobile 375x667, Tablet 768x1024, Desktop 1200x800, Laptop 1366x768, FHD 1920x1080) x 2 Theme Sáng/Tối = **10 lượt kiểm tra / trang**:
+* **Thời gian đo đạc kiểm chứng:** 12:15 19/11/2026
+* **Mã commit được đo đạc:** `888b094`
+* **Công cụ:** Playwright chạy trên Google Chrome qua bộ test chuẩn (`test-giao-dien.js` và `test-a11y.js`) trên máy chủ tĩnh nội bộ `http://localhost:3100`, kết hợp mở và quan sát trực tiếp bằng mắt 9 ảnh chụp màn hình thực tế tại `.local-test/screenshots/`.
+* **Quy mô:** 3 trang (`shifts.html`, `tasks.html`, `statistics.html`) x 5 kích thước (375x667, 768x1024, 1200x800, 1366x768, 1920x1080) x 2 Theme Sáng/Tối = **10 lượt kiểm tra / trang**.
 
-| Trang | Chủ sở hữu | Lỗi B1 (Tràn ngang) | Lỗi B6 (Xanh Bootstrap) | Lỗi B9 (Navbar chung) | Lỗi B10 (Emoji hiển thị) | Lỗi B11 (Khoảng cách navbar) | Lỗi A11y (WCAG AA) | Ảnh đại diện minh chứng | Nhận xét bằng mắt cụ thể một dòng |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|:---|
-| `shifts.html` | **TV1** | **0** | **0** | **0** | **0** | **0** (gap = 32px) | **0** | `.local-test/screenshots/shifts_desktop_light.png` | Danh sách thẻ ca trực tông nâu kem ấm áp, modal thêm/sửa ca căn giữa cân đối, nút bấm to bản rõ ràng ở mọi cỡ màn hình. |
-| `tasks.html` | **TV3** | **0** | **0** | **0** | **0** | **0** (gap = 32px) | **0** | `.local-test/screenshots/tasks_desktop_light.png` | Bảng công việc phân cột thoáng đãng, các badge trạng thái hài hòa, thanh lọc tìm kiếm và phân trang co giãn chuẩn xác. |
-| `statistics.html` | **TV4** | **0** | **0** | **0** | **0** | **0** (gap = 56px) | **0** | `.local-test/screenshots/statistics_desktop_light.png` | 6 thẻ chỉ số KPI chia đều 2 hàng ngay ngắn, 3 biểu đồ Chart.js tự động co giãn theo khung nhìn và màu tương phản Dark mode rất sắc nét. |
+### 5.1. Bảng Tổng Hợp Số Đo Thực Tế & Lỗi Ghi Nhận
+
+| Trang | Chủ | B1 (Tràn 375px) | B6 (Xanh Bootstrap) | B7 (Dark Mode) | B9 (Navbar) | B10 (Emoji DOM) | B11 (Cách navbar) | A11y (WCAG AA) | Ảnh đại diện minh chứng | Nhận xét bằng mắt cụ thể qua ảnh chụp thực tế |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|:---|
+| `shifts.html` | **TV1** | **0** | **0** | **0** | **0** | **0** | **0** (gap=32px) | **0** | `.local-test/screenshots/shifts_mobile_light.png` | Danh sách thẻ ca trực tông kem ấm, co giãn vừa vặn 375px không tràn ngang; ở chế độ tối dòng mô tả phụ chữ hơi chìm. |
+| `tasks.html` | **TV3** | **0** | **0** | **0** | **0** | **0** | **0** (gap=32px) | **0** | `.local-test/screenshots/tasks_mobile_light.png` | Bảng việc và cụm lọc 5 ô co giãn tốt trong 375px; 2 hộp toast lỗi đỏ ở đáy bị đè lên chân trang ở màn hình nhỏ. |
+| `statistics.html` | **TV4** | **0** | **0** | **❌ 5 lượt** (thân trang không đổi màu) | **0** | **❌ 10 lượt** (còn 2 emoji) | **0** (gap=56px) | **0** | `.local-test/screenshots/statistics_mobile_dark.png` | 6 thẻ KPI và 3 biểu đồ Chart.js xếp dọc ngay ngắn không tràn ở 375px; tuy nhiên Dark mode thân trang vẫn giữ màu trắng/kem và còn emoji ☕, 🎯. |
+
+### 5.2. Bảng Chi Tiết Lỗi Cần Khắc Phục Tách Theo Từng Người
+
+| Thành viên | File | Dòng | Lỗi / Bất cập cụ thể | Mức độ | Khuyến nghị cách khắc phục |
+|:---:|:---|:---:|:---|:---:|:---|
+| **TV4** | `public/statistics.html` | `202` | Emoji `☕` nằm trong badge tiêu đề card (`<span class="badge">☕ CAFE TASK MANAGER</span>`). | Trung bình | Thay bằng SVG icon hoặc xóa emoji để đạt chuẩn B10. |
+| **TV4** | `public/statistics.html` | `362` | Emoji `🎯` nằm trong tiêu đề tiến độ (`🎯 Tiến độ hoàn thành công việc hệ thống`). | Trung bình | Thay bằng SVG icon để đạt chuẩn B10. |
+| **TV4** | `public/statistics.html` | Thân trang & Card | Chế độ Dark mode chỉ ăn nhập ở thanh Navbar; toàn bộ các thẻ KPI, thẻ biểu đồ và nền trang bên dưới vẫn bị cố định màu trắng/kem sáng do class Bootstrap `.bg-white` và inline style. | Cao | Bổ sung CSS dark theme hoặc kế thừa biến `var(--bg-card)` và `var(--text-color)` từ `style.css`. |
+| **TV3** | `public/tasks.html` | Vùng Toast | Ở màn hình hẹp 375px, 2 hộp thông báo Toast lỗi ở góc dưới bị đè lên phần chân trang. | Thấp | Thêm `margin-bottom` hoặc điều chỉnh vị trí container toast khi ở màn hình mobile. |
+| **TV1** | `public/shifts.html` | Dòng 38 | Dòng mô tả phụ dưới tiêu đề có độ tương phản hơi thấp ở chế độ tối Dark mode. | Thấp | Bổ sung class `.text-secondary` hoặc biến `var(--text-secondary)` để tăng độ tương phản đạt chuẩn WCAG AAA. |
+
 
