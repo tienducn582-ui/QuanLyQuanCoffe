@@ -1,9 +1,9 @@
 # NHẬT KÝ SỬ DỤNG CÔNG CỤ AI (AI LOG) - THÀNH VIÊN TV4
 ## DỰ ÁN: CAFE TASK MANAGER
 - **Thành viên:** TV4
-- **Vai trò chuyên trách:** Cơ sở dữ liệu, Thống kê, Kiểm thử hệ thống
+- **Vai trò chuyên trách:** Cơ sở dữ liệu, Thống kê, Quản lý kho, Kiểm thử hệ thống
 - **Công cụ AI sử dụng:** Antigravity (Agent AI tích hợp trong VS Code)
-- **Mục tiêu:** Ghi nhận trung thực các tác vụ phối hợp với AI trong 5 ngày thực hiện dự án môn Lập trình ứng dụng Web (PROG2008).
+- **Mục tiêu:** Ghi nhận trung thực các tác vụ phối hợp với AI trong dự án môn Lập trình ứng dụng Web (PROG2008), bao gồm cả phân hệ cốt lõi và giai đoạn mở rộng.
 
 ---
 
@@ -16,12 +16,16 @@
 | **Ngày 3 (Mốc 3A)** | TV4 | Antigravity | **TV4-P3:** Tái cấu trúc trang `public/statistics.html` và viết lại `public/assets/js/statistics.js`, kết nối API thật, loại bỏ hoàn toàn LocalStorage và `taskService.js` | Mở trang `statistics.html` trên trình duyệt sau khi khởi động server Node.js. Kiểm tra hiển thị 6 thẻ KPI, kiểm tra độ mượt của 3 biểu đồ Chart.js; bấm thử nút "Làm mới số liệu" và in PDF | Thêm hàm `destroyAllCharts()` để hủy instance Chart.js cũ trước khi vẽ lại, khắc phục triệt để lỗi "Canvas is already in use" khi người dùng bấm làm mới liên tục; cấu hình chuyển trục `indexAxis: 'y'` cho biểu đồ danh mục để tên các nhóm việc hiển thị rõ ràng, không bị che khuất. |
 | **Ngày 4 (Mốc 4A)** | TV4 | Antigravity | **TV4-P4:** Soạn thảo báo cáo kỹ thuật `docs/bao-cao/tv4.md` gồm sơ đồ Mermaid ERD, mô tả chi tiết 5 bảng, phân tích toàn vẹn dữ liệu, tổng kết kiểm thử và định hướng mở rộng | Đưa mã Mermaid lên trang `mermaid.live` để kiểm tra cú pháp và render sơ đồ trực quan; rà soát từng thuộc tính bảng khớp chính xác với `schema.sql` thực tế | Bổ sung phần đối chiếu chi tiết giữa file `SQLQuery1.sql` cũ của giữa kỳ và cấu trúc mới; phân tích lý do nghiệp vụ của việc chọn `ON DELETE SET NULL` thay vì Cascade; bổ sung 6 phân hệ mở rộng thực tế cho quán cafe (POS, KDS, VietQR, BOM kho, Loyalty, Chấm công). |
 | **Ngày 5 (Mốc 5A & 5B)** | TV4 | Antigravity | **TV4-P5 & TV4-P6:** Chạy lại toàn bộ 26 test cases trên bản clone sạch, cập nhật báo cáo và chuẩn bị bộ câu hỏi ôn tập vấn đáp môn học | Chạy toàn bộ luồng chức năng từ giao diện và REST Client trên thư mục clone mới; tự trả lời 10 câu hỏi vấn đáp mô phỏng với các chủ đề Web cốt lõi | Bổ sung các câu hỏi chuyên sâu về cơ chế chống SQL Injection qua tham số hóa truy vấn của thư viện `mssql`, giải thích chi tiết luồng dữ liệu bất đồng bộ từ fetch qua API đến CSDL và vẽ lại giao diện Chart.js. |
+| **Mở rộng (Mốc X0)** | TV4 | Antigravity | **TV4-E0:** Thiết kế CSDL mở rộng 10 bảng `database/schema-mo-rong.sql` và dữ liệu mẫu `database/seed-mo-rong.sql` | Chạy lại nhiều lần trên SSMS. Kiểm tra xóa/tạo bảng theo đúng thứ tự khóa ngoại; kiểm tra ràng buộc `UX_Orders_OpenTable` chặn mở bàn trùng; kiểm tra truy vấn đếm dòng cuối file seed | Chỉnh sửa các câu INSERT trong `seed-mo-rong.sql` để lấy `ShiftId` và `CategoryId` bằng sub-query theo Name thay vì hard-code số ID; bảo đảm 2 nguyên liệu có tồn chạm ngưỡng tối thiểu để chuẩn bị cho test tự tạo việc. |
+| **Mở rộng (Mốc X1)** | TV4 | Antigravity | **TV4-X6:** Mở rộng router `stats.js` với 4 route mới (`/by-user`, `/by-shift`, `/weekly`, `/export.csv`), nâng cấp giao diện `statistics.html`, `statistics.js` | Gửi request REST Client cho cả Admin và Staff (Staff gọi export.csv nhận 403); kiểm tra mở file CSV bằng Excel và Notepad xem có BOM UTF-8 và dấu nháy đơn chống CSV Injection | Bổ sung cơ chế sinh đủ các tuần bắt đầu từ thứ Hai bằng JavaScript kết hợp `SET DATEFIRST 1;` để các tuần có 0 việc vẫn hiển thị đủ trên biểu đồ đường; thêm logic hủy 5 biểu đồ Chart.js chống rò rỉ bộ nhớ. |
+| **Mở rộng (Mốc X2)** | TV4 | Antigravity | **TV4-X7:** Xây dựng phân hệ Kho tối giản `ingredients.js`, giao diện `inventory.html`, `inventory.js` và tự động kích hoạt tạo Task | Gọi `PATCH /api/ingredients/:id/stock` giảm tồn kho chạm ngưỡng, kiểm tra bảng Tasks thấy tự sinh bản ghi "Nhập hàng: [Tên]" với Priority="High" và Deadline=hôm nay; gọi lần hai không tạo trùng | Đóng gói toàn bộ logic kiểm tra tồn kho, cập nhật số lượng và sinh task trong **MỘT transaction T-SQL duy nhất** (`SET XACT_ABORT ON; BEGIN TRAN; ... COMMIT TRAN;`) với `UPDLOCK, ROWLOCK` để chống race condition; xử lý mã lỗi 50002 thành HTTP 400 "Tồn kho không đủ". |
+| **Mở rộng (Mốc XD)** | TV4 | Antigravity | **TV4-XD:** Hoàn thiện báo cáo kỹ thuật mở rộng trong `docs/bao-cao/tv4.md`, bảng 22 ca test mở rộng trong `docs/test-cases.md` và kịch bản `tv4.http` | Rà soát toàn bộ các đầu mục của kế hoạch mở rộng; đối chiếu từng endpoint và quyền hạn khớp 100% với `AI_CONTEXT.md` | Bổ sung danh sách 7 ảnh chụp màn hình quan trọng cần chụp cho phần báo cáo mở rộng; bổ sung phân tích chuyên sâu về cơ chế chống CSV Injection và giao dịch nguyên tử khi trừ kho để phục vụ vấn đáp. |
 
 ---
 
 ## Đánh Giá Chung Về Việc Ứng Dụng AI Của TV4
-- **Điểm mạnh khi dùng AI:** Giúp sinh mã SQL mẫu nhanh chóng, chuẩn hóa cú pháp Mermaid ERD, tạo khung kiểm thử REST Client chuyên nghiệp và cấu trúc báo cáo học thuật chuẩn mực.
+- **Điểm mạnh khi dùng AI:** Tăng tốc đáng kể việc sinh mã T-SQL phức tạp (lập lịch theo tuần, giao dịch tự tạo task), tạo giao diện responsive theo đúng phong cách chung và hoàn thiện tài liệu báo cáo khoa học, đầy đủ dẫn chứng.
 - **Vai trò then chốt của con người (TV4):**
-  - Trực tiếp kiểm thử, chạy thực tế mã SQL trên hệ quản trị CSDL SQL Server để xác minh tính đúng đắn.
-  - Tinh chỉnh nghiệp vụ thực tế của ngành F&B (xử lý công việc quá hạn, bảo toàn lịch sử công việc khi xóa danh mục).
-  - Nắm vững bản chất mã nguồn để làm chủ hệ thống và sẵn sàng giải trình thuyết phục trong buổi vấn đáp bảo vệ đồ án.
+  - Trực tiếp kiểm tra tính toàn vẹn của giao dịch CSDL và thiết kế dữ liệu mẫu sát với thực tế quán cafe.
+  - Phân tích và ngăn chặn các lỗ hổng bảo mật thực tế (CSV Injection, race condition kho, bypass quyền Admin).
+  - Tự kiểm thử chéo và làm chủ 100% mã nguồn để bảo vệ thuyết phục trước hội đồng vấn đáp.

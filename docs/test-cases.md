@@ -1,14 +1,14 @@
 # Bảng Kế Hoạch và Kết Quả Kiểm Thử Hệ Thống (Test Cases)
 
 - **Dự án:** Cafe Task Manager
-- **Thành viên phụ trách:** TV4 (Cơ sở dữ liệu, Thống kê, Kiểm thử)
-- **Tài liệu đối chiếu:** `AI_CONTEXT.md`, `README.md`, Các router Backend và Giao diện Frontend
-- **Thời gian thực hiện kiểm thử:** Ngày 3 – Ngày 5 (Tháng 11/2026)
+- **Thành viên phụ trách:** TV4 (Cơ sở dữ liệu, Thống kê, Quản lý kho, Kiểm thử)
+- **Tài liệu đối chiếu:** `AI_CONTEXT.md` (gồm PHẦN MỞ RỘNG), `ke-hoach-mo-rong.md`, Các router Backend và Giao diện Frontend
+- **Thời gian thực hiện kiểm thử:** Tháng 11/2026
 - **Môi trường:** Node.js 18+, SQL Server Developer 2022 (localhost), Chrome 130+
 
 ---
 
-## Danh Sách Chi Tiết 26 Test Case
+## PHẦN 1: 26 CA KIỂM THỬ TÍNH NĂNG CỐT LÕI (TC01 - TC26)
 
 | Mã | Chức năng | Các bước hoặc đầu vào | Kết quả mong đợi | Kết quả thực tế | Đạt? |
 |:---|:---|:---|:---|:---|:---:|
@@ -41,9 +41,37 @@
 
 ---
 
-## Tổng Hợp Đánh Giá Kết Quả Kiểm Thử
+## PHẦN 2: 22 CA KIỂM THỬ TÍNH NĂNG MỞ RỘNG (TC-X01 - TC-X22)
 
-- **Tổng số test case thực hiện:** 26
-- **Số test case ĐẠT (Pass):** 26 / 26 (Tỷ lệ 100%)
+| Mã | Chức năng | Các bước hoặc đầu vào | Kết quả mong đợi | Kết quả thực tế | Đạt? |
+|:---|:---|:---|:---|:---|:---:|
+| **TC-X01** | Thống kê theo nhân viên | Gọi `GET /api/stats/by-user` có token | Trả về 200 OK, danh sách nhân viên kèm total, done, overdue; việc chưa giao gom thành "Chưa giao" (userId: null) | Trả về mảng nhân viên và dòng "Chưa giao" chính xác | Đạt |
+| **TC-X02** | Thống kê theo ca làm việc | Gọi `GET /api/stats/by-shift` có token | Trả về 200 OK, danh sách ca kèm completionRate làm tròn 1 chữ số; việc không ca gom thành "Chưa gán ca" | Trả về 3 ca chuẩn và số liệu hoàn thành chính xác | Đạt |
+| **TC-X03** | Thống kê theo tuần mặc định | Gọi `GET /api/stats/weekly?weeks=8` | Trả về 200 OK, đủ 8 tuần bắt đầu thứ Hai (YYYY-MM-DD), kể cả tuần có 0 việc | Trả về đủ 8 tuần theo thứ Hai, không khuyết tuần | Đạt |
+| **TC-X04** | Thống kê tuần với weeks = 0 | Gọi `GET /api/stats/weekly?weeks=0` | Trả về 400 Bad Request: "Tham số weeks phải nằm trong khoảng từ 1 đến 26" | Trả về 400 đúng thông báo lỗi chuẩn | Đạt |
+| **TC-X05** | Thống kê tuần với weeks chữ | Gọi `GET /api/stats/weekly?weeks=abc` | Trả về 400 Bad Request: "Tham số weeks phải là số nguyên" | Server bắt lỗi tham số và trả về 400 | Đạt |
+| **TC-X06** | Admin xuất dữ liệu CSV | Admin gọi `GET /api/stats/export.csv` | Trả về 200 OK, Content-Type text/csv, file có BOM UTF-8, chống CSV injection với các ký tự = + - @ | Trình duyệt tải về file tasks-export.csv hiển thị đúng tiếng Việt trong Excel | Đạt |
+| **TC-X07** | Staff gọi xuất CSV | Staff gọi `GET /api/stats/export.csv` | Bị từ chối bằng HTTP 403 Forbidden | Trả về 403 Forbidden, Staff không thể xuất | Đạt |
+| **TC-X08** | Lấy danh sách nguyên liệu | Gọi `GET /api/ingredients?page=1&pageSize=10` | Trả về 200 OK kèm danh sách và metadata pagination (page, pageSize, total, totalPages) | Trả về 8 nguyên liệu mẫu, có cờ isLow chuẩn | Đạt |
+| **TC-X09** | Lọc nguyên liệu sắp hết | Gọi `GET /api/ingredients?lowOnly=1` | Danh sách chỉ hiện các nguyên liệu có Quantity <= MinQuantity | Chỉ trả về Sữa tươi và Trà đen (2 nguyên liệu sắp hết) | Đạt |
+| **TC-X10** | Tìm kiếm tên nguyên liệu | Gọi `GET /api/ingredients?search=cà phê` | Danh sách chỉ hiện các mục chứa từ khóa tìm kiếm (đã escape ký tự đặc biệt) | Trả về đúng bản ghi "Cà phê hạt Robusta" | Đạt |
+| **TC-X11** | Lấy chi tiết nguyên liệu | Gọi `GET /api/ingredients/1` | Trả về 200 OK với đầy đủ thông tin chi tiết của nguyên liệu Id=1 | Trả về 200 OK thông tin nguyên liệu | Đạt |
+| **TC-X12** | Xem nguyên liệu không tồn tại | Gọi `GET /api/ingredients/99999` | Trả về 404 Not Found: "Nguyên liệu không tồn tại" | Trả về 404 Not Found | Đạt |
+| **TC-X13** | Admin thêm nguyên liệu mới | Admin gửi `POST /api/ingredients` dữ liệu hợp lệ | Thêm mới thành công, lưu CSDL, trả về 201 Created | Bản ghi mới xuất hiện trong kho | Đạt |
+| **TC-X14** | Staff thêm nguyên liệu | Staff gửi `POST /api/ingredients` | Bị từ chối bằng HTTP 403 Forbidden | Trả về 403 Forbidden, Staff không có quyền | Đạt |
+| **TC-X15** | Thêm nguyên liệu trùng tên | Admin gửi `POST /api/ingredients` tên đã có | Bị từ chối bằng HTTP 409 Conflict | Trả về 409 Conflict: "Tên nguyên liệu đã tồn tại" | Đạt |
+| **TC-X16** | Admin cập nhật nguyên liệu | Admin gửi `PUT /api/ingredients/:id` | Cập nhật thành công thông tin, trả về 200 OK | Thông tin nguyên liệu được cập nhật trong CSDL | Đạt |
+| **TC-X17** | Điều chỉnh kho với delta = 0 | Gửi `PATCH /api/ingredients/1/stock` với `{ delta: 0 }` | Bị từ chối bằng HTTP 400 Bad Request: "Số lượng thay đổi phải khác 0" | Trả về 400 Bad Request | Đạt |
+| **TC-X18** | Xuất quá số lượng tồn kho | Gửi `PATCH /api/ingredients/1/stock` với `{ delta: -999999 }` | Giao dịch ROLLBACK, trả về 400 Bad Request: "Tồn kho không đủ" | Trả về 400: Tồn kho không đủ để xuất | Đạt |
+| **TC-X19** | Xuất kho chạm ngưỡng tối thiểu | Gửi `PATCH /api/ingredients/:id/stock` làm Quantity <= MinQuantity | Tồn kho giảm, tự động INSERT 1 bản ghi mới vào bảng Tasks với Title="Nhập hàng: ...", autoTaskCreated=true | Tạo thành công Task "Nhập hàng", hiển thị toast cảnh báo | Đạt |
+| **TC-X20** | Xuất kho khi task đã tồn tại | Gửi tiếp `PATCH` trừ kho nguyên liệu đang có task chưa Done | Tồn kho giảm bình thường, KHÔNG tạo trùng Task mới, autoTaskCreated=false | Tồn kho cập nhật và không sinh thêm task thừa | Đạt |
+| **TC-X21** | Staff xóa nguyên liệu | Staff gửi `DELETE /api/ingredients/:id` | Bị từ chối bằng HTTP 403 Forbidden | Trả về 403 Forbidden | Đạt |
+| **TC-X22** | Admin xóa nguyên liệu | Admin gửi `DELETE /api/ingredients/:id` | Xóa bản ghi thành công khỏi CSDL, trả về 200 OK | Bản ghi bị xóa khỏi bảng Ingredients | Đạt |
+
+---
+
+## TỔNG HỢP TOÀN DỰ ÁN
+- **Tổng số test case thực hiện:** 48 (26 ca cốt lõi + 22 ca mở rộng)
+- **Số test case ĐẠT (Pass):** 48 / 48 (100%)
 - **Số test case KHÔNG ĐẠT (Fail):** 0
-- **Kết luận:** Hệ thống Cafe Task Manager hoạt động ổn định, đáp ứng toàn diện 10 nhóm yêu cầu chức năng, bảo mật hai lớp (xác thực token + phân quyền vai trò), xử lý ngoại lệ an toàn và tối ưu trải nghiệm người dùng trên nhiều kích thước màn hình.
+- **Kết luận:** Toàn bộ các phân hệ cốt lõi và mở rộng của TV4 hoạt động ổn định, bảo mật cao và nhất quán theo chuẩn hợp đồng API.
