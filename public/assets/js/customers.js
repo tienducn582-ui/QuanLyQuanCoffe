@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td data-label="Mã">#${escapeHtml(customer.id)}</td>
           <td data-label="Họ và tên"><strong>${escapeHtml(customer.fullName)}</strong></td>
           <td data-label="Số điện thoại">${escapeHtml(customer.phone)}</td>
-          <td data-label="Điểm tích lũy"><strong>${escapeHtml(Number(customer.points || 0).toLocaleString('vi-VN'))}</strong> điểm</td>
+          <td data-label="Điểm tích lũy"><span><strong>${escapeHtml(Number(customer.points || 0).toLocaleString('vi-VN'))}</strong> điểm</span></td>
           <td data-label="Hạng"><span class="rank-badge ${badgeClass}">${escapeHtml(rank)}</span></td>
           <td data-label="Thao tác" class="text-end">
             <div class="customer-actions">
