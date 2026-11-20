@@ -166,3 +166,140 @@ Authorization: Bearer {{adminToken}}
 ### ====================================================================
 POST {{baseUrl}}/api/auth/logout
 Authorization: Bearer {{testToken}}
+
+
+### ====================================================================
+### PHẦN MỞ RỘNG [TV2-X8]: KHÁCH HÀNG TÍCH ĐIỂM (/api/customers)
+### ====================================================================
+
+### 14. Đăng nhập tài khoản Staff mẫu để kiểm thử phân quyền
+# @name loginStaff
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{staffEmail}}",
+  "password": "{{staffPassword}}"
+}
+
+### Lưu token Staff
+@staffToken = {{loginStaff.response.body.data.token}}
+
+
+### 15. Tạo khách hàng mới hợp lệ bằng tài khoản Staff (Mong đợi: 201 Created, points = 0, rank = Đồng)
+# @name createCustomer
+POST {{baseUrl}}/api/customers
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "fullName": "TEST Khách Hàng TV2",
+  "phone": "0988777666"
+}
+
+### Lưu ID khách hàng vừa tạo
+@customerId = {{createCustomer.response.body.data.id}}
+
+
+### 16. Tạo khách hàng trùng số điện thoại (Mong đợi: 409 Conflict)
+POST {{baseUrl}}/api/customers
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "fullName": "TEST Khách Trùng SĐT",
+  "phone": "0988777666"
+}
+
+
+### 17. Tạo khách hàng với SĐT sai định dạng 'abc' (Mong đợi: 400 Bad Request)
+POST {{baseUrl}}/api/customers
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "fullName": "TEST SĐT Sai",
+  "phone": "abc"
+}
+
+
+### 18. Tìm kiếm và phân trang khách hàng (Mong đợi: 200 OK, kèm pagination và rank)
+GET {{baseUrl}}/api/customers?search=0988&page=1&pageSize=10
+Authorization: Bearer {{staffToken}}
+
+
+### 19. Lấy chi tiết khách hàng vừa tạo (Mong đợi: 200 OK)
+GET {{baseUrl}}/api/customers/{{customerId}}
+Authorization: Bearer {{staffToken}}
+
+
+### 20. Cộng điểm thất bại khi amount < 10000 (Mong đợi: 400 Bad Request)
+POST {{baseUrl}}/api/customers/{{customerId}}/earn
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "amount": 9000
+}
+
+
+### 21. Cộng điểm hợp lệ bằng tài khoản Staff: 1.250.000đ -> +125 điểm, rank = Bạc (Mong đợi: 200 OK)
+POST {{baseUrl}}/api/customers/{{customerId}}/earn
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "amount": 1250000
+}
+
+
+### 22. Đổi điểm hợp lệ: đổi 30 điểm -> còn 95 điểm, rank = Đồng (Mong đợi: 200 OK)
+POST {{baseUrl}}/api/customers/{{customerId}}/redeem
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "points": 30
+}
+
+
+### 23. Đổi điểm vượt quá số điểm hiện có (Mong đợi: 400 Bad Request - 'Không đủ điểm')
+POST {{baseUrl}}/api/customers/{{customerId}}/redeem
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "points": 999999
+}
+
+
+### 24. Staff thử sửa thông tin khách hàng PUT /api/customers/:id (Mong đợi: 403 Forbidden)
+PUT {{baseUrl}}/api/customers/{{customerId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Staff Cố Sửa",
+  "phone": "0988777666"
+}
+
+
+### 25. Admin sửa thông tin khách hàng PUT /api/customers/:id (Mong đợi: 200 OK)
+PUT {{baseUrl}}/api/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "fullName": "TEST Khách Hàng TV2 (Admin Đã Sửa)",
+  "phone": "0988777665"
+}
+
+
+### 26. Staff thử xóa khách hàng DELETE /api/customers/:id (Mong đợi: 403 Forbidden)
+DELETE {{baseUrl}}/api/customers/{{customerId}}
+Authorization: Bearer {{staffToken}}
+
+
+### 27. Admin xóa khách hàng vừa test DELETE /api/customers/:id (Mong đợi: 200 OK)
+DELETE {{baseUrl}}/api/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}

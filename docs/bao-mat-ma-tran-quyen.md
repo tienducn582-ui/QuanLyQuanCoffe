@@ -44,8 +44,34 @@
 
 ---
 
-## 3. Tóm Tắt Quyền Hạn Theo Vai Trò
+## 3. Bảng Ma Trận Phân Quyền Endpoint Mở Rộng Hiện Có Trong Code
+
+*(Ghi nhận theo đúng các router mở rộng đã có trong `server/routes/` trên nhánh hiện tại: `customers.js` (`TV2-X8`), `stats.js` (`TV4-X6`), `ingredients.js` (`TV4-X7`). Các router khung `schedule.js`, `templates.js`, `pos.js` hiện mới có `GET /` yêu cầu `verifyToken`; các endpoint mở rộng của `tasks.js` và `shifts.js` chưa có trong code.)*
+
+| STT | Nhóm | Phương thức & Endpoint | Mô tả nghiệp vụ | Chưa đăng nhập | Staff (Nhân viên) | Admin (Quản trị viên) |
+|:---:|:---|:---|:---|:---:|:---:|:---:|
+| 20 | **Khách hàng (TV2-X8)** | `GET /api/customers` | Tìm kiếm theo tên/SĐT, phân trang danh sách khách kèm `rank` | `401 Unauthorized` | `200 OK` | `200 OK` |
+| 21 | **Khách hàng (TV2-X8)** | `GET /api/customers/:id` | Xem chi tiết khách hàng kèm `rank` | `401 Unauthorized` | `200 OK` *(không có: `404`)* | `200 OK` *(không có: `404`)* |
+| 22 | **Khách hàng (TV2-X8)** | `POST /api/customers` | Tạo khách hàng tích điểm mới | `401 Unauthorized` | `201 Created` *(sai: `400`, trùng SĐT: `409`)* | `201 Created` *(sai: `400`, trùng SĐT: `409`)* |
+| 23 | **Khách hàng (TV2-X8)** | `PUT /api/customers/:id` | Cập nhật họ tên và SĐT khách hàng | `401 Unauthorized` | `403 Forbidden` | `200 OK` *(sai: `400`, không có: `404`, trùng SĐT: `409`)* |
+| 24 | **Khách hàng (TV2-X8)** | `DELETE /api/customers/:id` | Xóa hồ sơ khách hàng | `401 Unauthorized` | `403 Forbidden` | `200 OK` *(không có: `404`)* |
+| 25 | **Khách hàng (TV2-X8)** | `POST /api/customers/:id/earn` | Cộng điểm theo hóa đơn (`FLOOR(amount / 10000)`) | `401 Unauthorized` | `200 OK` *(sai: `400`, không có: `404`)* | `200 OK` *(sai: `400`, không có: `404`)* |
+| 26 | **Khách hàng (TV2-X8)** | `POST /api/customers/:id/redeem` | Đổi điểm tích lũy (`Points >= @points`, không âm) | `401 Unauthorized` | `200 OK` *(không đủ điểm/sai: `400`, không có: `404`)* | `200 OK` *(không đủ điểm/sai: `400`, không có: `404`)* |
+| 27 | **Thống kê mở rộng (TV4-X6)** | `GET /api/stats/by-user` | Thống kê khối lượng và tiến độ công việc theo nhân viên | `401 Unauthorized` | `200 OK` | `200 OK` |
+| 28 | **Thống kê mở rộng (TV4-X6)** | `GET /api/stats/by-shift` | Thống kê tỷ lệ hoàn thành công việc theo ca làm | `401 Unauthorized` | `200 OK` | `200 OK` |
+| 29 | **Thống kê mở rộng (TV4-X6)** | `GET /api/stats/weekly` | Thống kê tiến độ theo tuần (`weeks` 1..26) | `401 Unauthorized` | `200 OK` *(sai: `400`)* | `200 OK` *(sai: `400`)* |
+| 30 | **Thống kê mở rộng (TV4-X6)** | `GET /api/stats/export.csv` | Xuất danh sách công việc ra CSV UTF-8 BOM chống CSV injection | `401 Unauthorized` | `403 Forbidden` | `200 OK` |
+| 31 | **Kho nguyên liệu (TV4-X7)** | `GET /api/ingredients` | Danh sách nguyên liệu, tìm kiếm, lọc sắp hết (`lowOnly=1`), phân trang | `401 Unauthorized` | `200 OK` | `200 OK` |
+| 32 | **Kho nguyên liệu (TV4-X7)** | `GET /api/ingredients/:id` | Xem chi tiết một nguyên liệu | `401 Unauthorized` | `200 OK` *(không có: `404`)* | `200 OK` *(không có: `404`)* |
+| 33 | **Kho nguyên liệu (TV4-X7)** | `POST /api/ingredients` | Thêm mới nguyên liệu vào kho | `401 Unauthorized` | `403 Forbidden` | `201 Created` *(sai: `400`, trùng tên: `409`)* |
+| 34 | **Kho nguyên liệu (TV4-X7)** | `PUT /api/ingredients/:id` | Cập nhật thông tin nguyên liệu | `401 Unauthorized` | `403 Forbidden` | `200 OK` *(sai: `400`, không có: `404`, trùng tên: `409`)* |
+| 35 | **Kho nguyên liệu (TV4-X7)** | `DELETE /api/ingredients/:id` | Xóa nguyên liệu khỏi kho | `401 Unauthorized` | `403 Forbidden` | `200 OK` *(không có: `404`)* |
+| 36 | **Kho nguyên liệu (TV4-X7)** | `PATCH /api/ingredients/:id/stock` | Nhập/xuất kho (`delta`) và tự tạo Task khi chạm ngưỡng | `401 Unauthorized` | `200 OK` *(thiếu tồn/sai: `400`, không có: `404`)* | `200 OK` *(thiếu tồn/sai: `400`, không có: `404`)* |
+
+---
+
+## 4. Tóm Tắt Quyền Hạn Theo Vai Trò
 
 - **Chưa đăng nhập (Guest):** Chỉ được truy cập trang chủ `index.html`, trang `login.html`, `register.html` và gọi `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/health`. Mọi truy cập vào trang nghiệp vụ hoặc API khác đều bị chặn (`401 Unauthorized` và tự động chuyển hướng về `login.html`).
-- **Nhân viên (`Staff`):** Được xem toàn bộ công việc, ca làm, danh mục, danh sách nhân sự và thống kê; được tạo công việc mới (`POST /api/tasks`), cập nhật trạng thái công việc (`PATCH /api/tasks/:id/status`) và tự cập nhật hồ sơ/mật khẩu của mình (`PUT /api/me`). **Không** được sửa toàn bộ hoặc xóa công việc (`403 Forbidden`), **không** được thêm/sửa/xóa ca làm việc (`403 Forbidden`).
-- **Quản trị viên (`Admin`):** Có toàn quyền của `Staff`, đồng thời có quyền chỉnh sửa toàn bộ hoặc xóa công việc (`PUT/DELETE /api/tasks/:id`) và thêm/sửa/xóa ca làm việc (`POST/PUT/DELETE /api/shifts`).
+- **Nhân viên (`Staff`):** Được xem toàn bộ công việc, ca làm, danh mục, danh sách nhân sự, thống kê, kho nguyên liệu và danh sách khách hàng tích điểm; được tạo công việc mới (`POST /api/tasks`), cập nhật trạng thái công việc (`PATCH /api/tasks/:id/status`), tự cập nhật hồ sơ/mật khẩu (`PUT /api/me`), nhập/xuất kho (`PATCH /api/ingredients/:id/stock`), thêm khách hàng (`POST /api/customers`), cộng điểm (`POST /api/customers/:id/earn`) và đổi điểm (`POST /api/customers/:id/redeem`). **Không** được sửa toàn bộ hoặc xóa công việc (`403 Forbidden`), **không** được thêm/sửa/xóa ca làm việc (`403 Forbidden`), **không** được xuất CSV (`403 Forbidden`), **không** được thêm/sửa/xóa danh mục kho (`403 Forbidden`) và **không** được sửa hoặc xóa khách hàng (`403 Forbidden`).
+- **Quản trị viên (`Admin`):** Có toàn quyền của `Staff`, đồng thời có quyền chỉnh sửa toàn bộ hoặc xóa công việc (`PUT/DELETE /api/tasks/:id`), thêm/sửa/xóa ca làm việc (`POST/PUT/DELETE /api/shifts`), xuất CSV (`GET /api/stats/export.csv`), thêm/sửa/xóa nguyên liệu (`POST/PUT/DELETE /api/ingredients`) và sửa/xóa hồ sơ khách hàng (`PUT/DELETE /api/customers/:id`).

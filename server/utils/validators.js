@@ -64,6 +64,12 @@ function isTimeHHmm(v) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v.trim());
 }
 
+// Kiểm tra số điện thoại hợp lệ: chuỗi từ 9 đến 11 chữ số (0-9). Ví dụ: isPhone('0901234567') -> true, isPhone('abc') -> false
+function isPhone(v) {
+  if (typeof v !== 'string') return false;
+  return /^[0-9]{9,11}$/.test(v.trim());
+}
+
 // Kiểm tra giá trị v có nằm trong danh sách cho phép hay không. Ví dụ: isOneOf('High', ['Low', 'Medium', 'High']) -> true
 function isOneOf(v, list) {
   if (!Array.isArray(list)) return false;
@@ -91,6 +97,7 @@ module.exports = {
   isPositiveInt,
   isISODate,
   isTimeHHmm,
+  isPhone,
   isOneOf,
   sendBadRequest
 };
