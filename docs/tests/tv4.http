@@ -1,6 +1,6 @@
 ### ====================================================================
-### CAFE TASK MANAGER - KIỂM THỬ API THỐNG KÊ (REST CLIENT VS CODE)
-### Thành viên phụ trách: TV4 (Cơ sở dữ liệu, Thống kê, Kiểm thử)
+### CAFE TASK MANAGER - KIỂM THỬ API TV4 (REST CLIENT VS CODE)
+### Thành viên phụ trách: TV4 (Cơ sở dữ liệu, Thống kê, Quản lý kho)
 ### File: docs/tests/tv4.http
 ### ====================================================================
 
@@ -41,31 +41,171 @@ Content-Type: application/json
 
 
 ### ====================================================================
-### TEST CASE 1: Lấy dữ liệu thống kê bằng tài khoản Admin (Thành công 200)
-### Mong đợi: 200 OK, success: true, trả về totals, byStatus, byPriority, byCategory
+### PHẦN 1: API THỐNG KÊ CỐT LÕI (TV4-P2)
 ### ====================================================================
+
+### TC01: Lấy thống kê tổng quan (Admin) - Mong đợi: 200 OK
 GET {{baseUrl}}/api/stats
 Authorization: Bearer {{adminToken}}
 
+### TC02: Lấy thống kê tổng quan (Staff) - Mong đợi: 200 OK
+GET {{baseUrl}}/api/stats
+Authorization: Bearer {{staffToken}}
+
+### TC03: Lấy thống kê khi chưa đăng nhập - Mong đợi: 401 Unauthorized
+GET {{baseUrl}}/api/stats
+
 
 ### ====================================================================
-### TEST CASE 2: Lấy dữ liệu thống kê bằng tài khoản Staff (Thành công 200)
-### Phân quyền: Cả Admin và Staff đều có quyền xem báo cáo thống kê
+### PHẦN 2: THỐNG KÊ NÂNG CAO & XUẤT CSV (TV4-X6)
 ### ====================================================================
-GET {{baseUrl}}/api/stats
+
+### TC-X01: Thống kê hiệu suất theo nhân viên - Mong đợi: 200 OK
+GET {{baseUrl}}/api/stats/by-user
+Authorization: Bearer {{adminToken}}
+
+### TC-X02: Thống kê khối lượng theo ca làm - Mong đợi: 200 OK
+GET {{baseUrl}}/api/stats/by-shift
+Authorization: Bearer {{staffToken}}
+
+### TC-X03: Thống kê theo tuần (8 tuần mặc định) - Mong đợi: 200 OK
+GET {{baseUrl}}/api/stats/weekly?weeks=8
+Authorization: Bearer {{adminToken}}
+
+### TC-X04: Thống kê theo tuần với weeks = 0 - Mong đợi: 400 Bad Request
+GET {{baseUrl}}/api/stats/weekly?weeks=0
+Authorization: Bearer {{adminToken}}
+
+### TC-X05: Thống kê theo tuần với weeks không phải số - Mong đợi: 400 Bad Request
+GET {{baseUrl}}/api/stats/weekly?weeks=abc
+Authorization: Bearer {{adminToken}}
+
+### TC-X06: Xuất CSV toàn bộ công việc (Admin) - Mong đợi: 200 OK, text/csv kèm BOM
+GET {{baseUrl}}/api/stats/export.csv
+Authorization: Bearer {{adminToken}}
+
+### TC-X07: Phân quyền: Staff gọi xuất CSV - Mong đợi: 403 Forbidden
+GET {{baseUrl}}/api/stats/export.csv
 Authorization: Bearer {{staffToken}}
 
 
 ### ====================================================================
-### TEST CASE 3: Lấy dữ liệu thống kê khi chưa đăng nhập (Không có token)
-### Mong đợi: 401 Unauthorized, message từ chối truy cập
+### PHẦN 3: KHO TỐI GIẢN & CẢNH BÁO TỒN KHO (TV4-X7)
 ### ====================================================================
-GET {{baseUrl}}/api/stats
 
+### TC-X08: Lấy danh sách nguyên liệu phân trang - Mong đợi: 200 OK
+GET {{baseUrl}}/api/ingredients?page=1&pageSize=10
+Authorization: Bearer {{staffToken}}
 
-### ====================================================================
-### TEST CASE 4: Lấy dữ liệu thống kê với token không hợp lệ / đã hết hạn
-### Mong đợi: 401 Unauthorized
-### ====================================================================
-GET {{baseUrl}}/api/stats
-Authorization: Bearer invalid_jwt_token_example_12345
+### TC-X09: Lọc danh sách nguyên liệu sắp hết (lowOnly=1) - Mong đợi: 200 OK
+GET {{baseUrl}}/api/ingredients?lowOnly=1
+Authorization: Bearer {{staffToken}}
+
+### TC-X10: Tìm kiếm nguyên liệu theo tên có escape - Mong đợi: 200 OK
+GET {{baseUrl}}/api/ingredients?search=cà phê
+Authorization: Bearer {{staffToken}}
+
+### TC-X11: Lấy chi tiết nguyên liệu theo ID - Mong đợi: 200 OK
+GET {{baseUrl}}/api/ingredients/1
+Authorization: Bearer {{staffToken}}
+
+### TC-X12: Lấy chi tiết nguyên liệu không tồn tại - Mong đợi: 404 Not Found
+GET {{baseUrl}}/api/ingredients/99999
+Authorization: Bearer {{staffToken}}
+
+### TC-X13: Thêm nguyên liệu mới (Admin) - Mong đợi: 201 Created
+# @name createIngredient
+POST {{baseUrl}}/api/ingredients
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Bột Cacao Nguyên Chất Đắk Lắk",
+  "unit": "kg",
+  "quantity": 10.0,
+  "minQuantity": 3.0
+}
+
+@newIngredientId = {{createIngredient.response.body.data.id}}
+
+### TC-X14: Phân quyền: Staff thêm nguyên liệu - Mong đợi: 403 Forbidden
+POST {{baseUrl}}/api/ingredients
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Siro Dâu Mới",
+  "unit": "chai",
+  "quantity": 5.0,
+  "minQuantity": 2.0
+}
+
+### TC-X15: Thêm nguyên liệu trùng tên - Mong đợi: 409 Conflict
+POST {{baseUrl}}/api/ingredients
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Cà phê hạt Robusta rang mộc",
+  "unit": "kg",
+  "quantity": 5.0,
+  "minQuantity": 2.0
+}
+
+### TC-X16: Cập nhật nguyên liệu (Admin) - Mong đợi: 200 OK
+PUT {{baseUrl}}/api/ingredients/{{newIngredientId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Bột Cacao Nguyên Chất Đắk Lắk (Đã Sửa)",
+  "unit": "kg",
+  "quantity": 12.0,
+  "minQuantity": 4.0
+}
+
+### TC-X17: Điều chỉnh kho với delta = 0 - Mong đợi: 400 Bad Request
+PATCH {{baseUrl}}/api/ingredients/1/stock
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "delta": 0
+}
+
+### TC-X18: Xuất quá số lượng tồn kho (Quantity < 0) - Mong đợi: 400 Tồn kho không đủ
+PATCH {{baseUrl}}/api/ingredients/1/stock
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "delta": -999999
+}
+
+### TC-X19: Xuất kho chạm ngưỡng tối thiểu -> Tự tạo Task "Nhập hàng: ..."
+### Mong đợi: 200 OK, autoTaskCreated: true
+PATCH {{baseUrl}}/api/ingredients/{{newIngredientId}}/stock
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "delta": -10.0
+}
+
+### TC-X20: Xuất tiếp khi task đã có -> Không tạo trùng task
+### Mong đợi: 200 OK, autoTaskCreated: false
+PATCH {{baseUrl}}/api/ingredients/{{newIngredientId}}/stock
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "delta": -0.5
+}
+
+### TC-X21: Phân quyền: Staff xóa nguyên liệu - Mong đợi: 403 Forbidden
+DELETE {{baseUrl}}/api/ingredients/{{newIngredientId}}
+Authorization: Bearer {{staffToken}}
+
+### TC-X22: Admin xóa nguyên liệu vừa tạo - Mong đợi: 200 OK
+DELETE {{baseUrl}}/api/ingredients/{{newIngredientId}}
+Authorization: Bearer {{adminToken}}

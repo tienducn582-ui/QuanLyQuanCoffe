@@ -21,7 +21,6 @@
   <link rel="stylesheet" href="assets/css/style.css">
 
   <style>
-    /* Biến màu chủ đạo cho phong cách quán Cafe */
     :root {
       --primary: #6F4E37;
       --primary-dark: #513624;
@@ -70,7 +69,6 @@
       pointer-events: none;
     }
 
-    /* 6 Thẻ KPI */
     .kpi-metric-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
@@ -104,7 +102,6 @@
       color: var(--text-primary);
     }
 
-    /* Thanh tiến độ tổng thể */
     .overall-progress-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
@@ -126,7 +123,6 @@
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Khung biểu đồ Chart.js */
     .chart-panel-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
@@ -155,7 +151,6 @@
       gap: 8px;
     }
 
-    /* Trạng thái Loading và Empty */
     .loading-overlay {
       display: flex;
       align-items: center;
@@ -178,7 +173,7 @@
     }
 
     @media print {
-      #navbar, .site-navbar, #btn-print-report, #btn-refresh-stats, footer {
+      #navbar, .site-navbar, #btn-print-report, #btn-refresh-stats, #btn-export-csv, footer {
         display: none !important;
       }
       body { background: #fff !important; }
@@ -195,7 +190,6 @@
        NAVBAR RESPONSIVE DÙNG CHUNG (Tự động render bởi ui.js qua #navbar)
        ================================================================ -->
   <nav id="navbar">
-    <!-- Fallback thanh điều hướng khi chưa load ui.js -->
     <header class="site-navbar navbar navbar-expand-lg bg-white border-bottom py-2">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-dark" href="index.html">
@@ -211,6 +205,7 @@
             <li class="nav-item"><a class="nav-link" href="tasks.html">Công việc</a></li>
             <li class="nav-item"><a class="nav-link" href="shifts.html">Ca làm</a></li>
             <li class="nav-item"><a class="nav-link active fw-bold text-primary" href="statistics.html">Thống kê</a></li>
+            <li class="nav-item"><a class="nav-link" href="inventory.html">Kho nguyên liệu</a></li>
             <li class="nav-item"><a class="nav-link" href="profile.html">Hồ sơ</a></li>
           </ul>
         </div>
@@ -239,11 +234,15 @@
             Bảng Thống Kê &amp; Báo Cáo Vận Hành
           </h1>
           <p class="text-secondary small mb-0">
-            Dữ liệu tổng hợp trực tiếp từ cơ sở dữ liệu qua Backend API (GET /api/stats). Phụ trách bởi TV4.
+            Tổng hợp dữ liệu theo thời gian thực từ CSDL: Tiến độ, Trạng thái, Ưu tiên, Nhân viên, Ca làm và Theo tuần.
           </p>
         </div>
 
         <div class="d-flex flex-wrap gap-2">
+          <!-- Nút Xuất CSV (Chỉ hiện khi là Admin) -->
+          <button type="button" class="btn btn-success" id="btn-export-csv" style="display: none;" title="Xuất dữ liệu toàn bộ công việc ra file CSV (Dành riêng cho Quản trị viên)">
+            <i class="fa-solid fa-file-csv me-1"></i> Xuất CSV
+          </button>
           <button type="button" class="btn btn-outline-secondary" id="btn-refresh-stats" title="Làm mới lại dữ liệu từ Backend API">
             <i class="fa-solid fa-arrows-rotate me-1"></i> Làm mới
           </button>
@@ -263,7 +262,7 @@
       <span>Đang tổng hợp dữ liệu từ hệ thống máy chủ...</span>
     </div>
 
-    <!-- 2. KHU VỰC 6 THẺ CHỈ SỐ KPI CHÍNH -->
+    <!-- 2. KHU VỰC 6 THẺ CHỈ SỐ KPI CHÍNH (GIỮ NGUYÊN) -->
     <section class="mb-4" aria-label="Các chỉ số KPI chính của hệ thống">
       <div class="row g-3 mb-3">
         
@@ -382,10 +381,9 @@
       </div>
     </section>
 
-    <!-- 3. KHU VỰC 3 BIỂU ĐỒ CHART.JS -->
+    <!-- 3. KHU VỰC 3 BIỂU ĐỒ CHART.JS CỐT LÕI (GIỮ NGUYÊN) -->
     <section class="mb-4" aria-label="Biểu đồ trực quan hóa dữ liệu Chart.js">
 
-      <!-- Trạng thái trống (Empty State khi tổng task = 0) -->
       <div id="stats-empty-state" class="chart-empty-state mb-4" style="display: none;">
         <div style="font-size: 3rem; color: var(--accent); margin-bottom: 0.5rem;">
           <i class="fa-solid fa-mug-saucer"></i>
@@ -399,8 +397,7 @@
         </a>
       </div>
 
-      <!-- Lưới 3 Biểu đồ -->
-      <div class="row g-4" id="stats-charts-row">
+      <div class="row g-4 mb-4" id="stats-charts-row">
         
         <!-- Biểu đồ 1: Tròn (Doughnut) - Trạng thái -->
         <div class="col-12 col-lg-4">
@@ -462,6 +459,89 @@
       </div>
     </section>
 
+    <!-- 4. KHU VỰC THỐNG KÊ MỞ RỘNG (TV4-X6): THEO NHÂN VIÊN, THEO CA VÀ THEO TUẦN -->
+    <section class="mb-4" aria-label="Thống kê nâng cao theo nhân sự, ca làm và tiến độ tuần">
+      
+      <!-- Bảng 1: Thống kê hiệu suất theo nhân viên -->
+      <div class="card border-0 shadow-sm mb-4" style="border-radius: var(--radius-lg); overflow: hidden;">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+          <h2 class="h5 fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+            <i class="fa-solid fa-users-gear" style="color: var(--primary);"></i>
+            <span>Hiệu Suất Theo Nhân Viên</span>
+          </h2>
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">Tổng / Đã xong / Quá hạn</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" style="min-width: 180px;">Nhân viên</th>
+                <th scope="col" class="text-center">Tổng việc</th>
+                <th scope="col" class="text-center">Đã hoàn thành</th>
+                <th scope="col" class="text-center">Quá hạn</th>
+                <th scope="col" class="text-center" style="min-width: 140px;">Tỷ lệ hoàn thành</th>
+              </tr>
+            </thead>
+            <tbody id="table-by-user-body">
+              <tr>
+                <td colspan="5" class="text-center py-3 text-secondary">Đang tải dữ liệu nhân sự...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Lưới 2 Biểu đồ Nâng cao: Theo Ca làm và Theo Tuần -->
+      <div class="row g-4">
+        
+        <!-- Biểu đồ 4: Cột dọc - Theo Ca làm -->
+        <div class="col-12 col-lg-6">
+          <div class="chart-panel-card">
+            <div class="chart-panel-header">
+              <h2 class="chart-panel-title">
+                <i class="fa-solid fa-business-time" style="color: #3498DB;"></i>
+                <span>Theo Ca Làm Việc</span>
+              </h2>
+              <span class="badge bg-light text-dark border">Tổng vs Đã xong</span>
+            </div>
+            <div style="position: relative; height: 300px; width: 100%;">
+              <canvas id="chartShift"></canvas>
+            </div>
+            <div class="text-center mt-2 small text-secondary">
+              So sánh khối lượng và tỷ lệ hoàn thành công việc theo từng ca.
+            </div>
+          </div>
+        </div>
+
+        <!-- Biểu đồ 5: Đường (Line) - Tiến độ theo Tuần -->
+        <div class="col-12 col-lg-6">
+          <div class="chart-panel-card">
+            <div class="chart-panel-header">
+              <h2 class="chart-panel-title">
+                <i class="fa-solid fa-calendar-week" style="color: #E67E22;"></i>
+                <span>Tiến Độ Theo Tuần</span>
+              </h2>
+              <div class="d-flex align-items-center gap-2">
+                <select id="select-weekly-weeks" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem;">
+                  <option value="4">4 tuần</option>
+                  <option value="8" selected>8 tuần</option>
+                  <option value="12">12 tuần</option>
+                </select>
+              </div>
+            </div>
+            <div style="position: relative; height: 300px; width: 100%;">
+              <canvas id="chartWeekly"></canvas>
+            </div>
+            <div class="text-center mt-2 small text-secondary">
+              Xu hướng phát sinh và hoàn thành công việc theo các tuần bắt đầu từ thứ Hai.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
   </main>
 
   <!-- ================================================================
@@ -496,7 +576,7 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/ui.js"></script>
 
-  <!-- 4. Logic trang Thống kê TV4: Gọi GET /api/stats và vẽ Chart.js -->
+  <!-- 4. Logic trang Thống kê TV4: Gọi GET /api/stats, /by-user, /by-shift, /weekly, /export.csv -->
   <script src="assets/js/statistics.js"></script>
 
 </body>
