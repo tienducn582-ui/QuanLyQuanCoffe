@@ -46,7 +46,7 @@ app.get('/api/health', async (req, res, next) => {
   }
 });
 
-// Gắn 7 Router API chức năng
+// Gắn 7 Router API chức năng cơ bản
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/me', require('./routes/me'));
 app.use('/api/users', require('./routes/users'));
@@ -54,6 +54,13 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/stats', require('./routes/stats'));
+
+// Gắn 5 Router API chức năng mở rộng (TV1-E0)
+app.use('/api/schedule', require('./routes/schedule'));
+app.use('/api/templates', require('./routes/templates'));
+app.use('/api/ingredients', require('./routes/ingredients'));
+app.use('/api/customers', require('./routes/customers'));
+app.use('/api/pos', require('./routes/pos'));
 
 // Middleware bắt lỗi 404 và xử lý lỗi tập trung
 app.use(notFound);

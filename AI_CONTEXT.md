@@ -1,3 +1,5 @@
+Kế hoạch bổ sung ở docs/ke-hoach-mo-rong.md; luật LIÊN-TV và luật test áp dụng cho mọi tác vụ.
+
 # AI_CONTEXT – Cafe Task Manager
 
 BỐI CẢNH
@@ -112,3 +114,75 @@ E. Ghi kết quả và báo cáo
 - Kết quả test thuộc phạm vi của mình được tóm tắt thành bảng (Mã | Trang hoặc luồng | Cỡ màn hình | Kết quả thực tế | Đạt? | Ghi chú) vào file tài liệu thuộc phạm vi của mình (TV5: docs/ra-soat-giao-dien.md); file này được commit.
 - Lỗi trong file của mình: sửa rồi chạy lại, tối đa 3 vòng; còn lỗi thì báo rõ.
 - Trước khi đưa lệnh git cho tôi: chạy git status --short, bảo đảm .local-test/, node_modules, .env không nằm trong danh sách chuẩn bị add.
+
+=== PHẦN MỞ RỘNG (9 tính năng bổ sung) ===
+Mọi bảng, endpoint, hàm ở phần trên giữ nguyên; chỉ THÊM. Định dạng phản hồi, xác thực, phân quyền, quy tắc code: như phần trên.
+
+FILE MỚI (chỉ chủ file được sửa)
+database/ (TV4): schema-mo-rong.sql, seed-mo-rong.sql
+server/routes/: schedule.js (TV1), templates.js (TV3), ingredients.js (TV4), customers.js (TV2), pos.js (TV5)
+public/ và public/assets/js/ (cùng tên trang và tên js): schedule (TV1), templates (TV3), inventory (TV4), customers (TV2), my-tasks (TV5), pos (TV5)
+docs/: ke-hoach-mo-rong.md, ra-soat-mo-rong.md (TV1). Thư mục .local-test/ chỉ ở máy, nằm trong .gitignore.
+Trang mới dùng khung docs/khung-chung.html, có nav id='navbar', nạp script theo thứ tự: bootstrap bundle, api.js, ui.js, <tên-trang>.js; gọi requireLogin() khi tải trang.
+Server đã gắn sẵn /api/schedule, /api/templates, /api/ingredients, /api/customers, /api/pos; chủ router ghi đè file khung. Router cũ được mở rộng: shifts.js (TV1), tasks.js (TV3), stats.js (TV4).
+
+BẢNG MỚI (schema-mo-rong.sql xóa rồi tạo lại CHỈ các bảng này; chữ dùng NVARCHAR)
+ShiftLogs(Id PK, ShiftId FK->Shifts CASCADE, UserId FK->Users CASCADE, LogDate DATE, StartedAt DATETIME2, EndedAt DATETIME2 null, HandoverNote NVARCHAR(500) null)
+ShiftAssignments(Id PK, ShiftId FK->Shifts CASCADE, UserId FK->Users CASCADE, WorkDate DATE, UNIQUE(ShiftId,UserId,WorkDate))
+TaskTemplates(Id PK, Title NVARCHAR(200), Description NVARCHAR(500) null, Priority 'Low'|'Medium'|'High', CategoryId FK->Categories SET NULL null, ShiftId FK->Shifts CASCADE, IsActive BIT default 1)
+TaskLogs(Id PK, TaskId FK->Tasks CASCADE, UserId FK->Users SET NULL null, Action 'created'|'updated'|'status'|'comment', OldValue NVARCHAR(50) null, NewValue NVARCHAR(50) null, Comment NVARCHAR(500) null, CreatedAt default GETDATE())
+Ingredients(Id PK, Name NVARCHAR(100) unique, Unit NVARCHAR(20), Quantity DECIMAL(10,2) default 0 CHECK>=0, MinQuantity DECIMAL(10,2) default 0 CHECK>=0, UpdatedAt)
+Customers(Id PK, FullName NVARCHAR(100), Phone NVARCHAR(15) unique, Points INT default 0 CHECK>=0, CreatedAt)
+DiningTables(Id PK, Name NVARCHAR(30) unique, Seats INT CHECK 1..20)
+MenuItems(Id PK, Name NVARCHAR(100) unique, Price INT CHECK>=0, IsActive BIT default 1)
+Orders(Id PK, TableId FK->DiningTables, CustomerId FK->Customers SET NULL null, Status 'Open'|'Paid'|'Cancelled', Total INT default 0, CreatedBy FK->Users SET NULL null, CreatedAt, PaidAt null); UNIQUE INDEX có điều kiện UX_Orders_OpenTable ON Orders(TableId) WHERE Status='Open'
+OrderItems(Id PK, OrderId FK->Orders CASCADE, MenuItemId FK->MenuItems, Quantity INT CHECK 1..99, UnitPrice INT)
+Dữ liệu mẫu (seed-mo-rong.sql, tiếng Việt, tham chiếu ca và danh mục theo TÊN, không gõ cứng Id): 6 mẫu việc (2 mỗi ca), 8 nguyên liệu (ít nhất 2 loại Quantity <= MinQuantity), 5 khách, 8 bàn, 10 món.
+
+ENDPOINT MỚI (tất cả cần verifyToken; [Admin] = requireRole Admin)
+TV3 /api/tasks: GET / thêm assigneeId=<số>|me và overdue=1; GET /:id/logs; POST /:id/comments {comment} (mọi vai trò)
+TV1 /api/shifts: POST /:id/start; POST /:id/end {handoverNote?}; GET /logs?date=&shiftId=; GET /:id/handover (mọi vai trò). Đặt /logs trước /:id.
+TV1 /api/schedule: GET /?from=&to=; GET /mine?from=&to= (đặt /mine trước /:id); POST / {shiftId,userId,workDate} [Admin]; DELETE /:id [Admin]
+TV3 /api/templates: GET /?shiftId= (mọi vai trò); POST /, PUT /:id, DELETE /:id [Admin]; POST /generate {shiftId, date?} [Admin]
+TV4 /api/stats: GET /by-user; GET /by-shift; GET /weekly?weeks=8 (mọi vai trò); GET /export.csv [Admin]
+TV4 /api/ingredients: GET /?search=&lowOnly=1&page=&pageSize=; GET /:id; PATCH /:id/stock {delta} (mọi vai trò); POST /, PUT /:id, DELETE /:id [Admin]
+TV2 /api/customers: GET /?search=&page=&pageSize=; GET /:id; POST /; POST /:id/earn {amount}; POST /:id/redeem {points} (mọi vai trò); PUT /:id, DELETE /:id [Admin]
+TV5 /api/pos: GET /tables; GET /menu; POST /orders {tableId, customerId?}; GET /orders/:id; POST /orders/:id/items {menuItemId, quantity}; PATCH /orders/:id/items/:itemId {quantity}; DELETE /orders/:id/items/:itemId; POST /orders/:id/pay; POST /orders/:id/cancel (mọi vai trò); POST, PUT /:id, DELETE /:id của /tables và /menu [Admin]
+
+QUY TẮC NGHIỆP VỤ
+- Quá hạn: Deadline < CAST(GETDATE() AS DATE) AND Status <> 'Done'.
+- assigneeId=me lấy req.user.id; giá trị khác số nguyên dương hoặc 'me' trả 400.
+- Ghi TaskLogs (TV3, trong tasks.js): POST tạo việc -> 'created'; PATCH status -> 'status' kèm OldValue, NewValue; PUT -> 'status' nếu Status đổi, 'updated' nếu trường khác đổi; bình luận -> 'comment'. Lỗi ghi log chỉ ghi console, không làm hỏng thao tác chính.
+- Tạo việc từ mẫu: Status 'Pending', AssigneeId NULL, Deadline = date; bỏ qua mẫu nếu đã có Tasks cùng Title + ShiftId + Deadline.
+- Cảnh báo kho: sau PATCH stock, nếu Quantity <= MinQuantity và chưa có Tasks Title = N'Nhập hàng: ' + Name với Status <> 'Done' thì TV4 INSERT thẳng vào bảng Tasks (Priority 'High', Status 'Pending', Deadline hôm nay, danh mục 'Kho và mua hàng' lấy theo tên). Không sửa tasks.js.
+- Điểm tích lũy: điểm = FLOOR(số tiền / 10000). Hạng tính khi trả về, không lưu: Points < 100 'Đồng', 100–299 'Bạc', từ 300 'Vàng'. Đổi điểm không được làm Points âm.
+- POS: một bàn chỉ có một đơn Open; Total do server tính lại từ OrderItems, không tin client; UnitPrice chốt theo MenuItems.Price lúc thêm món; thanh toán xong thì đơn 'Paid', bàn trống; nếu đơn có CustomerId và bảng Customers có dữ liệu thì cộng điểm theo công thức trên trong cùng một batch.
+- Mã lỗi: 400 dữ liệu sai, 401 chưa đăng nhập, 403 thiếu quyền, 404 không tìm thấy, 409 trùng hoặc xung đột trạng thái.
+
+### 0.1 Luật LIÊN-TV: khi cần phần của thành viên khác
+
+Áp dụng cho mọi tác vụ. Khi tác vụ cần một hàm, endpoint, bảng hoặc file do thành viên khác sở hữu:
+
+- Kiểm tra trước: mở file đó trong repo, đối chiếu với hợp đồng (tên hàm, endpoint, cột đúng từng chữ).
+
+- Đã có và đúng: chỉ ĐỌC và gọi nó. Không sao chép logic sang file của mình, không sửa file đó.
+
+- Chưa có hoặc lệch hợp đồng: DỪNG riêng phần phụ thuộc đó, không tự viết thay, không tạo bản tạm trùng tên. Vẫn làm tiếp phần không phụ thuộc.
+
+- Cần sửa file của người khác, dù chỉ 1 dòng: dừng, không sửa.
+
+- Ở trường hợp 3 và 4, cuối báo cáo soạn sẵn “TIN NHẮN GỬI TVk” theo mẫu: [TVa → TVk] File: ... Cần: ... (hàm, endpoint hoặc cột). Lý do: ... Hạn: Mốc Xn.
+
+- Báo cáo cuối của mọi tác vụ có đủ các mục: file đã đổi, cách kiểm tra, việc tôi làm tay, “Phần của TV khác đã dùng”, “Tin nhắn cần gửi” (ghi “không có” nếu trống).
+
+### 0.2 Luật test của nhóm
+
+Làm xong thì tự test phần thuộc tác vụ của mình trước khi báo xong:
+
+- Giao diện: không tràn ngang, không dính hay chồng chữ ở 375px, 768px, 1200px.
+
+- Luồng nghiệp vụ thật qua API và CSDL, thử cả Admin và Staff, cả trường hợp lỗi (dữ liệu sai, thiếu quyền, id không tồn tại).
+
+- File test tạm, ảnh chụp, log test thuộc phần của thành viên khác: chỉ lưu trong thư mục .local-test/ trên máy (đã nằm trong .gitignore), không đưa lên GitHub. File docs/tests/tvN.http của tác vụ mình là file được sửa nên đưa lên bình thường.
+
+- Chưa chạy thì nói rõ là chưa chạy, không khẳng định đã chạy.
