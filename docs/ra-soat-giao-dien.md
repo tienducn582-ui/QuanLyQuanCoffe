@@ -142,20 +142,25 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 
 * **Công cụ đo:** Playwright trên Google Chrome thật kết nối máy chủ live `http://127.0.0.1:3095`.
 
-| Độ phân giải | Số đo thực tế | Kết quả kiểm tra tràn ngang | Trải nghiệm thao tác (UX/UI) | Đánh giá & Ảnh bằng chứng |
+| Độ phân giải | Số đo thực tế | Kết quả kiểm tra tràn ngang | Bố cục & Trải nghiệm thao tác (UX/UI) | Đánh giá & Ảnh bằng chứng |
 |:---:|:---|:---:|:---|:---:|
-| **375px** (Mobile) | `innerWidth: 375px`<br>`scrollWidth: 375px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Tự động chuyển thành 1 cột dọc: Sơ đồ bàn ở trên, thực đơn ở giữa, panel đơn hàng ở dưới; modal hủy đơn và modal thanh toán vừa vặn màn hình di động. Vùng chạm nút bấm và thẻ bàn $\ge 42\text{px}$; nút tăng giảm (+, -, ✕) thao tác thuận tiện. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_375px.png` |
-| **768px** (Tablet) | `innerWidth: 768px`<br>`scrollWidth: 768px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bố cục dạng lưới linh hoạt; sơ đồ bàn hiển thị 3-4 bàn/hàng; thực đơn dạng cuộn mượt mà; panel đơn hàng rộng rãi; các bảng modal quản lý Admin hiển thị trọn vẹn không cuộn ngang. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_768px.png` |
-| **1200px** (Desktop) | `innerWidth: 1200px`<br>`scrollWidth: 1200px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bố cục 2 cột chuyên nghiệp: Cột trái (1.25fr) chứa sơ đồ bàn và thực đơn món; Cột phải (0.95fr) cố định chi tiết đơn hàng, danh sách món và hộp thanh toán. Tận dụng tối đa không gian màn hình lớn. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_1200px.png` |
+| **375px** (Mobile) | `innerWidth: 375px`<br>`scrollWidth: 375px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Màn hình chính hiển thị sơ đồ bàn và thực đơn (ẩn panel đơn hàng chân trang). Khi người dùng bấm vào một bàn, panel đơn hàng hiển thị dưới dạng **Modal toàn màn hình (Full-screen Modal)** có nút `✕ Đóng` ở header để quay lại sơ đồ bàn. Vùng chạm $\ge 42\text{px}$; nút tăng giảm (+, -, ✕) thao tác thuận tiện. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_375px.png`<br>`.local-test/screenshots/pos_375px_modal.png` |
+| **768px** (Tablet) | `innerWidth: 768px`<br>`scrollWidth: 768px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bố cục **2 CỘT** chuẩn theo kế hoạch: Cột trái chứa sơ đồ bàn (2 cột) và thực đơn; Cột phải cố định panel đơn hàng ("Chưa chọn bàn" hoặc đơn đang mở). Các bảng modal quản lý Admin hiển thị đủ cột không cuộn ngang. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_768px.png` |
+| **1200px** (Desktop) | `innerWidth: 1200px`<br>`scrollWidth: 1200px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bố cục **2 CỘT** chuyên nghiệp: Cột trái (1.2fr) chứa sơ đồ bàn (4 cột) và thực đơn (4 cột); Cột phải (0.95fr) hiển thị chi tiết đơn hàng, danh sách món và hộp thanh toán. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/pos_1200px.png` |
 
-### 6.2. Kiểm tra tuân thủ các tiêu chuẩn thiết kế (B1 - B13)
+### 6.2. Kiểm tra tuân thủ các tiêu chuẩn thiết kế (B1 - B13) & Rà soát chồng chữ/dính chữ
 
-1. **B1 (Không tràn ngang):** `pos.html` sử dụng CSS Grid (`.pos-container`, `.pos-table-grid`, `.pos-menu-grid`) với `minmax()` thích ứng, không dùng `overflow-x: hidden` cưỡng ép (`scrollWidth == innerWidth` trên cả 3 kích thước).
-2. **B5 (Bảo vệ Route):** Được bảo vệ bằng hàm `requireLogin()` ngay khi DOMContentLoaded, chặn khách vãng lai và đưa về `login.html`.
-3. **B6 & B7 (Màu sắc & Theme):** Sử dụng 100% biến màu chuẩn (`--primary: #4A2C1A`, `--bg-color`, `--card-bg`, `--status-success`, `--status-warning`); hỗ trợ chế độ Tối (Dark mode) đồng bộ và script chống FOUC.
-4. **B8 (Độ tương phản WCAG AA):** Chữ trên nền thẻ và nút bấm đạt tỷ lệ tương phản $\ge 4.5:1$.
-5. **B10 (Không emoji):** 0 emoji trong mã nguồn và giao diện người dùng.
-6. **B11 (Khoảng cách navbar):** Nội dung chính cách navbar chuẩn $24\text{px}-32\text{px}$.
+1. **B1 (Không tràn ngang):** Đã đo bằng script Playwright trên Chrome thật: `scrollWidth == innerWidth` trên cả 3 kích thước 375px, 768px, 1200px (0px tràn ngang). ✅ **ĐẠT (ĐÃ ĐO THẬT)**
+2. **Kiểm tra chồng chữ / dính chữ:**
+   - Quan sát thực tế qua ảnh chụp màn hình:
+     + Thẻ món nước dài 2 dòng (`Matcha đá xay kem tuyết`, `Bạc xỉu truyền thống`, `Latte hạnh nhân vani`): Đã khắc phục bằng `min-height: 84px` và `margin-top: auto` cho giá tiền, đảm bảo giá tiền luôn cố định ở đáy thẻ, không bị dính sát vào tên món. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
+     + Thẻ bàn: Tên bàn dài có `word-break: break-word` và `min-height: 126px`, không đè lên badge trạng thái hoặc tổng tiền. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
+     + Danh sách món trong đơn: Tên món có `word-break: break-word; line-height: 1.35`, cụm nút `+ - ✕` có `flex-shrink: 0`, không bị dính chữ. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
+3. **B5 (Bảo vệ Route):** `requireLogin()` chặn khách vãng lai khi truy cập `pos.html`. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+4. **B6 & B7 (Màu sắc & Theme):** 100% biến màu tông nâu cà phê (`--primary: #4A2C1A`, `--bg-color: #FBF5EC`), 0 màu xanh Bootstrap. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+5. **B10 (Không emoji):** 0 emoji trong mã nguồn và giao diện người dùng. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+6. **B11 (Khoảng cách navbar):** Nội dung chính cách navbar $\ge 24\text{px}$. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+7. **Kiểm tra công cụ hỗ trợ người khuyết tật chuyên sâu (Screen Reader / VoiceOver cho sơ đồ bàn):** ⚠️ **CHƯA KIỂM** (chỉ mới kiểm tra cơ bản nhãn nút và thẻ chuẩn ngữ nghĩa).
 
 ### 6.3. Nhật ký kiểm thử luồng nghiệp vụ trực tiếp trên trình duyệt Chrome thật
 

@@ -189,27 +189,32 @@ function renderTables() {
 }
 
 /**
- * Render danh sách món nước vào menu grid
+ * Render danh sách món nước vào menu grid (cột chính và panel modal)
  */
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
-  if (!grid) return;
+  const panelGrid = document.getElementById('panelMenuGrid');
 
   if (menuData.length === 0) {
-    grid.innerHTML = `
+    const emptyHtml = `
       <div style="grid-column: 1 / -1; padding: var(--space-16); text-align: center; color: var(--text-secondary); font-size: var(--text-sm);">
         Chưa có món ăn hoặc đồ uống nào trong thực đơn.
       </div>
     `;
+    if (grid) grid.innerHTML = emptyHtml;
+    if (panelGrid) panelGrid.innerHTML = emptyHtml;
     return;
   }
 
-  grid.innerHTML = menuData.map(item => `
+  const menuHtml = menuData.map(item => `
     <div class="pos-menu-card" onclick="onMenuItemClick(${item.id})">
       <div class="pos-menu-name">${escapeHtml(item.name)}</div>
       <div class="pos-menu-price">${item.price.toLocaleString('vi-VN')} đ</div>
     </div>
   `).join('');
+
+  if (grid) grid.innerHTML = menuHtml;
+  if (panelGrid) panelGrid.innerHTML = menuHtml;
 }
 
 /**
@@ -269,6 +274,33 @@ async function selectTable(table, reloadOrderIfOccupied = true) {
     if (reloadOrderIfOccupied && table.openOrderId) {
       await loadOrderDetails(table.openOrderId);
     }
+  }
+
+  // Nếu màn hình di động (<768px), mở panel dưới dạng modal toàn màn hình
+  if (window.innerWidth < 768) {
+    openMobileOrderPanel();
+  }
+}
+
+/**
+ * Mở modal panel đơn hàng toàn màn hình (trên di động <768px)
+ */
+function openMobileOrderPanel() {
+  const wrapper = document.getElementById('orderPanelWrapper');
+  if (wrapper) {
+    wrapper.classList.add('pos-mobile-modal-open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+/**
+ * Đóng modal panel đơn hàng trên di động để quay lại sơ đồ bàn
+ */
+function closeMobileOrderPanel() {
+  const wrapper = document.getElementById('orderPanelWrapper');
+  if (wrapper) {
+    wrapper.classList.remove('pos-mobile-modal-open');
+    document.body.style.overflow = '';
   }
 }
 
@@ -668,6 +700,7 @@ async function searchCustomer() {
  * Đặt lại trạng thái ban đầu của panel đơn hàng
  */
 function resetOrderPanel() {
+  closeMobileOrderPanel();
   const tableNameEl = document.getElementById('panelTableName');
   const orderMetaEl = document.getElementById('panelOrderMeta');
   const tableBadgeEl = document.getElementById('panelTableBadge');
