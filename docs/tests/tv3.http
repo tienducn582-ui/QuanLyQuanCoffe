@@ -281,3 +281,179 @@ Content-Type: application/json
 {
   "title": "Không có việc này"
 }
+
+### =====================================================================
+### 5. TV3-X5 PHẦN 1: BỘ LỌC assigneeId VÀ overdue
+### Quá hạn = Deadline < hôm nay (theo SQL Server) và Status <> 'Done'.
+### Muốn thấy dữ liệu cho assigneeId=me: chạy 6.3 (Admin giao việc id=1 cho staff, id staff = 2) trước.
+### =====================================================================
+
+### 5.1 Việc của tôi - Mong đợi: 200, mọi bản ghi có assigneeId = id của staff; pagination.total đúng số việc của staff
+GET {{baseUrl}}/tasks?assigneeId=me
+Authorization: Bearer {{staffToken}}
+
+### 5.2 assigneeId không hợp lệ - Mong đợi: 400 "assigneeId phải là số nguyên dương hoặc 'me'."
+GET {{baseUrl}}/tasks?assigneeId=abc
+Authorization: Bearer {{staffToken}}
+
+### 5.3 assigneeId = 0 - Mong đợi: 400 (0 không phải số nguyên dương)
+GET {{baseUrl}}/tasks?assigneeId=0
+Authorization: Bearer {{staffToken}}
+
+### 5.4 Theo id người thực hiện cụ thể - Mong đợi: 200, mọi bản ghi assigneeId = 2
+GET {{baseUrl}}/tasks?assigneeId=2
+Authorization: Bearer {{adminToken}}
+
+### 5.5 Chỉ việc quá hạn - Mong đợi: 200, mọi bản ghi deadline < hôm nay và status khác Done
+###     Đối chiếu SSMS: SELECT COUNT(*) FROM Tasks WHERE Deadline < CAST(GETDATE() AS DATE) AND Status <> 'Done'
+GET {{baseUrl}}/tasks?overdue=1
+Authorization: Bearer {{staffToken}}
+
+### 5.6 overdue giá trị lạ - Mong đợi: 400 'overdue chỉ nhận 1 (chỉ việc quá hạn) hoặc 0.'
+GET {{baseUrl}}/tasks?overdue=yes
+Authorization: Bearer {{staffToken}}
+
+### 5.7 Kết hợp overdue + status - Mong đợi: 200, chỉ việc quá hạn có status = Pending
+GET {{baseUrl}}/tasks?overdue=1&status=Pending
+Authorization: Bearer {{staffToken}}
+
+### 5.8 overdue + status=Done - Mong đợi: 200, total = 0 (việc Done không bao giờ quá hạn)
+GET {{baseUrl}}/tasks?overdue=1&status=Done
+Authorization: Bearer {{staffToken}}
+
+### 5.9 Huy hiệu "Việc của tôi" của TV5 - Mong đợi: 200, data tối đa 1 bản ghi, pagination.total = tổng số việc quá hạn của tôi
+GET {{baseUrl}}/tasks?assigneeId=me&overdue=1&pageSize=1
+Authorization: Bearer {{staffToken}}
+
+### 5.10 Phân trang vẫn đúng khi lọc - Mong đợi: 200, pagination.total bằng 5.5, totalPages = ceil(total/2)
+GET {{baseUrl}}/tasks?overdue=1&page=1&pageSize=2
+Authorization: Bearer {{adminToken}}
+
+### =====================================================================
+### 6. TV3-X5 PHẦN 2: LỊCH SỬ (TaskLogs) VÀ BÌNH LUẬN
+### =====================================================================
+
+### 6.1 Staff tạo việc - Mong đợi: 201; GET logs của việc này có 1 dòng action = 'created'
+# @name createLogTask
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc thử lịch sử TV3-X5",
+  "priority": "Low",
+  "deadline": "2026-12-31"
+}
+
+###
+
+@logTaskId = {{createLogTask.response.body.$.data.id}}
+
+### 6.2 Staff đổi trạng thái - Mong đợi: 200; log mới action = 'status', oldValue = Pending, newValue = InProgress
+PATCH {{baseUrl}}/tasks/{{logTaskId}}/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "InProgress"
+}
+
+### 6.3 Admin sửa (đổi trạng thái + giao cho staff) - Mong đợi: 200; thêm 2 log:
+###     'status' (InProgress -> Done) và 'updated' (newValue liệt kê mã trường đổi, vd 'assignee')
+PUT {{baseUrl}}/tasks/{{logTaskId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Việc thử lịch sử TV3-X5",
+  "priority": "Low",
+  "deadline": "2026-12-31",
+  "status": "Done",
+  "assigneeId": 2
+}
+
+### 6.4 Staff bình luận - Mong đợi: 201, data.action = 'comment', data.userName = tên staff
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "comment": "Đã lau xong quầy, <script>alert('x')</script> phải hiện thành chữ"
+}
+
+### 6.5 Admin bình luận - Mong đợi: 201
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "comment": "Cảm ơn, mai làm tiếp nhé."
+}
+
+### 6.6 Xem lịch sử (Staff) - Mong đợi: 200, mới nhất trước: comment, comment, updated, status, status, created
+###     Mỗi phần tử có { id, action, oldValue, newValue, comment, userName, createdAt }
+GET {{baseUrl}}/tasks/{{logTaskId}}/logs
+Authorization: Bearer {{staffToken}}
+
+### 6.7 Xem lịch sử (Admin) - Mong đợi: 200, giống 6.6
+GET {{baseUrl}}/tasks/{{logTaskId}}/logs
+Authorization: Bearer {{adminToken}}
+
+### 6.8 Bình luận rỗng (chỉ khoảng trắng) - Mong đợi: 400 'Bình luận là bắt buộc và dài từ 1 đến 500 ký tự.'
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "comment": "   "
+}
+
+### 6.9 Thiếu trường comment - Mong đợi: 400
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 6.10 Bình luận 501 ký tự - Mong đợi: 400 'Bình luận là bắt buộc và dài từ 1 đến 500 ký tự.'
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "comment": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+### 6.11 Bình luận việc không tồn tại - Mong đợi: 404 'Không tìm thấy công việc.'
+POST {{baseUrl}}/tasks/999999/comments
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "comment": "Không có việc này"
+}
+
+### 6.12 Lịch sử việc không tồn tại - Mong đợi: 404
+GET {{baseUrl}}/tasks/999999/logs
+Authorization: Bearer {{staffToken}}
+
+### 6.13 Lịch sử với id không phải số - Mong đợi: 400
+GET {{baseUrl}}/tasks/abc/logs
+Authorization: Bearer {{staffToken}}
+
+### 6.14 Bình luận khi chưa đăng nhập - Mong đợi: 401
+POST {{baseUrl}}/tasks/{{logTaskId}}/comments
+Content-Type: application/json
+
+{
+  "comment": "Không có token"
+}
+
+### 6.15 PATCH chọn lại đúng trạng thái hiện tại - Mong đợi: 200, KHÔNG thêm log 'status' mới (vì không đổi)
+PATCH {{baseUrl}}/tasks/{{logTaskId}}/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "Done"
+}

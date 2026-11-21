@@ -18,6 +18,25 @@
     /* Độ rộng tối thiểu của cột trên màn hình vừa; bảng cuộn ngang trong khung nếu thiếu chỗ */
     #tasksTableWrap th.col-title { min-width: 13rem; }
     #tasksTableWrap th.col-meta { min-width: 6.5rem; }
+
+    /* Modal Chi tiết: dòng thời gian lịch sử và bình luận (TV3-X5) */
+    .task-timeline { list-style: none; padding: 0; margin: 0; }
+    .task-timeline li { position: relative; padding: 0 0 0.9rem 1.4rem; border-left: 2px solid var(--border-color); margin-left: 0.4rem; }
+    .task-timeline li:last-child { padding-bottom: 0.2rem; }
+    .task-timeline li::before {
+      content: ''; position: absolute; left: -0.45rem; top: 0.2rem;
+      width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--text-secondary);
+    }
+    .task-timeline li.tl-created::before { background: #198754; }
+    .task-timeline li.tl-status::before { background: #0d6efd; }
+    .task-timeline li.tl-updated::before { background: #fd7e14; }
+    .task-timeline li.tl-comment::before { background: #6f42c1; }
+    .task-timeline .tl-comment-text {
+      white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+      background: var(--bg-secondary, rgba(0,0,0,0.04)); border-radius: 0.5rem; padding: 0.4rem 0.6rem; margin-top: 0.25rem;
+    }
+    .task-timeline .tl-meta { font-size: 0.8rem; }
+    #detailInfo { overflow-wrap: anywhere; }
   </style>
 
   <!-- Chống chớp sáng khi dùng giao diện tối -->
@@ -197,6 +216,42 @@
             <button type="submit" class="btn btn-primary" id="btnSaveTask">Lưu công việc</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chi tiết công việc: lịch sử thao tác và bình luận (TV3-X5) -->
+  <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="taskDetailTitle">Chi tiết công việc</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div id="detailInfo" class="mb-3"></div>
+
+          <form id="commentForm" class="mb-4" novalidate>
+            <label for="commentInput" class="form-label fw-semibold">Thêm bình luận</label>
+            <textarea class="form-control" id="commentInput" rows="2" maxlength="500" placeholder="Ví dụ: Đã báo kỹ thuật, chờ linh kiện..."></textarea>
+            <div class="invalid-feedback"></div>
+            <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+              <small class="task-muted" id="commentCounter">0/500</small>
+              <button type="submit" class="btn btn-primary btn-sm" id="btnSendComment">Gửi</button>
+            </div>
+          </form>
+
+          <h6 class="fw-semibold mb-3">Dòng thời gian</h6>
+          <div id="detailLogsLoading" class="text-center my-3 d-none">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+              <span class="visually-hidden">Đang tải lịch sử...</span>
+            </div>
+          </div>
+          <ul class="task-timeline" id="detailTimeline"></ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
       </div>
     </div>
   </div>

@@ -200,11 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .map(([value, label]) => `<option value="${value}" ${value === task.status ? 'selected' : ''}>${label}</option>`)
         .join('');
 
-      // Nút Sửa và Xóa chỉ hiện với Admin
+      // Nút Chi tiết cho mọi người dùng (TV3-X5); nút Sửa và Xóa chỉ hiện với Admin
+      const detailButton = `<button type="button" class="btn btn-outline btn-sm" data-action="detail" data-id="${task.id}">Chi tiết</button>`;
       const adminButtons = admin
-        ? `<button type="button" class="btn btn-outline btn-sm" data-action="edit" data-id="${task.id}">Sửa</button>
+        ? `${detailButton}
+           <button type="button" class="btn btn-outline btn-sm" data-action="edit" data-id="${task.id}">Sửa</button>
            <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="${task.id}">Xóa</button>`
-        : '<span class="task-muted small">—</span>';
+        : detailButton;
 
       return `
         <tr>
@@ -401,6 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const task = currentTasks.find(t => t.id === id);
     if (!task) return;
 
+    if (btn.dataset.action === 'detail') {
+      openDetailModal(task);
+      return;
+    }
+
     if (btn.dataset.action === 'edit') {
       openEditModal(task);
       return;
@@ -418,6 +425,158 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(err.message, 'danger');
         hideLoading(btn);
       }
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     MODAL CHI TIẾT: LỊCH SỬ VÀ BÌNH LUẬN (TV3-X5)
+     GET /api/tasks/:id/logs và POST /api/tasks/:id/comments
+     ------------------------------------------------------------------ */
+  const detail = {
+    modalEl: document.getElementById('taskDetailModal'),
+    title: document.getElementById('taskDetailTitle'),
+    info: document.getElementById('detailInfo'),
+    timeline: document.getElementById('detailTimeline'),
+    loading: document.getElementById('detailLogsLoading'),
+    form: document.getElementById('commentForm'),
+    input: document.getElementById('commentInput'),
+    counter: document.getElementById('commentCounter'),
+    btnSend: document.getElementById('btnSendComment')
+  };
+  const detailModal = window.bootstrap ? new bootstrap.Modal(detail.modalEl) : null;
+  let detailTaskId = null;   // công việc đang mở trong modal
+  let detailLoadCounter = 0; // chỉ hiển thị kết quả của lần tải lịch sử mới nhất
+  let sendingComment = false;
+
+  // Mã ngắn trường thay đổi (server ghi vào NewValue của log 'updated') -> chữ tiếng Việt
+  const FIELD_LABELS = {
+    title: 'tên', desc: 'mô tả', prio: 'ưu tiên', deadline: 'hạn chót',
+    cat: 'danh mục', shift: 'ca làm', assignee: 'người thực hiện'
+  };
+  const COMMENT_RULES = { required: true, maxLength: 500, label: 'Bình luận' };
+
+  // 'YYYY-MM-DD HH:mm:ss' -> 'dd/mm/yyyy HH:mm'
+  function formatDateTimeVi(text) {
+    if (!text) return '';
+    const [datePart, timePart = ''] = String(text).replace('T', ' ').split(' ');
+    return `${formatDateVi(datePart)} ${timePart.slice(0, 5)}`.trim();
+  }
+
+  function statusLabel(value) {
+    return STATUS_LABELS[value] || value || '';
+  }
+
+  // Nội dung chữ của một dòng lịch sử (mọi chuỗi đều qua escapeHtml)
+  function describeLog(log) {
+    switch (log.action) {
+      case 'created':
+        return 'đã tạo công việc';
+      case 'status':
+        return `đổi trạng thái <strong>${escapeHtml(statusLabel(log.oldValue))}</strong> → <strong>${escapeHtml(statusLabel(log.newValue))}</strong>`;
+      case 'updated': {
+        const fields = String(log.newValue || '')
+          .split(',')
+          .filter(Boolean)
+          .map(f => FIELD_LABELS[f] || f);
+        return fields.length > 0
+          ? `đã sửa: ${escapeHtml(fields.join(', '))}`
+          : 'đã sửa thông tin công việc';
+      }
+      case 'comment':
+        return 'đã bình luận';
+      default:
+        return escapeHtml(log.action);
+    }
+  }
+
+  function renderDetailInfo(task) {
+    detail.title.textContent = `Chi tiết công việc #${task.id}`;
+    detail.info.innerHTML = `
+      <h6 class="fw-bold mb-1">${escapeHtml(task.title)}</h6>
+      ${task.description ? `<p class="task-muted small mb-2" style="white-space: pre-wrap;">${escapeHtml(task.description)}</p>` : ''}
+      <div class="d-flex flex-wrap gap-2 small">
+        <span class="badge bg-light text-dark border">${escapeHtml(statusLabel(task.status))}</span>
+        <span class="badge ${PRIORITY_BADGE[task.priority] || 'bg-secondary'}">${escapeHtml(PRIORITY_LABELS[task.priority] || task.priority)}</span>
+        <span class="task-muted">Hạn: ${escapeHtml(task.deadline ? formatDateVi(task.deadline) : 'Không có')}</span>
+        <span class="task-muted">· ${escapeHtml(task.shiftName || 'Không thuộc ca')}</span>
+        <span class="task-muted">· ${escapeHtml(task.assigneeName || 'Chưa giao')}</span>
+      </div>
+    `;
+  }
+
+  async function loadLogs() {
+    const taskId = detailTaskId;
+    const myLoad = ++detailLoadCounter;
+    detail.loading.classList.remove('d-none');
+    try {
+      const result = await apiFetch(`/api/tasks/${taskId}/logs`);
+      if (myLoad !== detailLoadCounter) return;
+      const logs = result.data || [];
+      if (logs.length === 0) {
+        detail.timeline.innerHTML = '<li class="task-muted">Chưa có lịch sử nào cho công việc này.</li>';
+        return;
+      }
+      detail.timeline.innerHTML = logs.map(log => `
+        <li class="tl-${escapeHtml(log.action)}">
+          <div><strong>${escapeHtml(log.userName || 'Người dùng đã xóa')}</strong> ${describeLog(log)}</div>
+          ${log.action === 'comment' ? `<div class="tl-comment-text">${escapeHtml(log.comment)}</div>` : ''}
+          <div class="task-muted tl-meta">${escapeHtml(formatDateTimeVi(log.createdAt))}</div>
+        </li>
+      `).join('');
+    } catch (err) {
+      if (myLoad !== detailLoadCounter) return;
+      detail.timeline.innerHTML = '<li class="text-danger">Không tải được lịch sử công việc.</li>';
+      showToast(err.message, 'danger');
+    } finally {
+      if (myLoad === detailLoadCounter) detail.loading.classList.add('d-none');
+    }
+  }
+
+  function updateCommentCounter() {
+    detail.counter.textContent = `${detail.input.value.length}/500`;
+  }
+
+  function openDetailModal(task) {
+    if (!detailModal) {
+      showToast('Không tải được thư viện Bootstrap, không mở được chi tiết.', 'danger');
+      return;
+    }
+    detailTaskId = task.id;
+    renderDetailInfo(task);
+    detail.timeline.innerHTML = '';
+    detail.input.value = '';
+    validateField(detail.input, {});
+    updateCommentCounter();
+    detailModal.show();
+    loadLogs();
+  }
+
+  detail.input.addEventListener('input', () => {
+    updateCommentCounter();
+    if (detail.input.classList.contains('is-invalid')) validateField(detail.input, COMMENT_RULES);
+  });
+
+  detail.form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (sendingComment || !detailTaskId) return; // đang gửi thì bỏ qua lần bấm thứ hai
+    if (!validateField(detail.input, COMMENT_RULES)) return;
+
+    sendingComment = true;
+    showLoading(detail.btnSend); // khóa nút khi đang gửi
+    try {
+      await apiFetch(`/api/tasks/${detailTaskId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ comment: detail.input.value.trim() })
+      });
+      detail.input.value = '';
+      updateCommentCounter();
+      showToast('Đã thêm bình luận', 'success');
+      await loadLogs();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    } finally {
+      sendingComment = false;
+      hideLoading(detail.btnSend);
     }
   });
 

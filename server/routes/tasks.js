@@ -3,12 +3,18 @@
  * Thành viên phụ trách: TV3 (Công việc)
  *
  * Danh sách endpoint (toàn bộ router yêu cầu đăng nhập - verifyToken):
- * - GET    /api/tasks?search=&status=&priority=&categoryId=&shiftId=&page=1&pageSize=10
+ * - GET    /api/tasks?search=&status=&priority=&categoryId=&shiftId=&assigneeId=&overdue=&page=1&pageSize=10
+ *          (assigneeId = số nguyên dương hoặc 'me'; overdue = 1 chỉ lấy việc quá hạn - TV3-X5)
  * - GET    /api/tasks/:id
+ * - GET    /api/tasks/:id/logs      (Admin và Staff - lịch sử thao tác, TV3-X5)
  * - POST   /api/tasks              (Admin và Staff)
+ * - POST   /api/tasks/:id/comments  (Admin và Staff - bình luận, TV3-X5)
  * - PUT    /api/tasks/:id          (chỉ Admin)
  * - PATCH  /api/tasks/:id/status   (Admin và Staff)
  * - DELETE /api/tasks/:id          (chỉ Admin)
+ *
+ * Ghi lịch sử (bảng TaskLogs, TV3-X5): POST -> 'created'; PATCH status -> 'status';
+ * PUT -> 'status' nếu Status đổi, 'updated' nếu trường khác đổi; bình luận -> 'comment'.
  */
 
 const express = require('express');
@@ -33,6 +39,10 @@ const PRIORITIES = ['Low', 'Medium', 'High'];
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 const MAX_DESCRIPTION = 2000;
+const MAX_COMMENT = 500;
+
+// Điều kiện "quá hạn" theo QUY TẮC NGHIỆP VỤ của Hợp đồng mở rộng
+const OVERDUE_CONDITION = "t.Deadline < CAST(GETDATE() AS DATE) AND t.Status <> 'Done'";
 
 // Phần SELECT dùng chung: JOIN để lấy thêm tên danh mục, tên ca, tên người thực hiện
 const SELECT_TASK = `
@@ -193,6 +203,85 @@ function checkIdParam(req, res, next) {
   next();
 }
 
+/* ------------------------------------------------------------------
+   LỊCH SỬ CÔNG VIỆC (TaskLogs) - TV3-X5
+   ------------------------------------------------------------------ */
+
+const LOG_ACTIONS = ['created', 'updated', 'status', 'comment'];
+
+/**
+ * Cắt chuỗi cho vừa cột NVARCHAR(50) của OldValue / NewValue (null giữ nguyên null)
+ */
+function toLogValue(value) {
+  if (value === undefined || value === null) return null;
+  return String(value).slice(0, 50);
+}
+
+/**
+ * Ghi một dòng vào bảng TaskLogs.
+ * Dùng cho thao tác PHỤ (ghi lịch sử sau khi tạo, sửa, đổi trạng thái): lỗi chỉ ghi console,
+ * KHÔNG ném lỗi ra ngoài, để thao tác chính (đã thành công) vẫn trả về bình thường.
+ * Trả về true nếu ghi được, false nếu lỗi.
+ */
+async function addLog(taskId, userId, action, oldValue = null, newValue = null, comment = null) {
+  try {
+    if (!LOG_ACTIONS.includes(action)) throw new Error(`Action không hợp lệ: ${action}`);
+    await query(
+      `INSERT INTO dbo.TaskLogs (TaskId, UserId, Action, OldValue, NewValue, Comment)
+       VALUES (@taskId, @userId, @action, @oldValue, @newValue, @comment)`,
+      {
+        taskId,
+        userId: userId || null,
+        action,
+        oldValue: toLogValue(oldValue),
+        newValue: toLogValue(newValue),
+        comment: comment === null || comment === undefined ? null : String(comment).slice(0, MAX_COMMENT)
+      }
+    );
+    return true;
+  } catch (err) {
+    console.error(`[TaskLogs] Không ghi được lịch sử (task ${taskId}, ${action}):`, err.message);
+    return false;
+  }
+}
+
+/**
+ * So sánh dữ liệu cũ (dòng SQL) với dữ liệu mới (đã chuẩn hóa) của PUT,
+ * trả về danh sách MÃ NGẮN của các trường (khác Status) đã thay đổi.
+ * Mã ngắn để cả danh sách vừa cột NewValue NVARCHAR(50):
+ * title, desc, prio, deadline, cat, shift, assignee (Frontend tự đổi sang chữ tiếng Việt).
+ */
+function changedFields(oldRow, data) {
+  const pairs = [
+    ['title', oldRow.Title, data.title],
+    ['desc', oldRow.Description, data.description],
+    ['prio', oldRow.Priority, data.priority],
+    ['deadline', formatDate(oldRow.Deadline), data.deadline],
+    ['cat', oldRow.CategoryId, data.categoryId],
+    ['shift', oldRow.ShiftId, data.shiftId],
+    ['assignee', oldRow.AssigneeId, data.assigneeId]
+  ];
+  const norm = v => (v === undefined || v === null || v === '' ? null : String(v));
+  return pairs.filter(([, oldV, newV]) => norm(oldV) !== norm(newV)).map(([name]) => name);
+}
+
+/**
+ * Đổi một dòng TaskLogs (kèm tên người thao tác) sang JSON camelCase
+ */
+function mapLog(row) {
+  return {
+    id: row.Id,
+    action: row.Action,
+    oldValue: row.OldValue,
+    newValue: row.NewValue,
+    comment: row.Comment,
+    userName: row.UserName || null,
+    // Chuỗi 'YYYY-MM-DD HH:mm:ss' theo giờ của SQL Server (đổi bằng CONVERT trong SQL)
+    // để không bị lệch múi giờ khi driver mssql coi DATETIME2 là giờ UTC
+    createdAt: row.CreatedAtText
+  };
+}
+
 /**
  * GET /api/tasks - Danh sách công việc có tìm kiếm, lọc và phân trang
  * Quyền: mọi tài khoản đã đăng nhập
@@ -226,6 +315,17 @@ router.get('/', async (req, res, next) => {
     if (!isEmpty(q.search) && !isString(q.search, 1, 200)) {
       errors.push('search phải là một chuỗi không quá 200 ký tự.');
     }
+    // assigneeId: số nguyên dương hoặc 'me' (= người đang đăng nhập), giá trị khác thì 400
+    let assigneeId = null;
+    if (!isEmpty(q.assigneeId)) {
+      if (q.assigneeId === 'me') assigneeId = Number(req.user.id);
+      else if (isPositiveInt(q.assigneeId)) assigneeId = Number(q.assigneeId);
+      else errors.push("assigneeId phải là số nguyên dương hoặc 'me'.");
+    }
+    // overdue: chỉ nhận 1 (lọc việc quá hạn) hoặc 0 / để trống (không lọc)
+    if (!isEmpty(q.overdue) && q.overdue !== '1' && q.overdue !== '0') {
+      errors.push('overdue chỉ nhận 1 (chỉ việc quá hạn) hoặc 0.');
+    }
     if (errors.length > 0) return sendBadRequest(res, errors);
 
     // 3. Ghép điều kiện WHERE. Chỉ ghép các đoạn SQL cố định,
@@ -253,6 +353,15 @@ router.get('/', async (req, res, next) => {
       conditions.push('t.ShiftId = @shiftId');
       params.shiftId = Number(q.shiftId);
     }
+    if (assigneeId !== null) {
+      conditions.push('t.AssigneeId = @assigneeId');
+      params.assigneeId = assigneeId;
+    }
+    if (q.overdue === '1') {
+      // Đoạn SQL cố định, không chứa giá trị người dùng nhập
+      conditions.push(`(${OVERDUE_CONDITION})`);
+    }
+    // Câu COUNT bên dưới dùng đúng biến where này nên pagination.total luôn khớp bộ lọc
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // 4. Đếm tổng số bản ghi khớp điều kiện (truy vấn COUNT riêng)
@@ -303,6 +412,70 @@ router.get('/:id', checkIdParam, async (req, res, next) => {
 });
 
 /**
+ * GET /api/tasks/:id/logs - Lịch sử thao tác và bình luận của một công việc (mới nhất trước)
+ * Quyền: mọi tài khoản đã đăng nhập
+ */
+router.get('/:id/logs', checkIdParam, async (req, res, next) => {
+  try {
+    const exists = await query('SELECT 1 AS Found FROM dbo.Tasks WHERE Id = @id', { id: req.taskId });
+    if (exists.recordset.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy công việc.' });
+    }
+
+    const result = await query(
+      `SELECT l.Id, l.Action, l.OldValue, l.NewValue, l.Comment, l.CreatedAt,
+              CONVERT(VARCHAR(19), l.CreatedAt, 120) AS CreatedAtText, u.FullName AS UserName
+       FROM dbo.TaskLogs l
+       LEFT JOIN dbo.Users u ON l.UserId = u.Id
+       WHERE l.TaskId = @id
+       ORDER BY l.CreatedAt DESC, l.Id DESC`,
+      { id: req.taskId }
+    );
+    res.json({ success: true, data: result.recordset.map(mapLog), message: 'Lấy lịch sử công việc thành công.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/tasks/:id/comments - Thêm bình luận vào công việc { comment: 1-500 ký tự }
+ * Quyền: Admin và Staff
+ * Đây là thao tác CHÍNH (không phải log phụ) nên lỗi ghi CSDL sẽ trả về lỗi cho người dùng.
+ */
+router.post('/:id/comments', checkIdParam, async (req, res, next) => {
+  try {
+    const comment = req.body ? req.body.comment : undefined;
+    if (!isString(comment, 1, MAX_COMMENT)) {
+      return sendBadRequest(res, [`Bình luận là bắt buộc và dài từ 1 đến ${MAX_COMMENT} ký tự.`]);
+    }
+
+    // Chèn bình luận chỉ khi công việc tồn tại (INSERT ... SELECT ... WHERE EXISTS trong một câu lệnh)
+    const result = await query(
+      `INSERT INTO dbo.TaskLogs (TaskId, UserId, Action, Comment)
+       OUTPUT INSERTED.Id
+       SELECT @taskId, @userId, 'comment', @comment
+       WHERE EXISTS (SELECT 1 FROM dbo.Tasks WHERE Id = @taskId)`,
+      { taskId: req.taskId, userId: req.user.id, comment: comment.trim() }
+    );
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy công việc.' });
+    }
+
+    const logResult = await query(
+      `SELECT l.Id, l.Action, l.OldValue, l.NewValue, l.Comment, l.CreatedAt,
+              CONVERT(VARCHAR(19), l.CreatedAt, 120) AS CreatedAtText, u.FullName AS UserName
+       FROM dbo.TaskLogs l
+       LEFT JOIN dbo.Users u ON l.UserId = u.Id
+       WHERE l.Id = @id`,
+      { id: result.recordset[0].Id }
+    );
+    res.status(201).json({ success: true, data: mapLog(logResult.recordset[0]), message: 'Đã thêm bình luận.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * POST /api/tasks - Tạo công việc mới
  * Quyền: Admin và Staff
  */
@@ -320,7 +493,9 @@ router.post('/', async (req, res, next) => {
        VALUES (@title, @description, @status, @priority, @deadline, @categoryId, @shiftId, @assigneeId)`,
       data
     );
-    const task = await findTaskById(result.recordset[0].Id);
+    const newId = result.recordset[0].Id;
+    await addLog(newId, req.user.id, 'created', null, data.status);
+    const task = await findTaskById(newId);
 
     res.status(201).json({ success: true, data: task, message: 'Tạo công việc thành công.' });
   } catch (err) {
@@ -340,15 +515,28 @@ router.put('/:id', requireRole('Admin'), checkIdParam, async (req, res, next) =>
     const refErrors = await checkReferences(data);
     if (refErrors.length > 0) return sendBadRequest(res, refErrors);
 
+    // OUTPUT DELETED.* trả về giá trị CŨ ngay trong câu UPDATE, dùng để ghi lịch sử chính xác
     const result = await query(
       `UPDATE dbo.Tasks
        SET Title = @title, Description = @description, Status = @status, Priority = @priority,
            Deadline = @deadline, CategoryId = @categoryId, ShiftId = @shiftId, AssigneeId = @assigneeId
+       OUTPUT DELETED.Title, DELETED.Description, DELETED.Status, DELETED.Priority, DELETED.Deadline,
+              DELETED.CategoryId, DELETED.ShiftId, DELETED.AssigneeId
        WHERE Id = @id`,
       { ...data, id: req.taskId }
     );
-    if (result.rowsAffected[0] === 0) {
+    if (result.recordset.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy công việc.' });
+    }
+
+    // Ghi lịch sử: 'status' nếu Status đổi, 'updated' nếu trường khác đổi (có thể ghi cả hai)
+    const oldRow = result.recordset[0];
+    if (oldRow.Status !== data.status) {
+      await addLog(req.taskId, req.user.id, 'status', oldRow.Status, data.status);
+    }
+    const changed = changedFields(oldRow, data);
+    if (changed.length > 0) {
+      await addLog(req.taskId, req.user.id, 'updated', null, changed.join(','));
     }
 
     const task = await findTaskById(req.taskId);
@@ -370,11 +558,17 @@ router.patch('/:id/status', checkIdParam, async (req, res, next) => {
     }
 
     const result = await query(
-      'UPDATE dbo.Tasks SET Status = @status WHERE Id = @id',
+      'UPDATE dbo.Tasks SET Status = @status OUTPUT DELETED.Status AS OldStatus WHERE Id = @id',
       { status, id: req.taskId }
     );
-    if (result.rowsAffected[0] === 0) {
+    if (result.recordset.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy công việc.' });
+    }
+
+    // Ghi lịch sử khi trạng thái thật sự thay đổi (chọn lại đúng trạng thái cũ thì không ghi)
+    const oldStatus = result.recordset[0].OldStatus;
+    if (oldStatus !== status) {
+      await addLog(req.taskId, req.user.id, 'status', oldStatus, status);
     }
 
     const task = await findTaskById(req.taskId);
