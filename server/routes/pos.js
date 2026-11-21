@@ -747,7 +747,7 @@ router.post('/orders/:id/items', async (req, res) => {
       });
     }
     if (orderRes.recordset[0].Status !== 'Open') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Chỉ có thể thêm món vào đơn hàng đang mở.'
       });
@@ -856,7 +856,7 @@ router.patch('/orders/:id/items/:itemId', async (req, res) => {
       });
     }
     if (orderRes.recordset[0].Status !== 'Open') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Chỉ có thể chỉnh sửa đơn hàng đang mở.'
       });
@@ -924,7 +924,7 @@ router.delete('/orders/:id/items/:itemId', async (req, res) => {
       });
     }
     if (orderRes.recordset[0].Status !== 'Open') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Chỉ có thể xóa món của đơn hàng đang mở.'
       });
@@ -988,7 +988,7 @@ router.post('/orders/:id/cancel', async (req, res) => {
       });
     }
     if (orderRes.recordset[0].Status !== 'Open') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Chỉ có thể hủy đơn hàng đang ở trạng thái mở.'
       });
@@ -1039,7 +1039,7 @@ router.post('/orders/:id/pay', async (req, res) => {
     }
     const order = orderRes.recordset[0];
     if (order.Status !== 'Open') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Đơn hàng không ở trạng thái mở hoặc đã thanh toán trước đó.'
       });

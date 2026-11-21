@@ -49,6 +49,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (adminBox) adminBox.classList.remove('d-none');
   }
 
+  // Hỗ trợ bấm Enter trong ô tìm kiếm SĐT khách hàng
+  document.getElementById('posCustomerPhone')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchCustomer();
+    }
+  });
+
   // Tải dữ liệu ban đầu
   await Promise.all([loadTables(), loadMenu()]);
 });
