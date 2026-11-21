@@ -457,3 +457,200 @@ Content-Type: application/json
 {
   "status": "Done"
 }
+
+### =====================================================================
+### 7. TV3-X3: MẪU VIỆC / CHECKLIST MỞ - ĐÓNG CA (/api/templates)
+### Cần chạy database/schema-mo-rong.sql và seed-mo-rong.sql trước (6 mẫu, 2 mỗi ca).
+### Ca theo seed.sql: 1 = Ca Sáng, 2 = Ca Tối, 3 = Đóng cửa vệ sinh.
+### =====================================================================
+
+### 7.1 Danh sách mẫu (Staff được xem) - Mong đợi: 200, 6 mẫu, mỗi mẫu có shiftName, categoryName, isActive
+GET {{baseUrl}}/templates
+Authorization: Bearer {{staffToken}}
+
+### 7.2 Lọc theo ca - Mong đợi: 200, mọi mẫu có shiftId = 1
+GET {{baseUrl}}/templates?shiftId=1
+Authorization: Bearer {{adminToken}}
+
+### 7.3 shiftId lọc không hợp lệ - Mong đợi: 400 'shiftId phải là số nguyên dương.'
+GET {{baseUrl}}/templates?shiftId=abc
+Authorization: Bearer {{adminToken}}
+
+### 7.4 Staff tạo mẫu - Mong đợi: 403 'Bạn không có quyền thực hiện thao tác này.'
+POST {{baseUrl}}/templates
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Staff cố tạo mẫu",
+  "shiftId": 1
+}
+
+### 7.5 Admin tạo mẫu - Mong đợi: 201, isActive = true, categoryName = null
+# @name createTemplate
+POST {{baseUrl}}/templates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Kiểm tra nhiệt độ tủ mát đầu ca",
+  "description": "Ghi nhiệt độ vào sổ, báo quản lý nếu trên 5 độ C",
+  "priority": "Medium",
+  "shiftId": 1,
+  "categoryId": null
+}
+
+###
+
+@templateId = {{createTemplate.response.body.$.data.id}}
+
+### 7.6 Dữ liệu sai (tên rỗng, ưu tiên lạ, thiếu ca, isActive lạ) - Mong đợi: 400, errors có 4 thông báo
+POST {{baseUrl}}/templates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "",
+  "priority": "Urgent",
+  "isActive": "maybe"
+}
+
+### 7.7 Ca không tồn tại khi tạo mẫu - Mong đợi: 404 'Ca làm với id 999999 không tồn tại.'
+POST {{baseUrl}}/templates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Mẫu ca ma",
+  "shiftId": 999999
+}
+
+### 7.8 Danh mục không tồn tại - Mong đợi: 404 'Danh mục với id 999999 không tồn tại.'
+POST {{baseUrl}}/templates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Mẫu danh mục ma",
+  "shiftId": 1,
+  "categoryId": 999999
+}
+
+### 7.9 Admin tắt mẫu (PUT, isActive = false) - Mong đợi: 200, isActive = false
+PUT {{baseUrl}}/templates/{{templateId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Kiểm tra nhiệt độ tủ mát đầu ca",
+  "description": "Ghi nhiệt độ vào sổ, báo quản lý nếu trên 5 độ C",
+  "priority": "High",
+  "shiftId": 1,
+  "isActive": false
+}
+
+### 7.10 Staff sửa mẫu - Mong đợi: 403
+PUT {{baseUrl}}/templates/{{templateId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "title": "Staff sửa",
+  "shiftId": 1
+}
+
+### 7.11 Sửa mẫu không tồn tại - Mong đợi: 404 'Không tìm thấy mẫu việc.'
+PUT {{baseUrl}}/templates/999999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Không có",
+  "shiftId": 1
+}
+
+### 7.12 Staff gọi generate - Mong đợi: 403
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1
+}
+
+### 7.13 Admin tạo việc cho Ca Sáng ngày 2026-12-01 - Mong đợi: 200, created = số mẫu ĐANG BẬT của ca 1 (2 với seed,
+###      mẫu 7.5 đã tắt nên không tính), skipped = 0. Mở tasks.html lọc Ca Sáng thấy các việc Pending, hạn 01/12/2026, chưa giao.
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "date": "2026-12-01"
+}
+
+### 7.14 Gọi lại y hệt 7.13 - Mong đợi: 200, created = 0, skipped = số mẫu đang bật (không sinh trùng)
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "date": "2026-12-01"
+}
+
+### 7.15 Không gửi date (mặc định hôm nay theo SQL Server) - Mong đợi: 200, data.date = ngày hôm nay
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 2
+}
+
+### 7.16 Ca không tồn tại - Mong đợi: 404 'Ca làm với id 999999 không tồn tại.'
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 999999
+}
+
+### 7.17 date sai định dạng - Mong đợi: 400 'Ngày (date) phải là ngày hợp lệ dạng YYYY-MM-DD.'
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "date": "01/12/2026"
+}
+
+### 7.18 date không có thật (30/02) - Mong đợi: 400
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "date": "2026-02-30"
+}
+
+### 7.19 Thiếu shiftId - Mong đợi: 400 'Ca làm (shiftId) là bắt buộc và phải là số nguyên dương.'
+POST {{baseUrl}}/templates/generate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 7.20 Staff xóa mẫu - Mong đợi: 403
+DELETE {{baseUrl}}/templates/{{templateId}}
+Authorization: Bearer {{staffToken}}
+
+### 7.21 Admin xóa mẫu - Mong đợi: 200 (gọi lại lần 2 thì 404); các việc đã sinh trước đó vẫn còn
+DELETE {{baseUrl}}/templates/{{templateId}}
+Authorization: Bearer {{adminToken}}
+
+### 7.22 Chưa đăng nhập - Mong đợi: 401
+GET {{baseUrl}}/templates

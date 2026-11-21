@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mẫu Việc Theo Ca - Cafe Task Manager</title>
+  <meta name="description" content="Checklist mở/đóng ca: quản lý mẫu việc theo ca và tạo công việc cho một ngày từ mẫu (chỉ Admin).">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- CSS Dùng Chung (TV5) -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <style>
+    /* Chữ phụ dùng biến màu của style.css nên đọc rõ ở cả giao diện sáng và tối */
+    .tpl-muted { color: var(--text-secondary) !important; }
+    #templatesTableWrap th.col-title { min-width: 14rem; }
+    #templatesTableWrap td { overflow-wrap: anywhere; }
+    .tpl-switch .form-check-input { cursor: pointer; width: 2.5em; height: 1.25em; }
+  </style>
+
+  <!-- Chống chớp sáng khi dùng giao diện tối -->
+  <script>
+    (function () {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <!-- Navbar chung được ui.js render tự động -->
+  <nav id="navbar"></nav>
+
+  <main class="container my-4" id="templatesMain">
+    <!-- Tiêu đề trang & nút Thêm mẫu -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h1 class="h3 mb-1 text-primary fw-bold">Mẫu Việc Theo Ca</h1>
+        <p class="tpl-muted mb-0">Checklist mở/đóng ca: soạn mẫu một lần, mỗi ngày bấm tạo việc cho ca.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="btnAddTemplate">+ Thêm mẫu</button>
+    </div>
+
+    <!-- Khối Tạo việc cho ngày -->
+    <section class="card p-3 mb-4" aria-labelledby="generateTitle">
+      <h2 class="h6 fw-bold mb-3" id="generateTitle">Tạo việc cho ngày</h2>
+      <form id="generateForm" class="row g-3 align-items-end" novalidate>
+        <div class="col-12 col-md-5">
+          <label for="generateShift" class="form-label">Ca làm</label>
+          <select id="generateShift" class="form-select" required>
+            <option value="">-- Chọn ca --</option>
+          </select>
+          <div class="invalid-feedback"></div>
+        </div>
+        <div class="col-12 col-sm-7 col-md-4">
+          <label for="generateDate" class="form-label">Ngày</label>
+          <input type="date" id="generateDate" class="form-control" required>
+          <div class="invalid-feedback"></div>
+        </div>
+        <div class="col-12 col-sm-5 col-md-3 d-grid">
+          <button type="submit" class="btn btn-primary" id="btnGenerate">Tạo việc</button>
+        </div>
+      </form>
+      <small class="tpl-muted mt-2 d-block">Chỉ dùng mẫu đang bật. Việc đã có cùng tên, cùng ca, cùng ngày sẽ được bỏ qua để không trùng.</small>
+    </section>
+
+    <!-- Bộ lọc và danh sách mẫu -->
+    <section class="card p-3" aria-label="Danh sách mẫu việc">
+      <div class="row g-3 align-items-end mb-3">
+        <div class="col-12 col-md-5">
+          <label for="filterShift" class="form-label">Lọc theo ca</label>
+          <select id="filterShift" class="form-select">
+            <option value="">Tất cả ca</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-7 text-md-end">
+          <small class="tpl-muted" id="templatesSummary">Đang tải...</small>
+        </div>
+      </div>
+
+      <div id="templatesLoading" class="text-center my-4 d-none">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Đang tải dữ liệu...</span>
+        </div>
+      </div>
+
+      <div id="templatesEmpty" class="d-none"></div>
+
+      <div class="table-responsive" id="templatesTableWrap">
+        <table class="table-custom table-cards">
+          <thead>
+            <tr>
+              <th class="col-title">Mẫu việc</th>
+              <th>Ca</th>
+              <th>Danh mục</th>
+              <th>Ưu tiên</th>
+              <th>Đang bật</th>
+              <th class="text-end">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="templatesTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Thêm / Sửa mẫu -->
+  <div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
+      <div class="modal-content">
+        <form id="templateForm" novalidate>
+          <div class="modal-header">
+            <h5 class="modal-title" id="templateModalTitle">Thêm mẫu việc</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <div id="templateFormError" class="alert alert-danger d-none" role="alert"></div>
+            <input type="hidden" id="templateId">
+
+            <div class="mb-3">
+              <label for="templateTitle" class="form-label">Tên mẫu việc <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="templateTitle" maxlength="200" placeholder="Ví dụ: Bật máy pha và test shot đầu ca" required>
+              <div class="invalid-feedback"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="templateDescription" class="form-label">Mô tả</label>
+              <textarea class="form-control" id="templateDescription" rows="3" maxlength="500" placeholder="Các bước thực hiện, lưu ý..."></textarea>
+              <div class="invalid-feedback"></div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="templateShift" class="form-label">Ca làm <span class="text-danger">*</span></label>
+                <select class="form-select" id="templateShift" required>
+                  <option value="">-- Chọn ca --</option>
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="templateCategory" class="form-label">Danh mục</label>
+                <select class="form-select" id="templateCategory">
+                  <option value="">-- Chưa phân loại --</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="templatePriority" class="form-label">Ưu tiên</label>
+                <select class="form-select" id="templatePriority">
+                  <option value="Low">Thấp</option>
+                  <option value="Medium" selected>Trung bình</option>
+                  <option value="High">Cao</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-check form-switch tpl-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="templateActive" checked>
+              <label class="form-check-label ms-1" for="templateActive">Đang bật (được dùng khi tạo việc)</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSaveTemplate">Lưu mẫu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: bootstrap bundle, api.js, ui.js rồi tới script riêng của trang -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/templates.js"></script>
+</body>
+</html>
