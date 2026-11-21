@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Việc của tôi | Cafe Task Manager</title>
+  <meta name="description" content="Quản lý và theo dõi danh sách công việc cá nhân được phân công, hạn chót và trạng thái thực hiện.">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- CSS Dùng Chung (TV5) -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <!-- Chống chớp sáng Dark/Light Mode (Tránh FOUC) -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- THANH ĐIỀU HƯỚNG CHUNG: ui.js tự động render vào nav#navbar -->
+  <nav id="navbar"></nav>
+
+  <!-- NỘI DUNG CHÍNH (khoảng cách tới navbar >= 24px) -->
+  <div style="min-height: calc(100vh - var(--navbar-height)); display: flex; flex-direction: column; justify-content: space-between;">
+    <main style="max-width: var(--container-max); width: 100%; margin: var(--space-32) auto 0; padding: 0 var(--space-16) var(--space-32);">
+
+      <!-- TIÊU ĐỀ TRANG -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-24); flex-wrap: wrap; gap: var(--space-16);">
+        <div>
+          <h1 style="font-size: var(--text-xl); margin: 0 0 var(--space-8); font-family: var(--font-serif); color: var(--primary);">
+            Việc của tôi
+          </h1>
+          <p style="color: var(--text-secondary); font-size: var(--text-sm); margin: 0;">
+            Danh sách các công việc được phân công cho bạn. Theo dõi hạn chót và cập nhật tiến độ công việc.
+          </p>
+        </div>
+      </div>
+
+      <!-- VÙNG BÁO LỖI NẾU CÓ -->
+      <div id="pageError" class="alert alert-danger d-none" style="display: none; margin-bottom: var(--space-16); font-size: var(--text-sm);" role="alert"></div>
+
+      <!-- BỘ LỌC TÌM KIẾM & TRẠNG THÁI -->
+      <div class="card-custom" style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-16) var(--space-20); margin-bottom: var(--space-20);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-16);">
+          <div style="display: flex; align-items: center; gap: var(--space-16); flex-wrap: wrap;">
+            
+            <!-- Lọc theo trạng thái -->
+            <div style="display: flex; align-items: center; gap: var(--space-8);">
+              <label for="filterStatus" style="font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); white-space: nowrap;">
+                Trạng thái:
+              </label>
+              <select id="filterStatus" class="form-select" style="min-width: 160px; font-size: var(--text-sm); height: 38px;">
+                <option value="">Tất cả trạng thái</option>
+                <option value="Pending">Đang chờ</option>
+                <option value="InProgress">Đang làm</option>
+                <option value="Done">Hoàn thành</option>
+              </select>
+            </div>
+
+            <!-- Checkbox chỉ việc quá hạn -->
+            <div style="display: flex; align-items: center;">
+              <label class="form-check-label" style="display: flex; align-items: center; gap: var(--space-8); cursor: pointer; font-size: var(--text-sm); font-weight: 500; user-select: none;">
+                <input type="checkbox" id="filterOverdue" class="form-check-input" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                <span>Chỉ việc quá hạn</span>
+              </label>
+            </div>
+
+          </div>
+
+          <!-- Tóm tắt số lượng -->
+          <div id="tasksSummaryText" style="font-size: var(--text-xs); color: var(--text-secondary);">
+            Đang tải dữ liệu...
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG CÔNG VIỆC CÓ LỚP .table-cards (DƯỚI 576PX TỰ THÀNH DẠNG THẺ) -->
+      <div class="card-custom" style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-20); margin-bottom: var(--space-24);">
+        <div class="table-responsive">
+          <table class="table-custom table-cards" id="myTasksTable">
+            <thead>
+              <tr>
+                <th style="width: 70px;">Mã</th>
+                <th>Tiêu đề công việc</th>
+                <th style="width: 120px;">Ưu tiên</th>
+                <th style="width: 140px;">Ca làm</th>
+                <th style="width: 140px;">Hạn chót</th>
+                <th style="width: 130px;">Trạng thái</th>
+                <th style="text-align: right; width: 140px;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="myTasksTableBody">
+              <!-- Render động bởi my-tasks.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Khung trạng thái rỗng -->
+        <div id="emptyTasksContainer" style="display: none;"></div>
+
+        <!-- Phân trang -->
+        <div id="paginationContainer"></div>
+      </div>
+
+    </main>
+
+    <!-- CHÂN TRANG TỐI GIẢN -->
+    <footer style="text-align: center; padding: var(--space-16); font-size: var(--text-xs); color: var(--text-secondary); border-top: 1px solid var(--border-color);">
+      Cafe Task Manager &copy; 2026 - Hệ thống quản lý công việc quán cafe
+    </footer>
+  </div>
+
+  <!-- NẠP SCRIPT THEO ĐÚNG THỨ TỰ HỢP ĐỒNG: Bootstrap -> api.js -> ui.js -> my-tasks.js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/my-tasks.js"></script>
+</body>
+</html>

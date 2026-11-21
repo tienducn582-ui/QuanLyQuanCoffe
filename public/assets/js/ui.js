@@ -272,12 +272,13 @@ function renderNavbar() {
       </div>
     `;
   } else {
-    // Menu cho người dùng đã đăng nhập: Trang chủ, Công việc, Ca làm, Thống kê
+    // Menu cho người dùng đã đăng nhập: Trang chủ, Công việc, Việc của tôi, Ca làm, Thống kê
     const roleBadge = user.role === 'Admin' ? 'Admin' : 'Staff';
     navLinksHtml = `
       <ul class="navbar-menu">
         <li><a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a></li>
         <li><a class="nav-link ${isCurrent('tasks.html')}" href="tasks.html">Công việc</a></li>
+        <li><a class="nav-link ${isCurrent('my-tasks.html')}" href="my-tasks.html" id="navMyTasksLink">Việc của tôi <span id="overdueBadge" class="badge bg-danger" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle;"></span></a></li>
         <li><a class="nav-link ${isCurrent('shifts.html')}" href="shifts.html">Ca làm</a></li>
         <li><a class="nav-link ${isCurrent('statistics.html')}" href="statistics.html">Thống kê</a></li>
       </ul>
@@ -375,7 +376,42 @@ function renderNavbar() {
 
   // Khởi tạo chuyển chế độ Sáng / Tối
   initThemeToggle();
+
+  // TV5-X1: Cập nhật huy hiệu quá hạn khi đã đăng nhập
+  if (user) {
+    updateOverdueBadge();
+  }
 }
+
+/**
+ * TV5-X1: Cập nhật huy hiệu công việc quá hạn cạnh liên kết 'Việc của tôi'
+ * Gọi apiFetch('/api/tasks?assigneeId=me&overdue=1&pageSize=1'), lấy pagination.total
+ * > 0 thì hiện badge đỏ (class badge bg-danger, id overdueBadge); lỗi thì ẩn badge, không hiện toast.
+ */
+async function updateOverdueBadge() {
+  const badgeEl = document.getElementById('overdueBadge');
+  if (!badgeEl) return;
+
+  try {
+    if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+      badgeEl.style.display = 'none';
+      return;
+    }
+    const res = await apiFetch('/api/tasks?assigneeId=me&overdue=1&pageSize=1');
+    if (res && res.success && res.pagination && res.pagination.total > 0) {
+      badgeEl.textContent = res.pagination.total;
+      badgeEl.style.display = 'inline-block';
+    } else {
+      badgeEl.style.display = 'none';
+    }
+  } catch (err) {
+    // Lỗi mạng hoặc token hết hạn thì ẩn badge, không hiện toast
+    badgeEl.style.display = 'none';
+  }
+}
+
+// Phơi ra window để các trang khác hoặc script có thể gọi lại
+window.updateOverdueBadge = updateOverdueBadge;
 
 /**
  * Xử lý chuyển đổi giao diện Sáng / Tối (Dark/Light mode)

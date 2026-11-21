@@ -175,6 +175,48 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 | 7 | Đăng nhập tài khoản Admin -> Bấm nút "⚙ Quản lý Bàn" | Admin | Modal Quản lý Sơ đồ bàn hiển thị đủ danh sách bàn kèm số ghế, nút Sửa/Xóa và form Thêm bàn mới. | ✅ **ĐÃ MỞ THẬT** |
 | 8 | Đăng nhập tài khoản Admin -> Bấm nút "📋 Quản lý Menu" | Admin | Modal Quản lý Thực đơn hiển thị đầy đủ món nước kèm trạng thái Đang bán/Ngừng bán và form Thêm món. | ✅ **ĐÃ MỞ THẬT** |
 
+---
+
+## 7. RÀ SOÁT & NGHIỆM THU TRANG MỞ RỘNG: VIỆC CỦA TÔI & HUY HIỆU QUÁ HẠN (`my-tasks.html` - TÁC VỤ TV5-X1)
+
+* **Trang kiểm thử:** `public/my-tasks.html`, `public/assets/js/my-tasks.js`, `public/assets/js/ui.js`
+* **Người thực hiện:** Thành viên 5 (TV5)
+* **Ngày rà soát:** 21/11/2026
+
+### 7.1. Đánh giá tính Responsive trên 3 kích thước màn hình chuẩn (Đo đạc thực tế trên Google Chrome)
+
+* **Công cụ đo:** Playwright trên Google Chrome thật kết nối máy chủ live `http://127.0.0.1:3098`.
+
+| Độ phân giải | Số đo thực tế | Kết quả kiểm tra tràn ngang | Bố cục & Trải nghiệm thao tác (UX/UI) | Đánh giá & Ảnh bằng chứng |
+|:---:|:---|:---:|:---|:---:|
+| **375px** (Mobile) | `innerWidth: 375px`<br>`scrollWidth: 375px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bảng công việc áp dụng lớp `.table-cards` tự động chuyển đổi thành dạng thẻ độc lập. Mỗi thẻ có viền mềm, nhãn `data-label` bên trái và giá trị bên phải rõ ràng. Chữ hạn chót quá hạn màu đỏ tương phản tốt. Huy hiệu quá hạn `#overdueBadge` trên navbar hiển thị số `2`. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/my_tasks_375px.png` |
+| **768px** (Tablet) | `innerWidth: 768px`<br>`scrollWidth: 768px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bảng dữ liệu hiển thị dạng bảng chuẩn, đủ 7 cột (Mã, Tiêu đề, Ưu tiên, Ca làm, Hạn chót, Trạng thái, Thao tác). Không bị cuộn ngang. Các nút chuyển trạng thái vừa vặn. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/my_tasks_768px.png` |
+| **1200px** (Desktop) | `innerWidth: 1200px`<br>`scrollWidth: 1200px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Bố cục rộng rãi theo container chuẩn `1140px`. Bộ lọc trạng thái và checkbox 'Chỉ việc quá hạn' căn chỉnh cân đối. | ✅ **ĐẠT (ĐÃ ĐO THẬT)**<br>`.local-test/screenshots/my_tasks_1200px.png` |
+
+### 7.2. Kiểm tra tuân thủ các tiêu chuẩn thiết kế (B1 - B13) & Rà soát chồng chữ/dính chữ
+
+1. **B1 (Không tràn ngang):** Đo đạc bằng Playwright trên Chrome thật: `scrollWidth == innerWidth` trên cả 3 kích thước 375px, 768px, 1200px (0px tràn ngang). ✅ **ĐẠT (ĐÃ ĐO THẬT)**
+2. **Kiểm tra chồng chữ / dính chữ:**
+   - Quan sát thực tế qua ảnh chụp màn hình (chưa có số đo chồng chữ tự động; chỉ ghi nhận theo điều đã nhìn thấy trong ảnh chụp Chrome thật):
+     + Ở 375px: Các dòng dữ liệu chuyển sang thẻ dạng dọc, nhãn và giá trị căn đều 2 bên, không dính chữ.
+     + Tiêu đề công việc dài có `word-break: break-word`, không tràn lấn sang cột khác.
+     + Hạn chót quá hạn hiển thị nổi bật với màu đỏ `#dc3545` (Light mode) và `#ff6b6b` (Dark mode), không bị dính vào badge trạng thái. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
+3. **B5 (Bảo vệ Route):** `requireLogin()` chặn khách vãng lai khi truy cập `my-tasks.html`. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+4. **B6 & B7 (Màu sắc & Dark Mode):** Sử dụng các biến màu CSS chuẩn cà phê. Chuyển đổi Dark/Light mode mượt mà, văn bản quá hạn và badge hiển thị tương phản chuẩn WCAG AA trên cả 2 theme. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+5. **B10 (Không emoji):** 0 emoji trong `my-tasks.html` và `my-tasks.js`. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+6. **B11 (Khoảng cách navbar):** Nội dung chính cách navbar $\ge 32\text{px}$. ✅ **ĐẠT (ĐÃ TEST THẬT)**
+
+### 7.3. Nhật ký kiểm thử luồng nghiệp vụ trực tiếp trên trình duyệt Chrome thật
+
+| Bước | Hành động trên trình duyệt Chrome thật | Vai trò | Kết quả quan sát & CSDL đối chiếu | Trạng thái |
+|:---:|:---|:---:|:---|:---:|
+| 1 | Mở trang `my-tasks.html` với tài khoản Staff (`staff@cafe.com`) | Staff | Navbar xuất hiện liên kết 'Việc của tôi' ngay sau 'Công việc'. Huy hiệu `#overdueBadge` màu đỏ hiển thị số `2` (khớp chính xác số việc quá hạn của Staff trong CSDL). | ✅ **ĐÃ MỞ THẬT** |
+| 2 | Bật checkbox 'Chỉ việc quá hạn' | Staff | Danh sách lọc chỉ còn 2 công việc có `Deadline < GETDATE()` và `Status <> 'Done'`. | ✅ **ĐÃ TEST THẬT** |
+| 3 | Bấm nút "Bắt đầu" ở công việc đang ở trạng thái `Pending` | Staff | Nút chuyển trạng thái gửi `PATCH /api/tasks/:id/status` `{ status: 'InProgress' }`. Giao diện tự động cập nhật sang 'Đang làm', nút chuyển thành 'Hoàn thành'. | ✅ **ĐÃ TEST THẬT** |
+| 4 | Bấm nút "Hoàn thành" ở công việc quá hạn đang ở trạng thái `InProgress` | Staff | Gửi `PATCH /api/tasks/:id/status` `{ status: 'Done' }`. Trạng thái chuyển sang 'Hoàn thành' (Đã xong); hàm `updateOverdueBadge()` tự động kích hoạt: huy hiệu giảm từ `2` xuống `1`. | ✅ **ĐÃ TEST THẬT** |
+| 5 | Kiểm tra trường hợp lỗi: Token hết hạn / sai định dạng | Staff | Gọi `updateOverdueBadge()` với token hỏng: huy hiệu tự động ẩn (`display: none`), không hiện popup lỗi toast gây phiền người dùng. | ✅ **ĐÃ TEST THẬT** |
+| 6 | Đăng nhập tài khoản Admin (`admin@cafe.com`) | Admin | Xem danh sách việc của Admin, huy hiệu hiển thị đúng số việc quá hạn của Admin (hoặc ẩn nếu 0 việc). | ✅ **ĐÃ TEST THẬT** |
+
 
 
 

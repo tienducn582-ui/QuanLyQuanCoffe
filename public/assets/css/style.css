@@ -953,4 +953,40 @@ nav#navbar {
   }
 }
 
+/* =====================================================================
+   TV5-X1: VIỆC CỦA TÔI VÀ HUY HIỆU QUÁ HẠN
+   ===================================================================== */
+#overdueBadge,
+.nav-overdue-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  background-color: #dc3545;
+  color: #ffffff;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.task-overdue-text {
+  color: #dc3545 !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .task-overdue-text,
+.dark-theme .task-overdue-text {
+  color: #ff6b6b !important;
+}
+
+.task-overdue-row {
+  background-color: rgba(220, 53, 69, 0.04);
+}
+
+[data-theme="dark"] .task-overdue-row,
+.dark-theme .task-overdue-row {
+  background-color: rgba(255, 107, 107, 0.08);
+}
+
 
