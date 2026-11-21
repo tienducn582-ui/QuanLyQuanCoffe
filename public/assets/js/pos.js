@@ -8,7 +8,12 @@ let menuData = [];
 let currentFilter = 'all'; // 'all' | 'free' | 'occupied'
 let selectedTable = null;
 let currentOrder = null;
+
+// Modal instances
 let payModalInstance = null;
+let cancelOrderModalInstance = null;
+let manageTablesModalInstance = null;
+let manageMenuModalInstance = null;
 
 // Khởi tạo trang khi DOM sẵn sàng
 document.addEventListener('DOMContentLoaded', async () => {
@@ -17,10 +22,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Render thanh điều hướng chung
   renderNavbar();
 
-  // Khởi tạo modal Bootstrap
+  // Khởi tạo các modal Bootstrap
   const payModalEl = document.getElementById('payModal');
   if (payModalEl && window.bootstrap) {
     payModalInstance = new bootstrap.Modal(payModalEl);
+  }
+
+  const cancelModalEl = document.getElementById('cancelOrderModal');
+  if (cancelModalEl && window.bootstrap) {
+    cancelOrderModalInstance = new bootstrap.Modal(cancelModalEl);
+  }
+
+  const manageTablesEl = document.getElementById('manageTablesModal');
+  if (manageTablesEl && window.bootstrap) {
+    manageTablesModalInstance = new bootstrap.Modal(manageTablesEl);
+  }
+
+  const manageMenuEl = document.getElementById('manageMenuModal');
+  if (manageMenuEl && window.bootstrap) {
+    manageMenuModalInstance = new bootstrap.Modal(manageMenuEl);
+  }
+
+  // Phân quyền: Nếu là Admin thì hiển thị các nút quản lý bàn và thực đơn
+  if (isAdmin()) {
+    const adminBox = document.getElementById('adminPosActions');
+    if (adminBox) adminBox.classList.remove('d-none');
   }
 
   // Tải dữ liệu ban đầu
@@ -288,13 +314,22 @@ function renderActiveOrder() {
     } else {
       itemsList.innerHTML = currentOrder.items.map(item => `
         <div class="pos-order-item">
-          <div>
+          <div style="flex: 1; padding-right: 8px;">
             <div style="font-weight: 600; color: var(--text-color);">${escapeHtml(item.name)}</div>
             <div style="font-size: var(--text-xs); color: var(--text-secondary);">
-              ${item.quantity} x ${item.unitPrice.toLocaleString('vi-VN')} đ
+              ${item.unitPrice.toLocaleString('vi-VN')} đ
             </div>
           </div>
-          <div style="font-weight: 700; color: var(--primary);">
+
+          <!-- Bộ nút tăng giảm số lượng & xóa món -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-sm btn-outline px-2 py-0" style="font-size: 11px; height: 26px;" onclick="changeItemQuantity(${item.id}, ${item.quantity - 1})">-</button>
+            <span style="font-weight: 700; font-size: var(--text-sm); min-width: 20px; text-align: center;">${item.quantity}</span>
+            <button type="button" class="btn btn-sm btn-outline px-2 py-0" style="font-size: 11px; height: 26px;" onclick="changeItemQuantity(${item.id}, ${item.quantity + 1})">+</button>
+            <button type="button" class="btn btn-sm btn-outline text-danger border-danger px-2 py-0" style="font-size: 11px; height: 26px;" title="Xóa món" onclick="deleteOrderItem(${item.id})">✕</button>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); min-width: 75px; text-align: right;">
             ${item.lineTotal.toLocaleString('vi-VN')} đ
           </div>
         </div>
@@ -392,6 +427,119 @@ async function onMenuItemClick(menuItemId) {
   } catch (err) {
     console.error('Lỗi thêm món:', err);
     showToast(err.message || 'Không thể thêm món vào đơn.', 'danger');
+  }
+}
+
+/**
+ * Tăng / giảm số lượng món trong đơn: PATCH /api/pos/orders/:id/items/:itemId
+ */
+async function changeItemQuantity(itemId, newQuantity) {
+  if (!currentOrder) return;
+
+  if (newQuantity <= 0) {
+    deleteOrderItem(itemId);
+    return;
+  }
+
+  if (newQuantity > 99) {
+    showToast('Số lượng tối đa cho mỗi món là 99.', 'warning');
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/pos/orders/${currentOrder.id}/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity: newQuantity })
+    });
+
+    if (res && res.success) {
+      await Promise.all([
+        loadOrderDetails(currentOrder.id),
+        loadTables()
+      ]);
+    }
+  } catch (err) {
+    console.error('Lỗi sửa số lượng:', err);
+    showToast(err.message || 'Không thể cập nhật số lượng món.', 'danger');
+  }
+}
+
+/**
+ * Xóa món khỏi đơn hàng: DELETE /api/pos/orders/:id/items/:itemId
+ */
+async function deleteOrderItem(itemId) {
+  if (!currentOrder) return;
+
+  if (!confirm('Bạn có chắc chắn muốn xóa món này khỏi đơn hàng?')) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/pos/orders/${currentOrder.id}/items/${itemId}`, {
+      method: 'DELETE'
+    });
+
+    if (res && res.success) {
+      showToast('Đã xóa món khỏi đơn hàng.', 'success');
+      await Promise.all([
+        loadOrderDetails(currentOrder.id),
+        loadTables()
+      ]);
+    }
+  } catch (err) {
+    console.error('Lỗi xóa món:', err);
+    showToast(err.message || 'Không thể xóa món khỏi đơn hàng.', 'danger');
+  }
+}
+
+/**
+ * Hiển thị Modal xác nhận hủy đơn
+ */
+function showCancelModal() {
+  if (!currentOrder) {
+    showToast('Không có đơn hàng nào để hủy.', 'warning');
+    return;
+  }
+  if (cancelOrderModalInstance) {
+    cancelOrderModalInstance.show();
+  }
+}
+
+/**
+ * Gửi yêu cầu hủy đơn hàng: POST /api/pos/orders/:id/cancel
+ */
+async function submitCancelOrder() {
+  if (!currentOrder) return;
+
+  const btn = document.getElementById('btnConfirmCancel');
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Đang hủy...';
+    }
+
+    const res = await apiFetch(`/api/pos/orders/${currentOrder.id}/cancel`, {
+      method: 'POST'
+    });
+
+    if (res && res.success) {
+      showToast('Đã hủy đơn hàng thành công.', 'success');
+      if (cancelOrderModalInstance) {
+        cancelOrderModalInstance.hide();
+      }
+      currentOrder = null;
+      selectedTable = null;
+      resetOrderPanel();
+      await loadTables();
+    }
+  } catch (err) {
+    console.error('Lỗi hủy đơn:', err);
+    showToast(err.message || 'Không thể hủy đơn hàng.', 'danger');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Xác nhận hủy đơn';
+    }
   }
 }
 
@@ -523,4 +671,235 @@ function resetOrderPanel() {
   document.getElementById('panelEmptyState')?.classList.remove('d-none');
   document.getElementById('panelOpenOrderBox')?.classList.add('d-none');
   document.getElementById('panelActiveOrderBox')?.classList.add('d-none');
+}
+
+/* ==========================================================================
+   4. CHỨC NĂNG DÀNH CHO ADMIN: QUẢN LÝ BÀN & QUẢN LÝ THỰC ĐƠN
+   ========================================================================== */
+
+/**
+ * Mở modal Quản lý Sơ đồ bàn (Admin)
+ */
+function openTablesManagementModal() {
+  resetTableForm();
+  renderManageTablesTable();
+  if (manageTablesModalInstance) {
+    manageTablesModalInstance.show();
+  }
+}
+
+function resetTableForm() {
+  document.getElementById('editingTableId').value = '';
+  document.getElementById('inputTableName').value = '';
+  document.getElementById('inputTableSeats').value = '4';
+  document.getElementById('tableFormTitle').textContent = 'Thêm bàn mới';
+  document.getElementById('btnSaveTable').textContent = 'Lưu bàn';
+  document.getElementById('btnCancelEditTable')?.classList.add('d-none');
+  document.getElementById('tableFormError').textContent = '';
+}
+
+function renderManageTablesTable() {
+  const tbody = document.getElementById('manageTablesTbody');
+  if (!tbody) return;
+
+  if (tablesData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có bàn nào.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = tablesData.map(t => `
+    <tr>
+      <td>#${t.id}</td>
+      <td style="font-weight: 600;">${escapeHtml(t.name)}</td>
+      <td>${t.seats} chỗ</td>
+      <td>
+        <span class="pos-table-badge ${t.status === 'Free' ? 'pos-badge-free' : 'pos-badge-occupied'}">
+          ${t.status === 'Free' ? 'Trống' : 'Có khách'}
+        </span>
+      </td>
+      <td class="text-end">
+        <button type="button" class="btn btn-sm btn-outline me-1" onclick="editTable(${t.id}, '${escapeHtml(t.name)}', ${t.seats})">Sửa</button>
+        <button type="button" class="btn btn-sm btn-outline text-danger border-danger" onclick="deleteTable(${t.id}, '${escapeHtml(t.name)}')">Xóa</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function editTable(id, name, seats) {
+  document.getElementById('editingTableId').value = id;
+  document.getElementById('inputTableName').value = name;
+  document.getElementById('inputTableSeats').value = seats;
+  document.getElementById('tableFormTitle').textContent = `Chỉnh sửa bàn: ${name}`;
+  document.getElementById('btnSaveTable').textContent = 'Cập nhật';
+  document.getElementById('btnCancelEditTable')?.classList.remove('d-none');
+  document.getElementById('tableFormError').textContent = '';
+}
+
+async function saveTable() {
+  const id = document.getElementById('editingTableId').value;
+  const name = document.getElementById('inputTableName').value.trim();
+  const seats = parseInt(document.getElementById('inputTableSeats').value, 10);
+  const errEl = document.getElementById('tableFormError');
+
+  if (!name) {
+    errEl.textContent = 'Vui lòng nhập tên bàn.';
+    return;
+  }
+  if (isNaN(seats) || seats < 1 || seats > 20) {
+    errEl.textContent = 'Số ghế phải từ 1 đến 20.';
+    return;
+  }
+
+  try {
+    errEl.textContent = '';
+    const method = id ? 'PUT' : 'POST';
+    const path = id ? `/api/pos/tables/${id}` : '/api/pos/tables';
+
+    const res = await apiFetch(path, {
+      method,
+      body: JSON.stringify({ name, seats })
+    });
+
+    if (res && res.success) {
+      showToast(res.message || 'Lưu bàn thành công.', 'success');
+      resetTableForm();
+      await loadTables();
+      renderManageTablesTable();
+    }
+  } catch (err) {
+    errEl.textContent = err.message || 'Lỗi khi lưu bàn.';
+  }
+}
+
+async function deleteTable(id, name) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa bàn "${name}"?`)) return;
+
+  try {
+    const res = await apiFetch(`/api/pos/tables/${id}`, { method: 'DELETE' });
+    if (res && res.success) {
+      showToast(`Đã xóa bàn "${name}" thành công.`, 'success');
+      await loadTables();
+      renderManageTablesTable();
+    }
+  } catch (err) {
+    alert(err.message || 'Không thể xóa bàn này.');
+  }
+}
+
+/**
+ * Mở modal Quản lý Thực đơn (Admin)
+ */
+async function openMenuManagementModal() {
+  resetMenuForm();
+  await loadManageMenuTable();
+  if (manageMenuModalInstance) {
+    manageMenuModalInstance.show();
+  }
+}
+
+function resetMenuForm() {
+  document.getElementById('editingMenuId').value = '';
+  document.getElementById('inputMenuName').value = '';
+  document.getElementById('inputMenuPrice').value = '';
+  document.getElementById('inputMenuActive').checked = true;
+  document.getElementById('menuFormTitle').textContent = 'Thêm món mới vào thực đơn';
+  document.getElementById('btnSaveMenu').textContent = 'Lưu món';
+  document.getElementById('btnCancelEditMenu')?.classList.add('d-none');
+  document.getElementById('menuFormError').textContent = '';
+}
+
+async function loadManageMenuTable() {
+  const tbody = document.getElementById('manageMenuTbody');
+  if (!tbody) return;
+
+  try {
+    // Admin lấy cả món đã ngừng bán: ?all=1
+    const res = await apiFetch('/api/pos/menu?all=1');
+    if (res && res.success && Array.isArray(res.data)) {
+      if (res.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có món nào.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(m => `
+        <tr>
+          <td>#${m.id}</td>
+          <td style="font-weight: 600;">${escapeHtml(m.name)}</td>
+          <td>${m.price.toLocaleString('vi-VN')} đ</td>
+          <td>
+            <span class="badge ${m.isActive ? 'bg-success' : 'bg-secondary'}">
+              ${m.isActive ? 'Đang bán' : 'Ngừng bán'}
+            </span>
+          </td>
+          <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline me-1" onclick="editMenu(${m.id}, '${escapeHtml(m.name)}', ${m.price}, ${m.isActive})">Sửa</button>
+            <button type="button" class="btn btn-sm btn-outline text-danger border-danger" onclick="deleteMenu(${m.id}, '${escapeHtml(m.name)}')">Xóa</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function editMenu(id, name, price, isActive) {
+  document.getElementById('editingMenuId').value = id;
+  document.getElementById('inputMenuName').value = name;
+  document.getElementById('inputMenuPrice').value = price;
+  document.getElementById('inputMenuActive').checked = Boolean(isActive);
+  document.getElementById('menuFormTitle').textContent = `Chỉnh sửa món: ${name}`;
+  document.getElementById('btnSaveMenu').textContent = 'Cập nhật';
+  document.getElementById('btnCancelEditMenu')?.classList.remove('d-none');
+  document.getElementById('menuFormError').textContent = '';
+}
+
+async function saveMenu() {
+  const id = document.getElementById('editingMenuId').value;
+  const name = document.getElementById('inputMenuName').value.trim();
+  const price = parseInt(document.getElementById('inputMenuPrice').value, 10);
+  const isActive = document.getElementById('inputMenuActive').checked;
+  const errEl = document.getElementById('menuFormError');
+
+  if (!name) {
+    errEl.textContent = 'Vui lòng nhập tên món.';
+    return;
+  }
+  if (isNaN(price) || price < 0) {
+    errEl.textContent = 'Đơn giá phải là số lớn hơn hoặc bằng 0.';
+    return;
+  }
+
+  try {
+    errEl.textContent = '';
+    const method = id ? 'PUT' : 'POST';
+    const path = id ? `/api/pos/menu/${id}` : '/api/pos/menu';
+
+    const res = await apiFetch(path, {
+      method,
+      body: JSON.stringify({ name, price, isActive })
+    });
+
+    if (res && res.success) {
+      showToast(res.message || 'Lưu món thành công.', 'success');
+      resetMenuForm();
+      await Promise.all([loadMenu(), loadManageMenuTable()]);
+    }
+  } catch (err) {
+    errEl.textContent = err.message || 'Lỗi khi lưu món.';
+  }
+}
+
+async function deleteMenu(id, name) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi thực đơn?`)) return;
+
+  try {
+    const res = await apiFetch(`/api/pos/menu/${id}`, { method: 'DELETE' });
+    if (res && res.success) {
+      showToast(`Đã xóa món "${name}" thành công.`, 'success');
+      await Promise.all([loadMenu(), loadManageMenuTable()]);
+    }
+  } catch (err) {
+    alert(err.message || 'Không thể xóa món này.');
+  }
 }

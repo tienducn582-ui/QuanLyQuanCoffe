@@ -45,11 +45,23 @@
           </p>
         </div>
 
-        <!-- BỘ LỌC TRẠNG THÁI BÀN -->
-        <div class="btn-group" role="group" aria-label="Bộ lọc bàn">
-          <button type="button" class="btn btn-sm btn-outline active" id="btnFilterAll" onclick="setTableFilter('all')">Tất cả</button>
-          <button type="button" class="btn btn-sm btn-outline" id="btnFilterFree" onclick="setTableFilter('free')">Bàn trống</button>
-          <button type="button" class="btn btn-sm btn-outline" id="btnFilterOccupied" onclick="setTableFilter('occupied')">Có khách</button>
+        <div style="display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap;">
+          <!-- BỘ LỌC TRẠNG THÁI BÀN -->
+          <div class="btn-group" role="group" aria-label="Bộ lọc bàn">
+            <button type="button" class="btn btn-sm btn-outline active" id="btnFilterAll" onclick="setTableFilter('all')">Tất cả</button>
+            <button type="button" class="btn btn-sm btn-outline" id="btnFilterFree" onclick="setTableFilter('free')">Bàn trống</button>
+            <button type="button" class="btn btn-sm btn-outline" id="btnFilterOccupied" onclick="setTableFilter('occupied')">Có khách</button>
+          </div>
+
+          <!-- NÚT QUẢN LÝ DÀNH RIÊNG CHO ADMIN -->
+          <div id="adminPosActions" class="d-none" style="display: flex; gap: var(--space-8);">
+            <button type="button" class="btn btn-sm btn-outline" onclick="openTablesManagementModal()">
+              ⚙ Quản lý Bàn
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="openMenuManagementModal()">
+              📋 Quản lý Menu
+            </button>
+          </div>
         </div>
       </div>
 
@@ -128,7 +140,7 @@
                   Bàn hiện đang trống. Nhập thông tin để mở đơn phục vụ mới:
                 </p>
 
-                <!-- Tìm khách hàng theo SĐT (nếu có routes/customers.js) -->
+                <!-- Tìm khách hàng theo SĐT (tích hợp nếu có routes/customers.js) -->
                 <div class="mb-3" id="customerSearchContainer">
                   <label for="posCustomerPhone" class="form-label" style="font-size: var(--text-xs); font-weight: 600;">
                     SĐT Khách hàng (Tùy chọn tích điểm)
@@ -172,6 +184,9 @@
                   <button class="btn btn-primary w-100" id="btnPayOrder" onclick="showPayModal()">
                     Thanh toán hóa đơn
                   </button>
+                  <button class="btn btn-outline w-100 text-danger border-danger" id="btnCancelOrder" onclick="showCancelModal()">
+                    Hủy đơn hàng này
+                  </button>
                 </div>
               </div>
 
@@ -214,6 +229,147 @@
           <button type="button" class="btn btn-primary" id="btnConfirmPay" onclick="submitPayOrder()">
             Đồng ý thanh toán
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN HỦY ĐƠN HÀNG -->
+  <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: var(--radius-card); border: 1px solid var(--border-color);">
+        <div class="modal-header">
+          <h5 class="modal-title text-danger" id="cancelOrderModalLabel" style="font-weight: 700;">
+            Xác nhận hủy đơn hàng
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: var(--text-sm); margin: 0;">
+            Bạn có chắc chắn muốn hủy đơn hàng này? Toàn bộ các món đã gọi sẽ bị hủy và bàn sẽ trở về trạng thái trống. Thao tác này không thể hoàn tác.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-danger" id="btnConfirmCancel" onclick="submitCancelOrder()">
+            Xác nhận hủy đơn
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ADMIN QUẢN LÝ BÀN PHỤC VỤ -->
+  <div class="modal fade" id="manageTablesModal" tabindex="-1" aria-labelledby="manageTablesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content" style="border-radius: var(--radius-card); border: 1px solid var(--border-color);">
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageTablesModalLabel" style="font-weight: 700; color: var(--primary);">
+            Quản Lý Sơ Đồ Bàn Phục Vụ
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <!-- FORM THÊM / SỬA BÀN -->
+          <div style="background: var(--bg-color); padding: var(--space-16); border-radius: var(--radius-btn); margin-bottom: var(--space-16);">
+            <h6 id="tableFormTitle" style="font-weight: 700; margin-bottom: var(--space-8);">Thêm bàn mới</h6>
+            <div class="row g-2">
+              <div class="col-md-6">
+                <input type="text" class="form-control form-control-sm" id="inputTableName" placeholder="Tên bàn (VD: Bàn 9)">
+              </div>
+              <div class="col-md-3">
+                <input type="number" class="form-control form-control-sm" id="inputTableSeats" placeholder="Số ghế (1-20)" min="1" max="20" value="4">
+              </div>
+              <div class="col-md-3 d-flex gap-1">
+                <input type="hidden" id="editingTableId" value="">
+                <button type="button" class="btn btn-sm btn-primary flex-fill" id="btnSaveTable" onclick="saveTable()">Lưu bàn</button>
+                <button type="button" class="btn btn-sm btn-outline d-none" id="btnCancelEditTable" onclick="resetTableForm()">Hủy</button>
+              </div>
+            </div>
+            <div id="tableFormError" class="text-danger mt-1" style="font-size: var(--text-xs);"></div>
+          </div>
+
+          <!-- BẢNG DANH SÁCH BÀN -->
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle" style="font-size: var(--text-sm);">
+              <thead>
+                <tr>
+                  <th>Mã</th>
+                  <th>Tên bàn</th>
+                  <th>Số ghế</th>
+                  <th>Trạng thái hiện tại</th>
+                  <th class="text-end">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="manageTablesTbody">
+                <!-- Render danh sách bàn -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ADMIN QUẢN LÝ THỰC ĐƠN -->
+  <div class="modal fade" id="manageMenuModal" tabindex="-1" aria-labelledby="manageMenuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content" style="border-radius: var(--radius-card); border: 1px solid var(--border-color);">
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageMenuModalLabel" style="font-weight: 700; color: var(--primary);">
+            Quản Lý Danh Mục Thực Đơn
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <!-- FORM THÊM / SỬA MÓN -->
+          <div style="background: var(--bg-color); padding: var(--space-16); border-radius: var(--radius-btn); margin-bottom: var(--space-16);">
+            <h6 id="menuFormTitle" style="font-weight: 700; margin-bottom: var(--space-8);">Thêm món mới vào thực đơn</h6>
+            <div class="row g-2 align-items-center">
+              <div class="col-md-5">
+                <input type="text" class="form-control form-control-sm" id="inputMenuName" placeholder="Tên món (VD: Cà phê cốt dừa)">
+              </div>
+              <div class="col-md-3">
+                <input type="number" class="form-control form-control-sm" id="inputMenuPrice" placeholder="Giá tiền (VNĐ)" min="0" step="1000">
+              </div>
+              <div class="col-md-2">
+                <div class="form-check form-switch" style="font-size: var(--text-xs);">
+                  <input class="form-check-input" type="checkbox" id="inputMenuActive" checked>
+                  <label class="form-check-label" for="inputMenuActive">Đang bán</label>
+                </div>
+              </div>
+              <div class="col-md-2 d-flex gap-1">
+                <input type="hidden" id="editingMenuId" value="">
+                <button type="button" class="btn btn-sm btn-primary flex-fill" id="btnSaveMenu" onclick="saveMenu()">Lưu món</button>
+                <button type="button" class="btn btn-sm btn-outline d-none" id="btnCancelEditMenu" onclick="resetMenuForm()">Hủy</button>
+              </div>
+            </div>
+            <div id="menuFormError" class="text-danger mt-1" style="font-size: var(--text-xs);"></div>
+          </div>
+
+          <!-- BẢNG DANH SÁCH MÓN -->
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle" style="font-size: var(--text-sm);">
+              <thead>
+                <tr>
+                  <th>Mã</th>
+                  <th>Tên món</th>
+                  <th>Đơn giá</th>
+                  <th>Trạng thái</th>
+                  <th class="text-end">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="manageMenuTbody">
+                <!-- Render danh sách món -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Đóng</button>
         </div>
       </div>
     </div>

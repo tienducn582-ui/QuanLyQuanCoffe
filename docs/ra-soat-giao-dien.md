@@ -130,4 +130,30 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 | **TV3** | `public/tasks.html` | Vùng Toast | Ở màn hình hẹp 375px, 2 hộp thông báo Toast lỗi ở góc dưới bị đè lên phần chân trang. | Thấp | Thêm `margin-bottom` hoặc điều chỉnh vị trí container toast khi ở màn hình mobile. |
 | **TV1** | `public/shifts.html` | Dòng 38 | Dòng mô tả phụ dưới tiêu đề có độ tương phản hơi thấp ở chế độ tối Dark mode. | Thấp | Bổ sung class `.text-secondary` hoặc biến `var(--text-secondary)` để tăng độ tương phản đạt chuẩn WCAG AAA. |
 
+---
+
+## 6. RÀ SOÁT & NGHIỆM THU TRANG MỞ RỘNG: POS & SƠ ĐỒ BÀN (`pos.html` - TÁC VỤ TV5-X9)
+
+* **Trang kiểm thử:** `public/pos.html` & `public/assets/js/pos.js`
+* **Người thực hiện:** Thành viên 5 (TV5)
+* **Ngày rà soát:** 21/11/2026
+
+### 6.1. Đánh giá tính Responsive trên 3 kích thước màn hình chuẩn
+
+| Độ phân giải | Bố cục hiển thị | Kết quả kiểm tra tràn ngang | Trải nghiệm thao tác (UX/UI) | Đánh giá |
+|:---:|:---|:---:|:---|:---:|
+| **375px** (Mobile) | Tự động chuyển thành 1 cột dọc: Sơ đồ bàn ở trên, thực đơn ở giữa, panel đơn hàng ở dưới; modal hủy đơn và modal thanh toán chiếm 92% bề ngang. | `scrollWidth <= innerWidth` (0 tràn ngang) | Vùng chạm nút bấm và thẻ bàn $\ge 42\text{px}$; nút tăng giảm số lượng (+, -, ✕) vừa ngón tay, thao tác nhanh trên di động. | ✅ **ĐẠT** |
+| **768px** (Tablet) | Bố cục dạng lưới linh hoạt; sơ đồ bàn hiển thị 3-4 bàn/hàng; thực đơn dạng cuộn mượt mà; panel đơn hàng rộng rãi. | `scrollWidth <= innerWidth` (0 tràn ngang) | Bảng modal quản lý bàn và thực đơn (Admin) hiển thị đủ các cột; không cần cuộn ngang. | ✅ **ĐẠT** |
+| **1200px** (Desktop) | Bố cục 2 cột chuyên nghiệp: Cột trái (1.25fr) chứa sơ đồ bàn và thực đơn món; Cột phải (0.95fr) cố định chi tiết đơn hàng, danh sách món và hộp thanh toán. | `scrollWidth <= innerWidth` (0 tràn ngang) | Tận dụng tối đa không gian màn hình lớn; hiển thị rõ ràng thông tin bàn, mã đơn, khách hàng và tổng tiền. | ✅ **ĐẠT** |
+
+### 6.2. Kiểm tra tuân thủ các tiêu chuẩn thiết kế (B1 - B13)
+
+1. **B1 (Không tràn ngang):** `pos.html` sử dụng CSS Grid (`.pos-container`, `.pos-table-grid`, `.pos-menu-grid`) với `minmax()` thích ứng, không dùng `overflow-x: hidden` cưỡng ép.
+2. **B5 (Bảo vệ Route):** Được bảo vệ bằng hàm `requireLogin()` ngay khi DOMContentLoaded, chặn khách vãng lai và đưa về `login.html`.
+3. **B6 & B7 (Màu sắc & Theme):** Sử dụng 100% biến màu chuẩn (`--primary: #4A2C1A`, `--bg-color`, `--card-bg`, `--status-success`, `--status-warning`); hỗ trợ chế độ Tối (Dark mode) đồng bộ và script chống FOUC.
+4. **B8 (Độ tương phản WCAG AA):** Chữ trên nền thẻ và nút bấm đạt tỷ lệ tương phản $\ge 4.5:1$.
+5. **B10 (Không emoji):** 0 emoji trong mã nguồn và giao diện người dùng.
+6. **B11 (Khoảng cách navbar):** Nội dung chính cách navbar chuẩn $24\text{px}-32\text{px}$.
+
+
 

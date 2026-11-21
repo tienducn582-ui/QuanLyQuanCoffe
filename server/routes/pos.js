@@ -4,23 +4,38 @@
  *
  * Danh sách endpoint:
  * [ĐỢT 1 - MỨC TỐI THIỂU]
- * - GET    /api/pos/tables               Lấy danh sách bàn kèm trạng thái (Free/Occupied), mã đơn và tổng tiền
- * - GET    /api/pos/menu                 Lấy danh mục món nước (mặc định chỉ lấy món đang bán IsActive = 1)
- * - POST   /api/pos/orders               Tạo đơn hàng mới cho bàn (chặn trùng bằng 409)
- * - GET    /api/pos/orders/:id           Xem chi tiết đơn hàng, danh sách món và tổng tiền tính từ server
- * - POST   /api/pos/orders/:id/items     Thêm món vào đơn hàng mở (cộng dồn số lượng tối đa 99)
- * - POST   /api/pos/orders/:id/pay       Thanh toán đơn hàng (chặn đơn rỗng bằng 400, tích điểm cho khách)
+ * - GET    /api/pos/tables                     Lấy danh sách bàn kèm trạng thái (Free/Occupied), mã đơn và tổng tiền
+ * - GET    /api/pos/menu                       Lấy danh mục món nước (mặc định chỉ lấy món đang bán IsActive = 1)
+ * - POST   /api/pos/orders                     Tạo đơn hàng mới cho bàn (chặn trùng bằng 409)
+ * - GET    /api/pos/orders/:id                 Xem chi tiết đơn hàng, danh sách món và tổng tiền tính từ server
+ * - POST   /api/pos/orders/:id/items           Thêm món vào đơn hàng mở (cộng dồn số lượng tối đa 99)
+ * - POST   /api/pos/orders/:id/pay             Thanh toán đơn hàng (chặn đơn rỗng bằng 400, tích điểm cho khách)
+ *
+ * [ĐỢT 2 - HOÀN THIỆN TOÀN BỘ]
+ * - POST   /api/pos/orders/:id/cancel          Hủy đơn hàng đang mở
+ * - PATCH  /api/pos/orders/:id/items/:itemId   Cập nhật số lượng món trong đơn (1-99), tính lại tổng tiền
+ * - DELETE /api/pos/orders/:id/items/:itemId   Xóa món khỏi đơn hàng mở, tính lại tổng tiền
+ * - POST   /api/pos/tables                     [Admin] Thêm bàn mới (Seats: 1-20, trùng tên 409)
+ * - PUT    /api/pos/tables/:id                 [Admin] Sửa thông tin bàn
+ * - DELETE /api/pos/tables/:id                 [Admin] Xóa bàn (bàn đã có lịch sử đơn hàng trả 409)
+ * - POST   /api/pos/menu                       [Admin] Thêm món mới vào thực đơn (Price >= 0, trùng tên 409)
+ * - PUT    /api/pos/menu/:id                   [Admin] Sửa thông tin món ăn / đồ uống
+ * - DELETE /api/pos/menu/:id                   [Admin] Xóa món (món đã có trong đơn hàng trả 409)
  */
 
 const express = require('express');
 const { query } = require('../db');
-const { verifyToken } = require('../middleware/auth');
-const { isPositiveInt, sendBadRequest } = require('../utils/validators');
+const { verifyToken, requireRole } = require('../middleware/auth');
+const { isString, isPositiveInt, sendBadRequest } = require('../utils/validators');
 
 const router = express.Router();
 
 // Toàn bộ router POS yêu cầu xác thực đăng nhập
 router.use(verifyToken);
+
+/* ==========================================================================
+   1. QUẢN LÝ BÀN & TRẠNG THÁI BÀN (TABLES)
+   ========================================================================== */
 
 /**
  * GET /api/pos/tables
@@ -71,6 +86,197 @@ router.get('/tables', async (req, res) => {
 });
 
 /**
+ * POST /api/pos/tables [Chỉ Admin]
+ * Thêm bàn phục vụ mới: { name (1-30), seats (1-20) }
+ */
+router.post('/tables', requireRole('Admin'), async (req, res) => {
+  try {
+    const { name, seats } = req.body;
+
+    if (!isString(name, 1, 30)) {
+      return sendBadRequest(res, 'Tên bàn phải từ 1 đến 30 ký tự.');
+    }
+    if (!isPositiveInt(seats) || Number(seats) < 1 || Number(seats) > 20) {
+      return sendBadRequest(res, 'Số ghế của bàn phải là số nguyên từ 1 đến 20.');
+    }
+
+    const trimmedName = name.trim();
+
+    // Kiểm tra tên bàn trùng lặp
+    const existCheck = await query('SELECT Id FROM dbo.DiningTables WHERE Name = @name', {
+      name: trimmedName
+    });
+    if (existCheck.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên bàn đã tồn tại trong hệ thống.'
+      });
+    }
+
+    const insertSql = `
+      INSERT INTO dbo.DiningTables (Name, Seats)
+      VALUES (@name, @seats);
+      SELECT SCOPE_IDENTITY() AS Id;
+    `;
+    const insertRes = await query(insertSql, {
+      name: trimmedName,
+      seats: Number(seats)
+    });
+
+    const newId = Number(insertRes.recordset[0].Id);
+    return res.status(201).json({
+      success: true,
+      message: 'Thêm bàn phục vụ mới thành công.',
+      data: {
+        id: newId,
+        name: trimmedName,
+        seats: Number(seats),
+        status: 'Free',
+        openOrderId: null,
+        openTotal: 0
+      }
+    });
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên bàn đã tồn tại trong hệ thống.'
+      });
+    }
+    console.error('[POS] Lỗi POST /tables:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi thêm bàn mới.'
+    });
+  }
+});
+
+/**
+ * PUT /api/pos/tables/:id [Chỉ Admin]
+ * Cập nhật thông tin bàn: { name (1-30), seats (1-20) }
+ */
+router.put('/tables/:id', requireRole('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, seats } = req.body;
+
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, 'Mã bàn không hợp lệ.');
+    }
+    if (!isString(name, 1, 30)) {
+      return sendBadRequest(res, 'Tên bàn phải từ 1 đến 30 ký tự.');
+    }
+    if (!isPositiveInt(seats) || Number(seats) < 1 || Number(seats) > 20) {
+      return sendBadRequest(res, 'Số ghế của bàn phải là số nguyên từ 1 đến 20.');
+    }
+
+    const tableId = Number(id);
+    const trimmedName = name.trim();
+
+    // 1. Kiểm tra bàn tồn tại
+    const tableRes = await query('SELECT Id FROM dbo.DiningTables WHERE Id = @id', { id: tableId });
+    if (tableRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bàn không tồn tại.'
+      });
+    }
+
+    // 2. Kiểm tra trùng tên với bàn khác
+    const dupRes = await query(
+      'SELECT Id FROM dbo.DiningTables WHERE Name = @name AND Id <> @id',
+      { name: trimmedName, id: tableId }
+    );
+    if (dupRes.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên bàn này đã được sử dụng cho một bàn khác.'
+      });
+    }
+
+    await query(
+      'UPDATE dbo.DiningTables SET Name = @name, Seats = @seats WHERE Id = @id',
+      { name: trimmedName, seats: Number(seats), id: tableId }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin bàn thành công.',
+      data: {
+        id: tableId,
+        name: trimmedName,
+        seats: Number(seats)
+      }
+    });
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên bàn này đã được sử dụng cho một bàn khác.'
+      });
+    }
+    console.error('[POS] Lỗi PUT /tables/:id:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi cập nhật thông tin bàn.'
+    });
+  }
+});
+
+/**
+ * DELETE /api/pos/tables/:id [Chỉ Admin]
+ * Xóa bàn phục vụ (nếu bàn đã có bất kỳ đơn hàng nào -> HTTP 409)
+ */
+router.delete('/tables/:id', requireRole('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, 'Mã bàn không hợp lệ.');
+    }
+
+    const tableId = Number(id);
+
+    // 1. Kiểm tra bàn tồn tại
+    const tableRes = await query('SELECT Id, Name FROM dbo.DiningTables WHERE Id = @id', { id: tableId });
+    if (tableRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bàn không tồn tại.'
+      });
+    }
+
+    // 2. Kiểm tra lịch sử đơn hàng của bàn
+    const orderCheck = await query('SELECT COUNT(*) AS OrderCount FROM dbo.Orders WHERE TableId = @id', {
+      id: tableId
+    });
+    const orderCount = orderCheck.recordset[0] ? Number(orderCheck.recordset[0].OrderCount) : 0;
+    if (orderCount > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Không thể xóa bàn đã có lịch sử đơn hàng.'
+      });
+    }
+
+    await query('DELETE FROM dbo.DiningTables WHERE Id = @id', { id: tableId });
+
+    return res.json({
+      success: true,
+      message: 'Xóa bàn phục vụ thành công.'
+    });
+  } catch (err) {
+    console.error('[POS] Lỗi DELETE /tables/:id:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi xóa bàn.'
+    });
+  }
+});
+
+/* ==========================================================================
+   2. QUẢN LÝ THỰC ĐƠN MÓN ĂN / ĐỒ UỐNG (MENU)
+   ========================================================================== */
+
+/**
  * GET /api/pos/menu
  * Lấy danh mục món ăn / đồ uống
  * Admin có thể truyền ?all=1 để xem cả món ngừng phục vụ (IsActive = 0)
@@ -109,6 +315,201 @@ router.get('/menu', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/pos/menu [Chỉ Admin]
+ * Thêm món mới vào thực đơn: { name (1-100), price (>= 0), isActive (boolean) }
+ */
+router.post('/menu', requireRole('Admin'), async (req, res) => {
+  try {
+    const { name, price, isActive } = req.body;
+
+    if (!isString(name, 1, 100)) {
+      return sendBadRequest(res, 'Tên món phải từ 1 đến 100 ký tự.');
+    }
+    if (price === undefined || price === null || isNaN(Number(price)) || Number(price) < 0) {
+      return sendBadRequest(res, 'Đơn giá món phải là số lớn hơn hoặc bằng 0.');
+    }
+
+    const trimmedName = name.trim();
+    const itemPrice = Math.floor(Number(price));
+    const activeBit = isActive === false ? 0 : 1;
+
+    // Kiểm tra trùng tên món
+    const existCheck = await query('SELECT Id FROM dbo.MenuItems WHERE Name = @name', {
+      name: trimmedName
+    });
+    if (existCheck.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên món đã tồn tại trong thực đơn.'
+      });
+    }
+
+    const insertSql = `
+      INSERT INTO dbo.MenuItems (Name, Price, IsActive)
+      VALUES (@name, @price, @isActive);
+      SELECT SCOPE_IDENTITY() AS Id;
+    `;
+    const insertRes = await query(insertSql, {
+      name: trimmedName,
+      price: itemPrice,
+      isActive: activeBit
+    });
+
+    const newId = Number(insertRes.recordset[0].Id);
+    return res.status(201).json({
+      success: true,
+      message: 'Thêm món vào thực đơn thành công.',
+      data: {
+        id: newId,
+        name: trimmedName,
+        price: itemPrice,
+        isActive: Boolean(activeBit)
+      }
+    });
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên món đã tồn tại trong thực đơn.'
+      });
+    }
+    console.error('[POS] Lỗi POST /menu:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi thêm món mới vào thực đơn.'
+    });
+  }
+});
+
+/**
+ * PUT /api/pos/menu/:id [Chỉ Admin]
+ * Sửa thông tin món: { name (1-100), price (>= 0), isActive (boolean) }
+ */
+router.put('/menu/:id', requireRole('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, isActive } = req.body;
+
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, 'Mã món không hợp lệ.');
+    }
+    if (!isString(name, 1, 100)) {
+      return sendBadRequest(res, 'Tên món phải từ 1 đến 100 ký tự.');
+    }
+    if (price === undefined || price === null || isNaN(Number(price)) || Number(price) < 0) {
+      return sendBadRequest(res, 'Đơn giá món phải là số lớn hơn hoặc bằng 0.');
+    }
+
+    const itemId = Number(id);
+    const trimmedName = name.trim();
+    const itemPrice = Math.floor(Number(price));
+    const activeBit = isActive === false ? 0 : 1;
+
+    // 1. Kiểm tra món tồn tại
+    const existItem = await query('SELECT Id FROM dbo.MenuItems WHERE Id = @id', { id: itemId });
+    if (existItem.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Món ăn không tồn tại.'
+      });
+    }
+
+    // 2. Kiểm tra trùng tên với món khác
+    const dupRes = await query(
+      'SELECT Id FROM dbo.MenuItems WHERE Name = @name AND Id <> @id',
+      { name: trimmedName, id: itemId }
+    );
+    if (dupRes.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên món này đã được sử dụng cho một món khác.'
+      });
+    }
+
+    await query(
+      'UPDATE dbo.MenuItems SET Name = @name, Price = @price, IsActive = @isActive WHERE Id = @id',
+      { name: trimmedName, price: itemPrice, isActive: activeBit, id: itemId }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật món thành công.',
+      data: {
+        id: itemId,
+        name: trimmedName,
+        price: itemPrice,
+        isActive: Boolean(activeBit)
+      }
+    });
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên món này đã được sử dụng cho một món khác.'
+      });
+    }
+    console.error('[POS] Lỗi PUT /menu/:id:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi cập nhật món.'
+    });
+  }
+});
+
+/**
+ * DELETE /api/pos/menu/:id [Chỉ Admin]
+ * Xóa món khỏi thực đơn (nếu món đã từng nằm trong đơn hàng -> HTTP 409 gợi ý chuyển IsActive = 0)
+ */
+router.delete('/menu/:id', requireRole('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, 'Mã món không hợp lệ.');
+    }
+
+    const itemId = Number(id);
+
+    // 1. Kiểm tra món tồn tại
+    const itemRes = await query('SELECT Id, Name FROM dbo.MenuItems WHERE Id = @id', { id: itemId });
+    if (itemRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Món ăn không tồn tại.'
+      });
+    }
+
+    // 2. Kiểm tra xem món đã từng xuất hiện trong OrderItems chưa
+    const orderCheck = await query('SELECT COUNT(*) AS ItemCount FROM dbo.OrderItems WHERE MenuItemId = @id', {
+      id: itemId
+    });
+    const itemCount = orderCheck.recordset[0] ? Number(orderCheck.recordset[0].ItemCount) : 0;
+    if (itemCount > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Không thể xóa món đã nằm trong đơn hàng. Hãy chuyển trạng thái sang ngưng phục vụ (IsActive = 0).'
+      });
+    }
+
+    await query('DELETE FROM dbo.MenuItems WHERE Id = @id', { id: itemId });
+
+    return res.json({
+      success: true,
+      message: 'Xóa món khỏi thực đơn thành công.'
+    });
+  } catch (err) {
+    console.error('[POS] Lỗi DELETE /menu/:id:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi xóa món khỏi thực đơn.'
+    });
+  }
+});
+
+/* ==========================================================================
+   3. QUẢN LÝ ĐƠN HÀNG VÀ CHI TIẾT GỌI MÓN (ORDERS & ITEMS)
+   ========================================================================== */
 
 /**
  * POST /api/pos/orders
@@ -422,6 +823,189 @@ router.post('/orders/:id/items', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi thêm món vào đơn hàng.'
+    });
+  }
+});
+
+/**
+ * PATCH /api/pos/orders/:id/items/:itemId
+ * Sửa số lượng của một món trong đơn: { quantity (1-99) }
+ */
+router.patch('/orders/:id/items/:itemId', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    const { quantity } = req.body;
+
+    if (!isPositiveInt(id) || !isPositiveInt(itemId)) {
+      return sendBadRequest(res, 'Mã đơn hoặc mã dòng món không hợp lệ.');
+    }
+    if (!isPositiveInt(quantity) || Number(quantity) > 99) {
+      return sendBadRequest(res, 'Số lượng món phải là số nguyên từ 1 đến 99.');
+    }
+
+    const orderId = Number(id);
+    const itemRowId = Number(itemId);
+    const newQty = Number(quantity);
+
+    // 1. Kiểm tra đơn hàng đang mở
+    const orderRes = await query('SELECT Id, Status FROM dbo.Orders WHERE Id = @id', { id: orderId });
+    if (orderRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Đơn hàng không tồn tại.'
+      });
+    }
+    if (orderRes.recordset[0].Status !== 'Open') {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ có thể chỉnh sửa đơn hàng đang mở.'
+      });
+    }
+
+    // 2. Kiểm tra dòng món trong đơn
+    const itemRes = await query(
+      'SELECT Id FROM dbo.OrderItems WHERE Id = @itemId AND OrderId = @orderId',
+      { itemId: itemRowId, orderId }
+    );
+    if (itemRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Món ăn không tồn tại trong đơn hàng này.'
+      });
+    }
+
+    // 3. Cập nhật số lượng
+    await query('UPDATE dbo.OrderItems SET Quantity = @quantity WHERE Id = @itemId', {
+      quantity: newQty,
+      itemId: itemRowId
+    });
+
+    // 4. Cập nhật lại tổng tiền đơn hàng
+    await query(
+      `UPDATE dbo.Orders
+       SET Total = (SELECT ISNULL(SUM(Quantity * UnitPrice), 0) FROM dbo.OrderItems WHERE OrderId = @orderId)
+       WHERE Id = @orderId;`,
+      { orderId }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật số lượng món thành công.'
+    });
+  } catch (err) {
+    console.error('[POS] Lỗi PATCH /orders/:id/items/:itemId:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi cập nhật số lượng món.'
+    });
+  }
+});
+
+/**
+ * DELETE /api/pos/orders/:id/items/:itemId
+ * Xóa một món ra khỏi đơn hàng mở
+ */
+router.delete('/orders/:id/items/:itemId', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    if (!isPositiveInt(id) || !isPositiveInt(itemId)) {
+      return sendBadRequest(res, 'Mã đơn hoặc mã dòng món không hợp lệ.');
+    }
+
+    const orderId = Number(id);
+    const itemRowId = Number(itemId);
+
+    // 1. Kiểm tra đơn hàng đang mở
+    const orderRes = await query('SELECT Id, Status FROM dbo.Orders WHERE Id = @id', { id: orderId });
+    if (orderRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Đơn hàng không tồn tại.'
+      });
+    }
+    if (orderRes.recordset[0].Status !== 'Open') {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ có thể xóa món của đơn hàng đang mở.'
+      });
+    }
+
+    // 2. Kiểm tra dòng món trong đơn
+    const itemRes = await query(
+      'SELECT Id FROM dbo.OrderItems WHERE Id = @itemId AND OrderId = @orderId',
+      { itemId: itemRowId, orderId }
+    );
+    if (itemRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Món ăn không tồn tại trong đơn hàng này.'
+      });
+    }
+
+    // 3. Xóa dòng món
+    await query('DELETE FROM dbo.OrderItems WHERE Id = @itemId', { itemId: itemRowId });
+
+    // 4. Cập nhật lại tổng tiền đơn hàng
+    await query(
+      `UPDATE dbo.Orders
+       SET Total = (SELECT ISNULL(SUM(Quantity * UnitPrice), 0) FROM dbo.OrderItems WHERE OrderId = @orderId)
+       WHERE Id = @orderId;`,
+      { orderId }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Xóa món khỏi đơn hàng thành công.'
+    });
+  } catch (err) {
+    console.error('[POS] Lỗi DELETE /orders/:id/items/:itemId:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi xóa món khỏi đơn hàng.'
+    });
+  }
+});
+
+/**
+ * POST /api/pos/orders/:id/cancel
+ * Hủy đơn hàng đang mở (chuyển sang 'Cancelled')
+ */
+router.post('/orders/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, 'Mã đơn hàng không hợp lệ.');
+    }
+
+    const orderId = Number(id);
+
+    // 1. Kiểm tra đơn hàng
+    const orderRes = await query('SELECT Id, Status FROM dbo.Orders WHERE Id = @id', { id: orderId });
+    if (orderRes.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Đơn hàng không tồn tại.'
+      });
+    }
+    if (orderRes.recordset[0].Status !== 'Open') {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ có thể hủy đơn hàng đang ở trạng thái mở.'
+      });
+    }
+
+    // 2. Chuyển trạng thái đơn thành 'Cancelled'
+    await query("UPDATE dbo.Orders SET Status = 'Cancelled' WHERE Id = @id", { id: orderId });
+
+    return res.json({
+      success: true,
+      message: 'Hủy đơn hàng thành công.'
+    });
+  } catch (err) {
+    console.error('[POS] Lỗi POST /orders/:id/cancel:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi hủy đơn hàng.'
     });
   }
 });
