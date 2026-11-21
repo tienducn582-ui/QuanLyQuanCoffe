@@ -925,7 +925,7 @@ nav#navbar {
     bottom: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 1060;
+    z-index: 1040;
     background-color: var(--bg-color);
     overflow-y: auto;
     padding: var(--space-16);
