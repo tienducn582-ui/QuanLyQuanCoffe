@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sơ Đồ Bàn & POS Gọi Món - Cafe Task Manager</title>
+  <meta name="description" content="Quản lý sơ đồ bàn, mở đơn phục vụ, gọi món và thanh toán tại bàn cho quán cafe.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- CSS Dùng Chung Tông Màu Nâu Cafe -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <!-- Chống chớp sáng Dark/Light Mode (Tránh FOUC) -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+
+<body>
+
+  <!-- THANH ĐIỀU HƯỚNG CHUNG: ui.js sẽ tự động render vào thẻ nav#navbar này -->
+  <nav id="navbar"></nav>
+
+  <!-- NỘI DUNG CHÍNH CỦA TRANG -->
+  <div style="min-height: calc(100vh - var(--navbar-height)); display: flex; flex-direction: column; justify-content: space-between;">
+    <main style="max-width: var(--container-max); width: 100%; margin: var(--space-24) auto 0; padding: 0 var(--space-16) var(--space-32);">
+
+      <!-- TIÊU ĐỀ TRANG VÀ BỘ LỌC BÀN -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-20); flex-wrap: wrap; gap: var(--space-12);">
+        <div>
+          <h1 style="font-size: var(--text-xl); margin: 0 0 4px; font-family: var(--font-serif); color: var(--primary);">
+            Sơ Đồ Bàn & Gọi Món (POS)
+          </h1>
+          <p style="color: var(--text-secondary); font-size: var(--text-sm); margin: 0;">
+            Quản lý sơ đồ bàn trực quan, mở đơn phục vụ, thêm món và thanh toán tại chỗ.
+          </p>
+        </div>
+
+        <!-- BỘ LỌC TRẠNG THÁI BÀN -->
+        <div class="btn-group" role="group" aria-label="Bộ lọc bàn">
+          <button type="button" class="btn btn-sm btn-outline active" id="btnFilterAll" onclick="setTableFilter('all')">Tất cả</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btnFilterFree" onclick="setTableFilter('free')">Bàn trống</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btnFilterOccupied" onclick="setTableFilter('occupied')">Có khách</button>
+        </div>
+      </div>
+
+      <!-- VÙNG BÁO LỖI CHUNG -->
+      <div id="posAlertError" class="alert alert-danger d-none" role="alert"></div>
+
+      <!-- BỐ CỤC 2 CỘT: TRÁI (SƠ ĐỒ BÀN & THỰC ĐƠN) - PHẢI (PANEL ĐƠN HÀNG) -->
+      <div class="pos-container">
+        
+        <!-- CỘT TRÁI: SƠ ĐỒ BÀN VÀ MENU MÓN NƯỚC -->
+        <div>
+          <!-- KHỐI 1: SƠ ĐỒ BÀN -->
+          <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); padding: var(--space-16); margin-bottom: var(--space-20);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-12);">
+              <h2 style="font-size: var(--text-base); margin: 0; font-weight: 700; color: var(--text-color);">
+                Sơ đồ bàn phục vụ
+              </h2>
+              <span id="tableSummaryText" style="font-size: var(--text-xs); color: var(--text-secondary);">
+                Đang tải...
+              </span>
+            </div>
+
+            <div id="tablesGrid" class="pos-table-grid">
+              <!-- Render danh sách bàn động bằng pos.js -->
+            </div>
+          </div>
+
+          <!-- KHỐI 2: DANH MỤC THỰC ĐƠN ĐỂ CHỌN MÓN -->
+          <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-card); padding: var(--space-16);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-12);">
+              <h2 style="font-size: var(--text-base); margin: 0; font-weight: 700; color: var(--text-color);">
+                Thực đơn món nước (Bấm để thêm)
+              </h2>
+              <span style="font-size: var(--text-xs); color: var(--text-secondary);">
+                Chọn bàn trước khi thêm món
+              </span>
+            </div>
+
+            <div id="menuGrid" class="pos-menu-grid">
+              <!-- Render danh sách món nước động bằng pos.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- CỘT PHẢI: CHI TIẾT ĐƠN HÀNG CỦA BÀN ĐANG CHỌN -->
+        <div>
+          <div class="pos-order-panel" id="orderPanel">
+            
+            <!-- TIÊU ĐỀ PANEL ĐƠN HÀNG -->
+            <div class="pos-order-header">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <h3 id="panelTableName" style="font-size: var(--text-md); margin: 0 0 4px; font-weight: 700; color: var(--text-color);">
+                    Chưa chọn bàn
+                  </h3>
+                  <div id="panelOrderMeta" style="font-size: var(--text-xs); color: var(--text-secondary);">
+                    Vui lòng bấm chọn một bàn bên trái để bắt đầu.
+                  </div>
+                </div>
+                <div id="panelTableBadge"></div>
+              </div>
+            </div>
+
+            <!-- NỘI DUNG ĐƠN HÀNG -->
+            <div id="panelOrderContent">
+              <!-- Hiển thị khi chưa chọn bàn hoặc bàn trống -->
+              <div id="panelEmptyState" class="empty-state" style="padding: var(--space-32) var(--space-16);">
+                <p style="color: var(--text-secondary); font-size: var(--text-sm);">
+                  Chọn bàn để mở đơn hoặc kiểm tra món đã gọi.
+                </p>
+              </div>
+
+              <!-- KHỐI FORM MỞ ĐƠN CHO BÀN TRỐNG -->
+              <div id="panelOpenOrderBox" class="d-none">
+                <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-16);">
+                  Bàn hiện đang trống. Nhập thông tin để mở đơn phục vụ mới:
+                </p>
+
+                <!-- Tìm khách hàng theo SĐT (nếu có routes/customers.js) -->
+                <div class="mb-3" id="customerSearchContainer">
+                  <label for="posCustomerPhone" class="form-label" style="font-size: var(--text-xs); font-weight: 600;">
+                    SĐT Khách hàng (Tùy chọn tích điểm)
+                  </label>
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="posCustomerPhone" placeholder="Nhập SĐT để tìm khách...">
+                    <button class="btn btn-outline" type="button" id="btnFindCustomer" onclick="searchCustomer()">Tìm</button>
+                  </div>
+                  <div id="posCustomerResult" class="form-text" style="font-size: var(--text-xs);"></div>
+                  <input type="hidden" id="posCustomerId" value="">
+                </div>
+
+                <button class="btn btn-primary w-100" id="btnCreateOrder" onclick="openOrderForCurrentTable()">
+                  Mở đơn phục vụ bàn này
+                </button>
+              </div>
+
+              <!-- KHỐI CHI TIẾT ĐƠN HÀNG ĐANG MỞ -->
+              <div id="panelActiveOrderBox" class="d-none">
+                
+                <!-- THÔNG TIN KHÁCH HÀNG (NẾU CÓ) -->
+                <div id="panelCustomerInfo" style="font-size: var(--text-xs); background: var(--bg-color); padding: 8px 12px; border-radius: var(--radius-btn); margin-bottom: var(--space-12); display: none;">
+                </div>
+
+                <!-- DANH SÁCH MÓN ĐÃ GỌI -->
+                <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                  DANH SÁCH MÓN ĐÃ GỌI:
+                </div>
+                <div class="pos-order-list" id="panelItemsList">
+                  <!-- Render danh sách món động -->
+                </div>
+
+                <!-- HỘP TỔNG TIỀN -->
+                <div class="pos-order-total-box">
+                  <span class="pos-order-total-text">Tổng thanh toán:</span>
+                  <span class="pos-order-total-amount" id="panelTotalAmount">0 đ</span>
+                </div>
+
+                <!-- NÚT HÀNH ĐỘNG -->
+                <div class="pos-order-actions">
+                  <button class="btn btn-primary w-100" id="btnPayOrder" onclick="showPayModal()">
+                    Thanh toán hóa đơn
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- FOOTER MỘT DÒNG DUY NHẤT -->
+    <footer class="site-footer">
+      Hệ thống Quản lý Quán Cafe - Module POS & Sơ đồ bàn (TV5) &copy; 2026
+    </footer>
+  </div>
+
+  <!-- MODAL XÁC NHẬN THANH TOÁN -->
+  <div class="modal fade" id="payModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: var(--radius-card); border: 1px solid var(--border-color);">
+        <div class="modal-header">
+          <h5 class="modal-title" id="payModalLabel" style="font-weight: 700; color: var(--primary);">
+            Xác nhận thanh toán
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div id="payModalBodyText" style="font-size: var(--text-sm); line-height: 1.6;">
+            Bạn có chắc chắn muốn thanh toán cho đơn hàng này?
+          </div>
+          <div class="pos-order-total-box mt-3 mb-0">
+            <span class="pos-order-total-text">Tổng tiền:</span>
+            <span class="pos-order-total-amount" id="payModalTotalText">0 đ</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmPay" onclick="submitPayOrder()">
+            Đồng ý thanh toán
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts nạp đúng thứ tự hợp đồng: bootstrap bundle -> api.js -> ui.js -> pos.js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/pos.js"></script>
+</body>
+
+</html>
