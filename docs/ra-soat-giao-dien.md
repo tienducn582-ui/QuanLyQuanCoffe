@@ -152,10 +152,10 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 
 1. **B1 (Không tràn ngang):** Đã đo bằng script Playwright trên Chrome thật: `scrollWidth == innerWidth` trên cả 3 kích thước 375px, 768px, 1200px (0px tràn ngang). ✅ **ĐẠT (ĐÃ ĐO THẬT)**
 2. **Kiểm tra chồng chữ / dính chữ:**
-   - Quan sát thực tế qua ảnh chụp màn hình:
+   - Quan sát thực tế qua ảnh chụp màn hình (chưa có số đo chồng chữ tự động; chỉ ghi nhận theo điều đã nhìn thấy trong ảnh chụp Chrome thật):
      + Thẻ món nước dài 2 dòng (`Matcha đá xay kem tuyết`, `Bạc xỉu truyền thống`, `Latte hạnh nhân vani`): Đã khắc phục bằng `min-height: 84px` và `margin-top: auto` cho giá tiền, đảm bảo giá tiền luôn cố định ở đáy thẻ, không bị dính sát vào tên món. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
      + Thẻ bàn: Tên bàn dài có `word-break: break-word` và `min-height: 126px`, không đè lên badge trạng thái hoặc tổng tiền. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
-     + Danh sách món trong đơn: Tên món có `word-break: break-word; line-height: 1.35`, cụm nút `+ - ✕` có `flex-shrink: 0`, không bị dính chữ. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
+     + Danh sách món trong đơn: Tên món có `word-break: break-word; line-height: 1.35`, cụm nút `+ - Xóa` có `flex-shrink: 0`, không bị dính chữ. ✅ **ĐẠT (ĐÃ KIỂM BẰNG MẮT QUA ẢNH THẬT)**
 3. **B5 (Bảo vệ Route):** `requireLogin()` chặn khách vãng lai khi truy cập `pos.html`. ✅ **ĐẠT (ĐÃ TEST THẬT)**
 4. **B6 & B7 (Màu sắc & Theme):** 100% biến màu tông nâu cà phê (`--primary: #4A2C1A`, `--bg-color: #FBF5EC`), 0 màu xanh Bootstrap. ✅ **ĐẠT (ĐÃ TEST THẬT)**
 5. **B10 (Không emoji):** 0 emoji trong mã nguồn và giao diện người dùng. ✅ **ĐẠT (ĐÃ TEST THẬT)**

@@ -366,7 +366,7 @@ function renderActiveOrder() {
             <button type="button" class="btn btn-sm btn-outline px-2 py-0" style="font-size: 11px; height: 26px;" onclick="changeItemQuantity(${item.id}, ${item.quantity - 1})">-</button>
             <span style="font-weight: 700; font-size: var(--text-sm); min-width: 20px; text-align: center;">${item.quantity}</span>
             <button type="button" class="btn btn-sm btn-outline px-2 py-0" style="font-size: 11px; height: 26px;" onclick="changeItemQuantity(${item.id}, ${item.quantity + 1})">+</button>
-            <button type="button" class="btn btn-sm btn-outline text-danger border-danger px-2 py-0" style="font-size: 11px; height: 26px;" title="Xóa món" onclick="deleteOrderItem(${item.id})">✕</button>
+            <button type="button" class="btn btn-sm btn-outline text-danger border-danger px-2 py-0" style="font-size: 11px; height: 26px;" title="Xóa món" onclick="deleteOrderItem(${item.id})">Xóa</button>
           </div>
 
           <div style="font-weight: 700; color: var(--primary); min-width: 75px; text-align: right;">
