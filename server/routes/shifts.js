@@ -10,6 +10,7 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 const {
   isString,
   isPositiveInt,
+  isISODate,
   isTimeHHmm,
   sendBadRequest
 } = require('../utils/validators');
@@ -66,6 +67,77 @@ router.get('/', verifyToken, async (req, res, next) => {
       success: true,
       data: shifts,
       message: 'Lấy danh sách ca làm việc thành công'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/shifts/logs - Lấy nhật ký ca làm việc
+ * Query: date (YYYY-MM-DD, mặc định hôm nay), shiftId (tùy chọn)
+ * Quyền: Mọi tài khoản đã đăng nhập
+ * Chú ý: Đặt TRƯỚC /:id để tránh Express nhầm 'logs' là ID
+ */
+router.get('/logs', verifyToken, async (req, res, next) => {
+  try {
+    const { date, shiftId } = req.query;
+    let targetDate = date;
+
+    if (targetDate) {
+      if (!isISODate(targetDate)) {
+        return sendBadRequest(res, ['Ngày không đúng định dạng YYYY-MM-DD hoặc không hợp lệ.']);
+      }
+    } else {
+      const now = new Date();
+      targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    let sql = `
+      SELECT TOP 100
+        sl.Id,
+        sl.ShiftId,
+        s.Name AS ShiftName,
+        sl.UserId,
+        u.FullName AS UserName,
+        CONVERT(VARCHAR(10), sl.LogDate, 120) AS LogDate,
+        sl.StartedAt,
+        sl.EndedAt,
+        sl.HandoverNote
+      FROM ShiftLogs sl
+      JOIN Shifts s ON sl.ShiftId = s.Id
+      JOIN Users u ON sl.UserId = u.Id
+      WHERE sl.LogDate = @date
+    `;
+    const params = { date: targetDate };
+
+    if (shiftId !== undefined && shiftId !== '') {
+      if (!isPositiveInt(shiftId)) {
+        return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
+      }
+      sql += ' AND sl.ShiftId = @shiftId';
+      params.shiftId = Number(shiftId);
+    }
+
+    sql += ' ORDER BY sl.StartedAt DESC';
+
+    const result = await query(sql, params);
+    const logs = result.recordset.map(r => ({
+      id: r.Id,
+      shiftId: r.ShiftId,
+      shiftName: r.ShiftName,
+      userId: r.UserId,
+      userName: r.UserName,
+      logDate: r.LogDate,
+      startedAt: r.StartedAt,
+      endedAt: r.EndedAt,
+      handoverNote: r.HandoverNote || ''
+    }));
+
+    res.json({
+      success: true,
+      data: logs,
+      message: 'Lấy nhật ký ca làm việc thành công'
     });
   } catch (error) {
     next(error);
@@ -277,6 +349,195 @@ router.delete('/:id', verifyToken, requireRole('Admin'), async (req, res, next) 
     res.json({
       success: true,
       message: 'Xóa ca làm việc thành công'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/shifts/:id/start - Bắt đầu nhận ca làm việc
+ * Quyền: Mọi tài khoản đã đăng nhập
+ */
+router.post('/:id/start', verifyToken, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
+    }
+
+    const shiftId = Number(id);
+    const userId = req.user.id;
+
+    // 1. Kiểm tra ca làm việc tồn tại
+    const shiftCheck = await query('SELECT Id FROM Shifts WHERE Id = @id', { id: shiftId });
+    if (shiftCheck.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy ca làm việc'
+      });
+    }
+
+    // 2. Kiểm tra người dùng có ShiftLogs nào chưa kết thúc (EndedAt IS NULL) ở bất kỳ ca nào
+    const activeCheck = await query(
+      'SELECT TOP 1 Id, ShiftId FROM ShiftLogs WHERE UserId = @userId AND EndedAt IS NULL',
+      { userId }
+    );
+    if (activeCheck.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Bạn đang trong một ca chưa kết thúc'
+      });
+    }
+
+    // 3. Tạo bản ghi ShiftLogs mới với LogDate = hôm nay, StartedAt = SYSDATETIME()
+    const insertSql = `
+      INSERT INTO ShiftLogs (ShiftId, UserId, LogDate, StartedAt, EndedAt, HandoverNote)
+      OUTPUT INSERTED.Id, INSERTED.ShiftId, INSERTED.UserId, CONVERT(VARCHAR(10), INSERTED.LogDate, 120) AS LogDate, INSERTED.StartedAt
+      VALUES (@shiftId, @userId, CAST(GETDATE() AS DATE), SYSDATETIME(), NULL, NULL)
+    `;
+
+    const result = await query(insertSql, { shiftId, userId });
+    const inserted = result.recordset[0];
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: inserted.Id,
+        shiftId: inserted.ShiftId,
+        userId: inserted.UserId,
+        logDate: inserted.LogDate,
+        startedAt: inserted.StartedAt
+      },
+      message: 'Nhận ca làm việc thành công'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/shifts/:id/end - Kết thúc ca làm việc và ghi nhận bàn giao
+ * Body: { handoverNote?: string } (tối đa 500 ký tự)
+ * Quyền: Mọi tài khoản đã đăng nhập
+ */
+router.post('/:id/end', verifyToken, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
+    }
+
+    const shiftId = Number(id);
+    const userId = req.user.id;
+    const { handoverNote } = req.body || {};
+
+    if (handoverNote !== undefined && handoverNote !== null && typeof handoverNote === 'string' && handoverNote.trim().length > 500) {
+      return sendBadRequest(res, ['Ghi chú bàn giao không được vượt quá 500 ký tự.']);
+    }
+
+    // Tìm log chưa kết thúc của CHÍNH người dùng ở ca :id
+    const findLog = await query(
+      'SELECT TOP 1 Id FROM ShiftLogs WHERE ShiftId = @shiftId AND UserId = @userId AND EndedAt IS NULL',
+      { shiftId, userId }
+    );
+
+    if (findLog.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy ca làm việc đang mở của bạn để kết thúc'
+      });
+    }
+
+    const logId = findLog.recordset[0].Id;
+    const noteVal = handoverNote && typeof handoverNote === 'string' && handoverNote.trim() ? handoverNote.trim() : null;
+
+    await query(
+      `UPDATE ShiftLogs 
+       SET EndedAt = SYSDATETIME(), HandoverNote = @handoverNote 
+       WHERE Id = @logId`,
+      { logId, handoverNote: noteVal }
+    );
+
+    res.json({
+      success: true,
+      message: 'Kết thúc ca làm việc và bàn giao thành công'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/shifts/:id/handover - Lấy thông tin bàn giao ca gần nhất và các công việc chưa xong
+ * Quyền: Mọi tài khoản đã đăng nhập
+ */
+router.get('/:id/handover', verifyToken, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!isPositiveInt(id)) {
+      return sendBadRequest(res, ['Mã ca làm việc không hợp lệ (phải là số nguyên dương).']);
+    }
+
+    const shiftId = Number(id);
+
+    // Kiểm tra ca làm việc tồn tại
+    const shiftCheck = await query('SELECT Id FROM Shifts WHERE Id = @id', { id: shiftId });
+    if (shiftCheck.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy ca làm việc'
+      });
+    }
+
+    // Log đã kết thúc gần nhất của ca
+    const logSql = `
+      SELECT TOP 1 
+        u.FullName AS userName,
+        sl.EndedAt AS endedAt,
+        sl.HandoverNote AS handoverNote
+      FROM ShiftLogs sl
+      JOIN Users u ON sl.UserId = u.Id
+      WHERE sl.ShiftId = @shiftId AND sl.EndedAt IS NOT NULL
+      ORDER BY sl.EndedAt DESC
+    `;
+    const logRes = await query(logSql, { shiftId });
+    const lastLog = logRes.recordset.length > 0 ? {
+      userName: logRes.recordset[0].userName,
+      endedAt: logRes.recordset[0].endedAt,
+      handoverNote: logRes.recordset[0].handoverNote || ''
+    } : null;
+
+    // Các công việc còn dở của ca (Status khác 'Done')
+    const taskSql = `
+      SELECT 
+        t.Id AS id,
+        t.Title AS title,
+        t.Priority AS priority,
+        t.Status AS status,
+        CONVERT(VARCHAR(10), t.Deadline, 120) AS deadline
+      FROM Tasks t
+      WHERE t.ShiftId = @shiftId AND t.Status <> 'Done'
+      ORDER BY 
+        CASE t.Priority WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 3 ELSE 4 END,
+        t.Deadline ASC
+    `;
+    const taskRes = await query(taskSql, { shiftId });
+    const openTasks = taskRes.recordset.map(t => ({
+      id: t.id,
+      title: t.title,
+      priority: t.priority,
+      status: t.status,
+      deadline: t.deadline
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        lastLog,
+        openTasks
+      },
+      message: 'Lấy thông tin bàn giao ca thành công'
     });
   } catch (error) {
     next(error);

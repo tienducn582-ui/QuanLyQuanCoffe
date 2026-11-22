@@ -109,3 +109,157 @@ Authorization: Bearer {{adminToken}}
 ### 14. Thử xóa ca bằng tài khoản Staff (Kỳ vọng: 403 Forbidden)
 DELETE {{baseUrl}}/shifts/1
 Authorization: Bearer {{staffToken}}
+
+### ===================================================================
+### PHẦN MỞ RỘNG: [TV1-X2] BÀN GIAO CA (ShiftLogs)
+### ===================================================================
+
+### 15. Lấy nhật ký ca hôm nay (Mặc định hôm nay - 200 OK)
+GET {{baseUrl}}/shifts/logs
+Authorization: Bearer {{adminToken}}
+
+### 16. Lấy nhật ký ca theo ngày cụ thể và ShiftId
+GET {{baseUrl}}/shifts/logs?date=2026-11-22&shiftId=1
+Authorization: Bearer {{staffToken}}
+
+### 17. Ca biên: Lấy nhật ký ca với ngày sai định dạng (Kỳ vọng: 400 Bad Request)
+GET {{baseUrl}}/shifts/logs?date=22-11-2026
+Authorization: Bearer {{staffToken}}
+
+### 18. Bắt đầu nhận ca làm việc (Staff - 201 Created)
+POST {{baseUrl}}/shifts/1/start
+Authorization: Bearer {{staffToken}}
+
+### 19. Ca biên: Nhận tiếp ca thứ hai khi ca cũ chưa kết thúc (Kỳ vọng: 409 Conflict)
+POST {{baseUrl}}/shifts/2/start
+Authorization: Bearer {{staffToken}}
+
+### 20. Ca biên: Nhận ca không tồn tại (Kỳ vọng: 404 Not Found)
+POST {{baseUrl}}/shifts/9999/start
+Authorization: Bearer {{staffToken}}
+
+### 21. Lấy thông tin bàn giao ca gần nhất và công việc dở (200 OK)
+GET {{baseUrl}}/shifts/1/handover
+Authorization: Bearer {{staffToken}}
+
+### 22. Ca biên: Lấy thông tin bàn giao ca không tồn tại (Kỳ vọng: 404 Not Found)
+GET {{baseUrl}}/shifts/9999/handover
+Authorization: Bearer {{staffToken}}
+
+### 23. Ca biên: Kết thúc ca với ghi chú quá 500 ký tự (Kỳ vọng: 400 Bad Request)
+POST {{baseUrl}}/shifts/1/end
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "handoverNote": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus."
+}
+
+### 24. Kết thúc ca và ghi nhận bàn giao hợp lệ (Staff - 200 OK)
+POST {{baseUrl}}/shifts/1/end
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "handoverNote": "Đã vệ sinh họng pha espresso, hạt Robusta còn 1 hũ, bàn giao ca tiếp theo."
+}
+
+### 25. Ca biên: Kết thúc ca lần hai khi không còn log mở (Kỳ vọng: 404 Not Found)
+POST {{baseUrl}}/shifts/1/end
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "handoverNote": "Thử kết thúc lại"
+}
+
+### ===================================================================
+### PHẦN MỞ RỘNG: [TV1-X4] LỊCH PHÂN CA TUẦN (/api/schedule)
+### ===================================================================
+
+### 26. Lấy lịch phân ca tuần của toàn quán (Mọi vai trò - 200 OK)
+GET {{baseUrl}}/schedule?from=2026-11-16&to=2026-11-22
+Authorization: Bearer {{staffToken}}
+
+### 27. Lấy lịch phân ca của chính mình (/mine đặt trước /:id - 200 OK)
+GET {{baseUrl}}/schedule/mine?from=2026-11-16&to=2026-11-22
+Authorization: Bearer {{staffToken}}
+
+### 28. Ca biên: Khoảng ngày vượt quá 31 ngày (Kỳ vọng: 400 Bad Request)
+GET {{baseUrl}}/schedule?from=2026-10-01&to=2026-11-15
+Authorization: Bearer {{staffToken}}
+
+### 29. Ca biên: Ngày bắt đầu from > to (Kỳ vọng: 400 Bad Request)
+GET {{baseUrl}}/schedule?from=2026-11-25&to=2026-11-20
+Authorization: Bearer {{staffToken}}
+
+### 30. Ca biên: Định dạng ngày sai (Kỳ vọng: 400 Bad Request)
+GET {{baseUrl}}/schedule?from=abc&to=2026-11-22
+Authorization: Bearer {{staffToken}}
+
+### 31. Phân công ca làm việc (Admin - 201 Created)
+POST {{baseUrl}}/schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "userId": 2,
+  "workDate": "2026-11-23"
+}
+
+### 32. Ca biên: Phân công trùng lặp ca + người + ngày (Kỳ vọng: 409 Conflict)
+POST {{baseUrl}}/schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "userId": 2,
+  "workDate": "2026-11-23"
+}
+
+### 33. Ca biên: Phân công ca không tồn tại (Kỳ vọng: 404 Not Found)
+POST {{baseUrl}}/schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 9999,
+  "userId": 2,
+  "workDate": "2026-11-23"
+}
+
+### 34. Ca biên: Phân công nhân viên không tồn tại (Kỳ vọng: 404 Not Found)
+POST {{baseUrl}}/schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "userId": 9999,
+  "workDate": "2026-11-23"
+}
+
+### 35. Ca biên: Staff gọi POST phân công ca (Kỳ vọng: 403 Forbidden)
+POST {{baseUrl}}/schedule
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "shiftId": 1,
+  "userId": 2,
+  "workDate": "2026-11-24"
+}
+
+### 36. Hủy phân công ca làm việc (Admin - 200 OK)
+DELETE {{baseUrl}}/schedule/1
+Authorization: Bearer {{adminToken}}
+
+### 37. Ca biên: Hủy phân công ca không tồn tại (Kỳ vọng: 404 Not Found)
+DELETE {{baseUrl}}/schedule/9999
+Authorization: Bearer {{adminToken}}
+
+### 38. Ca biên: Staff gọi DELETE hủy phân công (Kỳ vọng: 403 Forbidden)
+DELETE {{baseUrl}}/schedule/1
+Authorization: Bearer {{staffToken}}

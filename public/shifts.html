@@ -45,7 +45,68 @@
 
     <!-- Danh sách Ca làm việc (Hiển thị dạng thẻ) -->
     <div id="shiftsList" class="row g-4"></div>
+
+    <!-- Bảng Nhật ký ca hôm nay (TV1-X2 Bàn giao ca) -->
+    <div class="card card-custom mt-5 shadow-sm">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+        <div>
+          <h2 class="h5 mb-0 fw-bold text-primary">Nhật Ký Ca & Bàn Giao Hôm Nay</h2>
+          <small class="text-muted" id="shiftLogsDateDisplay">Đang tải ngày...</small>
+        </div>
+        <button id="btnRefreshLogs" class="btn btn-outline-secondary btn-sm" type="button" title="Tải lại nhật ký">
+          Làm mới
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="shiftLogsTable">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 130px;">Ca làm việc</th>
+                <th style="min-width: 140px;">Nhân viên</th>
+                <th style="min-width: 110px;">Giờ bắt đầu</th>
+                <th style="min-width: 110px;">Giờ kết thúc</th>
+                <th style="min-width: 120px;">Trạng thái</th>
+                <th style="min-width: 250px;">Ghi chú bàn giao</th>
+              </tr>
+            </thead>
+            <tbody id="shiftLogsTbody">
+              <tr><td colspan="6" class="text-center py-4 text-muted">Đang tải nhật ký...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </main>
+
+  <!-- Modal Kết thúc ca & Bàn giao (TV1-X2) -->
+  <div class="modal fade" id="endShiftModal" tabindex="-1" aria-labelledby="endShiftModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="endShiftForm">
+          <div class="modal-header">
+            <h5 class="modal-title" id="endShiftModalTitle">Kết thúc ca làm việc & Bàn giao</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <div id="endShiftError" class="alert alert-danger d-none"></div>
+            <input type="hidden" id="endShiftId">
+            <p class="mb-3 text-muted" id="endShiftInfo">Vui lòng nhập ghi chú bàn giao công việc và trang thiết bị cho ca tiếp theo (nếu có).</p>
+
+            <div class="mb-3">
+              <label for="handoverNote" class="form-label">Ghi chú bàn giao ca <small class="text-muted">(Tùy chọn, tối đa 500 ký tự)</small></label>
+              <textarea class="form-control" id="handoverNote" rows="4" maxlength="500" placeholder="Ví dụ: Đã vệ sinh máy pha espresso, hạt Robusta còn nửa hũ, bàn 3 còn việc dở..."></textarea>
+              <div class="form-text text-end"><span id="handoverCharCount">0</span>/500 ký tự</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-danger" id="btnSubmitEndShift">Xác nhận kết thúc ca</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Thêm/Sửa Ca Làm Việc (Chỉ Admin) -->
   <div class="modal fade" id="shiftModal" tabindex="-1" aria-labelledby="shiftModalTitle" aria-hidden="true">
