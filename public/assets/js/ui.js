@@ -272,14 +272,33 @@ function renderNavbar() {
       </div>
     `;
   } else {
-    // Menu cho người dùng đã đăng nhập: Trang chủ, Công việc, Việc của tôi, Ca làm, Thống kê
+    // Menu cho người dùng đã đăng nhập: Trang chủ, Công việc, Việc của tôi, Ca làm, Mở rộng (dropdown), Thống kê
     const roleBadge = user.role === 'Admin' ? 'Admin' : 'Staff';
+    const isExtraActive = ['schedule.html', 'inventory.html', 'customers.html', 'pos.html', 'templates.html'].includes(currentPath);
+    const extraActiveCls = isExtraActive ? 'active' : '';
+
+    const templatesLink = user.role === 'Admin'
+      ? `<li><hr class="dropdown-divider"></li><li><a class="dropdown-item ${isCurrent('templates.html')}" href="templates.html">Mẫu công việc</a></li>`
+      : '';
+
     navLinksHtml = `
       <ul class="navbar-menu">
         <li><a class="nav-link ${isCurrent('index.html')}" href="index.html">Trang chủ</a></li>
         <li><a class="nav-link ${isCurrent('tasks.html')}" href="tasks.html">Công việc</a></li>
         <li><a class="nav-link ${isCurrent('my-tasks.html')}" href="my-tasks.html" id="navMyTasksLink">Việc của tôi <span id="overdueBadge" class="badge bg-danger" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle;"></span></a></li>
         <li><a class="nav-link ${isCurrent('shifts.html')}" href="shifts.html">Ca làm</a></li>
+        <li class="navbar-dropdown dropdown">
+          <a class="nav-link dropdown-toggle ${extraActiveCls}" href="#" id="navbarExtraDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Mở rộng
+          </a>
+          <ul class="dropdown-menu shadow-sm" aria-labelledby="navbarExtraDropdown">
+            <li><a class="dropdown-item ${isCurrent('schedule.html')}" href="schedule.html">Lịch phân ca</a></li>
+            <li><a class="dropdown-item ${isCurrent('inventory.html')}" href="inventory.html">Quản lý kho</a></li>
+            <li><a class="dropdown-item ${isCurrent('customers.html')}" href="customers.html">Khách hàng</a></li>
+            <li><a class="dropdown-item ${isCurrent('pos.html')}" href="pos.html">POS Bán hàng</a></li>
+            ${templatesLink}
+          </ul>
+        </li>
         <li><a class="nav-link ${isCurrent('statistics.html')}" href="statistics.html">Thống kê</a></li>
       </ul>
     `;
@@ -371,6 +390,26 @@ function renderNavbar() {
   if (mobileToggle && menuWrapper) {
     mobileToggle.addEventListener('click', () => {
       menuWrapper.classList.toggle('is-open');
+    });
+  }
+
+  // TV5-XU: Hỗ trợ đóng mở dropdown menu Mở rộng
+  const extraToggle = document.getElementById('navbarExtraDropdown');
+  if (extraToggle) {
+    extraToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const menu = extraToggle.nextElementSibling;
+      if (menu) {
+        menu.classList.toggle('show');
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (!extraToggle.contains(e.target)) {
+        const menu = extraToggle.nextElementSibling;
+        if (menu && menu.classList.contains('show')) {
+          menu.classList.remove('show');
+        }
+      }
     });
   }
 

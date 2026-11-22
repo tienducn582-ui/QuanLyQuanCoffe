@@ -217,6 +217,41 @@ Toàn bộ 8 trang trên main được quét tự động qua script `.local-tes
 | 5 | Kiểm tra trường hợp lỗi: Token hết hạn / sai định dạng | Staff | Gọi `updateOverdueBadge()` với token hỏng: huy hiệu tự động ẩn (`display: none`), không hiện popup lỗi toast gây phiền người dùng. | ✅ **ĐÃ TEST THẬT** |
 | 6 | Đăng nhập tài khoản Admin (`admin@cafe.com`) | Admin | Xem danh sách việc của Admin, huy hiệu hiển thị đúng số việc quá hạn của Admin (hoặc ẩn nếu 0 việc). | ✅ **ĐÃ TEST THẬT** |
 
+---
+
+## 8. RÀ SOÁT & NGHIỆM THU LIÊN KẾT NAVBAR MỞ RỘNG (TÁC VỤ TV5-XU)
+
+* **Phạm vi kiểm thử:** `public/assets/js/ui.js`, `public/assets/css/style.css` và toàn bộ các trang trong `public/`.
+* **Người thực hiện:** Thành viên 5 (TV5)
+* **Ngày rà soát:** 22/11/2026
+
+### 8.1. Danh sách các trang mở rộng có thật và trạng thái router tương ứng
+
+| Trang HTML | File JS tương ứng | Router Backend | Trạng thái Router | Liên kết trên Navbar |
+|:---|:---|:---|:---:|:---:|
+| `public/my-tasks.html` | `my-tasks.js` | `server/routes/tasks.js` | Hoàn thiện (assigneeId, overdue) | Nằm cạnh 'Công việc' kèm badge đỏ |
+| `public/schedule.html` | `schedule.js` | `server/routes/schedule.js` | Hoàn thiện (/mine, /, POST, DELETE) | Nằm trong dropdown 'Mở rộng' |
+| `public/inventory.html` | `inventory.js` | `server/routes/ingredients.js` | Hoàn thiện (/stock, search, lowOnly) | Nằm trong dropdown 'Mở rộng' |
+| `public/customers.html` | `customers.js` | `server/routes/customers.js` | Hoàn thiện (/earn, /redeem, getRank) | Nằm trong dropdown 'Mở rộng' |
+| `public/pos.html` | `pos.js` | `server/routes/pos.js` | Hoàn thiện (/tables, /menu, /orders) | Nằm trong dropdown 'Mở rộng' |
+| `public/templates.html` | `templates.js` | `server/routes/templates.js` | Hoàn thiện (/generate, CRUD mẫu việc) | Nằm trong dropdown 'Mở rộng' (Chỉ Admin) |
+
+### 8.2. Đánh giá tính Responsive trên 3 kích thước màn hình chuẩn
+
+| Độ phân giải | Số đo thực tế | Kết quả tràn ngang | Bố cục & Trải nghiệm thao tác (UX/UI) | Đánh giá |
+|:---:|:---|:---:|:---|:---:|
+| **375px** (Mobile) | `innerWidth: 375px`<br>`scrollWidth: 375px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Menu hamburger thu gọn; khi bấm mở menu, dropdown 'Mở rộng' hiển thị thụt dòng mượt mà, không làm vỡ layout hay tràn ngang. | ✅ **ĐẠT** |
+| **768px** (Tablet) | `innerWidth: 768px`<br>`scrollWidth: 768px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Thanh menu ngang gom gọn 6 mục chính + 1 dropdown 'Mở rộng'. Nhãn và nút bấm vừa vặn, không bị đè lên logo hay nút chuyển theme. | ✅ **ĐẠT** |
+| **1200px** (Desktop) | `innerWidth: 1200px`<br>`scrollWidth: 1200px` | `scrollWidth <= innerWidth`<br>(0px tràn ngang) | Dropdown 'Mở rộng' căn lề chuẩn, đổ bóng mờ, hover đổi màu nâu cafe đồng bộ. Menu hiển thị đầy đủ, thoáng đãng. | ✅ **ĐẠT** |
+
+### 8.3. Kiểm tra liên kết chết & Phân quyền trên Navbar
+
+1. **Kiểm tra liên kết chết (Dead Links):** Toàn bộ 100% href trên Navbar trỏ chính xác đến các file `.html` có thật trong `public/`. Không có liên kết nào bị 404.
+2. **Kiểm tra phân quyền theo vai trò (RBAC):**
+   - Tài khoản **Staff:** Không nhìn thấy liên kết 'Mẫu công việc' (`templates.html`) trong dropdown 'Mở rộng'.
+   - Tài khoản **Admin:** Nhìn thấy liên kết 'Mẫu công việc' sau đường gạch phân cách `dropdown-divider`.
+3. **Độ nhất quán tiêu đề:** Tất cả các trang đều có hậu tố `- Cafe Task Manager` chuẩn xác theo thương hiệu.
+
 
 
 
