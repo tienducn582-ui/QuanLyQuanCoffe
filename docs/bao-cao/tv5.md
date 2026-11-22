@@ -200,7 +200,7 @@ Nhằm đảm bảo tính trung thực kỹ thuật và bám sát tiến độ d
 - **Giải pháp thực hiện:**
   - Đặt liên kết 'Việc của tôi' ngay cạnh 'Công việc'.
   - Gom các trang: Lịch phân ca (`schedule.html`), Quản lý kho (`inventory.html`), Khách hàng (`customers.html`), POS Bán hàng (`pos.html`) và Mẫu công việc (`templates.html` - chỉ Admin) vào menu dropdown **"Mở rộng"**.
-  - Kiểm tra số đo thực tế trên Google Chrome bằng Playwright: `scrollWidth <= innerWidth` tại 375px, 768px và 1200px (0px tràn ngang).
+  - Chưa đo trên navbar hiện tại.
 
 ---
 
@@ -208,15 +208,15 @@ Nhằm đảm bảo tính trung thực kỹ thuật và bám sát tiến độ d
 
 | Mã | Chức năng | Các bước thực hiện | Kết quả mong đợi | Kết quả thực tế | Đạt? |
 |:---|:---|:---|:---|:---|:---:|
-| **TC-X1-01** | Lọc việc cá nhân & Huy hiệu quá hạn | Đăng nhập tài khoản Staff, mở trang `my-tasks.html` | Hiển thị các công việc được giao cho nhân viên; huy hiệu `#overdueBadge` trên navbar hiện đúng số việc quá hạn | Hiển thị chính xác việc của tôi và số đếm quá hạn | Đạt |
-| **TC-X1-02** | Chuyển trạng thái việc và giảm huy hiệu | Bấm "Hoàn thành" một việc quá hạn trong `my-tasks.html` | Việc chuyển sang `Done`, huy hiệu `#overdueBadge` tự động giảm đi 1 | Trạng thái chuyển Done, huy hiệu giảm lập tức | Đạt |
-| **TC-X1-03** | Lọc chỉ việc quá hạn | Bật checkbox "Chỉ việc quá hạn" trên `my-tasks.html` | Danh sách chỉ còn các công việc có Deadline < hôm nay và chưa xong | Lọc chính xác 100% | Đạt |
-| **TC-X9-01** | Xem sơ đồ bàn và thực đơn | Truy cập `pos.html`, quan sát danh sách bàn và món nước | Bàn trống màu xanh, bàn có khách màu cam kèm tổng tiền tạm tính | Hiển thị trực quan, đúng màu sắc | Đạt |
-| **TC-X9-02** | Mở đơn bàn và gọi món | Chọn Bàn 1 trống, bấm mở đơn, chọn 2 món nước trong menu | Mở đơn thành công, Bàn 1 chuyển sang Occupied, hiển thị danh sách món và tổng tiền | Đơn mở thành công, tính tiền chính xác | Đạt |
-| **TC-X9-03** | Chặn mở 2 đơn trên cùng 1 bàn | Gửi lệnh `POST /api/pos/orders` vào bàn đang có đơn Open | Server chặn bằng mã lỗi `409 Conflict` | Trả về 409 Conflict chuẩn hợp đồng | Đạt |
-| **TC-X9-04** | Thanh toán hóa đơn và giải phóng bàn | Bấm "Thanh toán hóa đơn" tại bàn đang có khách | Server tính lại Total tại server, chuyển đơn thành Paid, bàn quay về Free | Bàn trống ngay sau khi thanh toán, CSDL cập nhật Total | Đạt |
-| **TC-X9-05** | Thanh toán kèm tích điểm cho khách | Mở đơn bàn gắn SĐT khách hàng, gọi món 150.000đ, thanh toán | Đơn thanh toán thành công, khách hàng được cộng thêm 15 điểm | Điểm khách hàng tăng chính xác | Đạt |
-| **TC-X9-06** | Hủy đơn hàng đang mở | Bấm "Hủy đơn hàng này" có xác nhận confirm | Đơn chuyển trạng thái `Cancelled`, bàn được giải phóng về Free | Đơn hủy thành công, bàn trở lại trống | Đạt |
+| **TC-X1-01** | Lọc việc cá nhân & Huy hiệu quá hạn | Đăng nhập tài khoản Staff, mở trang `my-tasks.html` | Hiển thị các công việc được giao cho nhân viên; huy hiệu `#overdueBadge` trên navbar hiện đúng số việc quá hạn | | |
+| **TC-X1-02** | Chuyển trạng thái việc và giảm huy hiệu | Bấm "Hoàn thành" một việc quá hạn trong `my-tasks.html` | Việc chuyển sang `Done`, huy hiệu `#overdueBadge` tự động giảm đi 1 | | |
+| **TC-X1-03** | Lọc chỉ việc quá hạn | Bật checkbox "Chỉ việc quá hạn" trên `my-tasks.html` | Danh sách chỉ còn các công việc có Deadline < hôm nay và chưa xong | | |
+| **TC-X9-01** | Xem sơ đồ bàn và thực đơn | Truy cập `pos.html`, quan sát danh sách bàn và món nước | Bàn trống màu xanh, bàn có khách màu cam kèm tổng tiền tạm tính | | |
+| **TC-X9-02** | Mở đơn bàn và gọi món | Chọn Bàn 1 trống, bấm mở đơn, chọn 2 món nước trong menu | Mở đơn thành công, Bàn 1 chuyển sang Occupied, hiển thị danh sách món và tổng tiền | | |
+| **TC-X9-03** | Chặn mở 2 đơn trên cùng 1 bàn | Gửi lệnh `POST /api/pos/orders` vào bàn đang có đơn Open | Server chặn bằng mã lỗi `409 Conflict` | | |
+| **TC-X9-04** | Thanh toán hóa đơn và giải phóng bàn | Bấm "Thanh toán hóa đơn" tại bàn đang có khách | Server tính lại Total tại server, chuyển đơn thành Paid, bàn quay về Free | | |
+| **TC-X9-05** | Thanh toán kèm tích điểm cho khách | Mở đơn bàn gắn SĐT khách hàng, gọi món 150.000đ, thanh toán | Đơn thanh toán thành công, khách hàng được cộng thêm 15 điểm | | |
+| **TC-X9-06** | Hủy đơn hàng đang mở | Bấm "Hủy đơn hàng này" có xác nhận confirm | Đơn chuyển trạng thái `Cancelled`, bàn được giải phóng về Free | | |
 
 ---
 
