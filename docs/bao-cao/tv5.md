@@ -162,3 +162,69 @@ Nhằm đảm bảo tính trung thực kỹ thuật và bám sát tiến độ d
 - `[CHỜ code đóng băng]` Tích hợp dữ liệu API thật trên giao diện Phân ca trực (`shifts.html`) của TV1.
 - `[CHỜ code đóng băng]` Ảnh chụp màn hình nghiệm thu thực tế toàn diện của các trang nghiệp vụ sau khi đóng băng mã nguồn.
 - `[CHỜ code đóng băng]` Ghép nối báo cáo tổng thể, slide thuyết trình 12 trang và video demo vận hành.
+
+---
+
+## 9. TÍNH NĂNG MỞ RỘNG: VIỆC CỦA TÔI & HUY HIỆU QUÁ HẠN (`[TV5-X1]`)
+
+- **Mục đích nghiệp vụ:** Cho phép nhân viên theo dõi riêng các công việc được giao cho chính mình tại trang `my-tasks.html`. Đồng thời, hiển thị trực quan huy hiệu đỏ `#overdueBadge` trên thanh điều hướng Navbar với số lượng việc quá hạn theo thời gian thực để cảnh báo nhân viên xử lý gấp.
+- **Đối tượng sử dụng:** Tất cả nhân viên và Admin đã đăng nhập vào hệ thống.
+- **Luồng xử lý (Frontend → API → CSDL):**
+  1. Khi tải trang bất kỳ, `ui.js` gọi hàm `updateOverdueBadge()`: thực hiện `GET /api/tasks?assigneeId=me&overdue=1&pageSize=1` để lấy `pagination.total`. Nếu > 0, huy hiệu đỏ cạnh liên kết 'Việc của tôi' hiển thị số lượng; nếu = 0 hoặc lỗi, huy hiệu ẩn tự động.
+  2. Tại `my-tasks.html`, script `my-tasks.js` gọi `GET /api/tasks?assigneeId=me&status=&overdue=` để tải danh sách công việc cá nhân.
+  3. Bảng hỗ trợ lọc theo trạng thái, checkbox "Chỉ việc quá hạn", và phân trang chuẩn `renderPagination()`.
+  4. Người dùng bấm chuyển trạng thái `Pending` -> `InProgress` -> `Done` qua `PATCH /api/tasks/:id/status`. Sau mỗi lần cập nhật, trang tải lại và tự động kích hoạt `updateOverdueBadge()` để giảm số lượng quá hạn.
+- **File cài đặt:** `public/my-tasks.html`, `public/assets/js/my-tasks.js`, `public/assets/js/ui.js`, `public/assets/css/style.css`, `docs/ra-soat-giao-dien.md`.
+
+---
+
+## 10. TÍNH NĂNG MỞ RỘNG: POS & SƠ ĐỒ BÀN (`[TV5-X9]`)
+
+- **Mục đích nghiệp vụ:** Xây dựng hệ thống bán hàng tại bàn (Point of Sale) trực quan dành cho quán cà phê. Quản lý trạng thái bàn (Trống / Đang có khách), mở đơn gọi món, tùy chỉnh số lượng món, tính tiền chuẩn xác tại server, thanh toán hóa đơn và tự động tích điểm cho khách hàng thành viên.
+- **Đối tượng sử dụng:**
+  - **Staff:** Xem sơ đồ bàn, mở đơn phục vụ bàn, chọn món từ menu, tăng/giảm món, thanh toán hóa đơn hoặc hủy đơn hàng.
+  - **Admin:** Toàn quyền sử dụng POS, đồng thời có modal quản lý sơ đồ bàn (Thêm/Sửa/Xóa bàn) và thực đơn món (Thêm/Sửa/Xóa món).
+- **Luồng xử lý (Frontend → API → CSDL):**
+  1. Sơ đồ bàn hiển thị danh sách các bàn từ `GET /api/pos/tables`. Bàn có đơn `Open` mang trạng thái `Occupied` (màu cam), bàn trống mang trạng thái `Free` (màu xanh).
+  2. Bấm bàn trống mở đơn qua `POST /api/pos/orders` `{ tableId, customerId? }`. Server ràng buộc chỉ mục `UX_Orders_OpenTable` đảm bảo mỗi bàn chỉ có duy nhất 1 đơn `Open`.
+  3. Gọi món qua `POST /api/pos/orders/:id/items`. Đơn giá `UnitPrice` được server chốt theo giá của `MenuItems.Price` tại thời điểm gọi món.
+  4. Thanh toán qua `POST /api/pos/orders/:id/pay`. Server thực thi trong một transaction: tính lại tổng tiền `Total = SUM(Quantity * UnitPrice)`, cập nhật trạng thái `Paid` và thời điểm `PaidAt`, đồng thời tự động tích điểm cho khách hàng (10.000đ = 1 điểm) nếu có `CustomerId`.
+- **Bảng CSDL liên quan:** `dbo.DiningTables`, `dbo.MenuItems`, `dbo.Orders`, `dbo.OrderItems` trong `database/schema-mo-rong.sql`.
+- **File cài đặt:** `server/routes/pos.js`, `public/pos.html`, `public/assets/js/pos.js`, `public/assets/css/style.css`.
+
+---
+
+## 11. TÁC VỤ TÍCH HỢP NAVBAR MỞ RỘNG (`[TV5-XU]`)
+
+- **Mục đích:** Tích hợp liên kết điều hướng đồng bộ cho tất cả các trang mở rộng vào Navbar chung mà không làm vỡ giao diện hay tràn ngang màn hình trên thiết bị di động.
+- **Giải pháp thực hiện:**
+  - Đặt liên kết 'Việc của tôi' ngay cạnh 'Công việc'.
+  - Gom các trang: Lịch phân ca (`schedule.html`), Quản lý kho (`inventory.html`), Khách hàng (`customers.html`), POS Bán hàng (`pos.html`) và Mẫu công việc (`templates.html` - chỉ Admin) vào menu dropdown **"Mở rộng"**.
+  - Kiểm tra số đo thực tế trên Google Chrome bằng Playwright: `scrollWidth <= innerWidth` tại 375px, 768px và 1200px (0px tràn ngang).
+
+---
+
+## 12. BẢNG TEST MỞ RỘNG (`[TV5-X1]` & `[TV5-X9]`)
+
+| Mã | Chức năng | Các bước thực hiện | Kết quả mong đợi | Kết quả thực tế | Đạt? |
+|:---|:---|:---|:---|:---|:---:|
+| **TC-X1-01** | Lọc việc cá nhân & Huy hiệu quá hạn | Đăng nhập tài khoản Staff, mở trang `my-tasks.html` | Hiển thị các công việc được giao cho nhân viên; huy hiệu `#overdueBadge` trên navbar hiện đúng số việc quá hạn | Hiển thị chính xác việc của tôi và số đếm quá hạn | Đạt |
+| **TC-X1-02** | Chuyển trạng thái việc và giảm huy hiệu | Bấm "Hoàn thành" một việc quá hạn trong `my-tasks.html` | Việc chuyển sang `Done`, huy hiệu `#overdueBadge` tự động giảm đi 1 | Trạng thái chuyển Done, huy hiệu giảm lập tức | Đạt |
+| **TC-X1-03** | Lọc chỉ việc quá hạn | Bật checkbox "Chỉ việc quá hạn" trên `my-tasks.html` | Danh sách chỉ còn các công việc có Deadline < hôm nay và chưa xong | Lọc chính xác 100% | Đạt |
+| **TC-X9-01** | Xem sơ đồ bàn và thực đơn | Truy cập `pos.html`, quan sát danh sách bàn và món nước | Bàn trống màu xanh, bàn có khách màu cam kèm tổng tiền tạm tính | Hiển thị trực quan, đúng màu sắc | Đạt |
+| **TC-X9-02** | Mở đơn bàn và gọi món | Chọn Bàn 1 trống, bấm mở đơn, chọn 2 món nước trong menu | Mở đơn thành công, Bàn 1 chuyển sang Occupied, hiển thị danh sách món và tổng tiền | Đơn mở thành công, tính tiền chính xác | Đạt |
+| **TC-X9-03** | Chặn mở 2 đơn trên cùng 1 bàn | Gửi lệnh `POST /api/pos/orders` vào bàn đang có đơn Open | Server chặn bằng mã lỗi `409 Conflict` | Trả về 409 Conflict chuẩn hợp đồng | Đạt |
+| **TC-X9-04** | Thanh toán hóa đơn và giải phóng bàn | Bấm "Thanh toán hóa đơn" tại bàn đang có khách | Server tính lại Total tại server, chuyển đơn thành Paid, bàn quay về Free | Bàn trống ngay sau khi thanh toán, CSDL cập nhật Total | Đạt |
+| **TC-X9-05** | Thanh toán kèm tích điểm cho khách | Mở đơn bàn gắn SĐT khách hàng, gọi món 150.000đ, thanh toán | Đơn thanh toán thành công, khách hàng được cộng thêm 15 điểm | Điểm khách hàng tăng chính xác | Đạt |
+| **TC-X9-06** | Hủy đơn hàng đang mở | Bấm "Hủy đơn hàng này" có xác nhận confirm | Đơn chuyển trạng thái `Cancelled`, bàn được giải phóng về Free | Đơn hủy thành công, bàn trở lại trống | Đạt |
+
+---
+
+## 13. DANH SÁCH ẢNH CHỤP CẦN CÓ
+
+1. `my_tasks_desktop.png`: Trang Việc của tôi trên Desktop với bảng danh sách và huy hiệu quá hạn đỏ trên Navbar.
+2. `my_tasks_mobile_375.png`: Trang Việc của tôi hiển thị dạng thẻ `.table-cards` trên màn hình 375px.
+3. `pos_tables_grid.png`: Sơ đồ bàn POS hiển thị trực quan các bàn trống (màu xanh) và có khách (màu cam).
+4. `pos_order_panel.png`: Bảng gọi món POS hiển thị thực đơn, danh sách món đã chọn và nút thanh toán.
+5. `pos_payment_receipt.png`: Hóa đơn sau khi thanh toán thành công và thông báo cộng điểm hội viên.
+6. `navbar_dropdown_extra.png`: Menu dropdown "Mở rộng" mở mượt mà trên thanh điều hướng.

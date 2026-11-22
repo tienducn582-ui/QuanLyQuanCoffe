@@ -172,3 +172,67 @@ flowchart TD
   - Được phép tạo công việc mới và cập nhật trạng thái tiến độ (`Pending` -> `InProgress` -> `Done`).
   - Không nhìn thấy và bị chặn thao tác sửa đổi cấu trúc ca, sửa chi tiết hoặc xóa công việc.
   - Tự cập nhật hồ sơ cá nhân và đổi mật khẩu tại trang Hồ sơ (`profile.html`).
+
+---
+
+## 5. Tính Năng Mở Rộng: Bàn Giao Ca (`[TV1-X2]`)
+
+- **Mục đích nghiệp vụ:** Cho phép nhân viên quán cà phê ghi nhận thời điểm bắt đầu nhận ca làm việc (`/start`), kết thúc ca kèm ghi chú bàn giao công việc/thiết bị (`/end`), xem thông tin bàn giao từ ca trước và danh sách các công việc còn dở dang (`/handover`), đồng thời cung cấp bảng nhật ký trực ban trong ngày.
+- **Đối tượng sử dụng:**
+  - **Nhân viên (Staff):** Nhận ca trực, kết thúc ca và ghi chú bàn giao, xem bàn giao từ ca trước.
+  - **Quản trị viên (Admin):** Toàn quyền xem nhật ký trực ban, theo dõi tình trạng bàn giao ca của tất cả nhân sự.
+- **Luồng xử lý (Frontend → API → CSDL):**
+  1. Khi truy cập `shifts.html`, client gọi `GET /api/shifts/logs?date=hôm_nay` để xác định ca nào người dùng đang trực (`EndedAt IS NULL`). Thẻ ca tương ứng hiển thị nút "Kết thúc ca", các ca còn lại hiển thị "Nhận ca" (hoặc bị khóa nếu đang trực ca khác).
+  2. Bấm "Nhận ca" gửi `POST /api/shifts/:id/start`. Server kiểm tra xung đột (chặn 409 nếu đang có ca mở), rồi tạo bản ghi mới vào bảng `ShiftLogs` với `LogDate = CAST(GETDATE() AS DATE)` và `StartedAt = SYSDATETIME()`.
+  3. Bấm "Kết thúc ca" mở modal nhập ghi chú bàn giao (tối đa 500 ký tự), gửi `POST /api/shifts/:id/end`. Server cập nhật `EndedAt = SYSDATETIME()` và `HandoverNote`.
+  4. Mỗi thẻ ca gọi `GET /api/shifts/:id/handover` để hiển thị log kết thúc gần nhất và các công việc chưa hoàn thành (`Status <> 'Done'`) từ bảng `Tasks`.
+  5. Bảng "Nhật Ký Ca & Bàn Giao Hôm Nay" ở cuối trang render danh sách ca trực theo thời gian thực.
+- **Bảng CSDL liên quan:** `dbo.ShiftLogs (Id, ShiftId, UserId, LogDate, StartedAt, EndedAt, HandoverNote)` trong `database/schema-mo-rong.sql`.
+- **File cài đặt:** `server/routes/shifts.js`, `public/shifts.html`, `public/assets/js/shifts.js`, `docs/tests/tv1.http`.
+
+---
+
+## 6. Tính Năng Mở Rộng: Lịch Phân Ca Tuần (`[TV1-X4]`)
+
+- **Mục đích nghiệp vụ:** Xây dựng lịch phân công nhân sự trực quán dạng lưới tuần 7 ngày (Thứ Hai đến Chủ Nhật). Hiển thị trực quan nhân viên nào làm ca nào, tô đậm ca trực của chính người dùng, tự động chuyển đổi sang dạng thẻ theo ngày trên điện thoại di động (< 576px).
+- **Đối tượng sử dụng:**
+  - **Nhân viên (Staff):** Xem lịch phân ca của toàn quán hoặc lịch cá nhân, theo dõi ca trực của mình được tô đậm.
+  - **Quản trị viên (Admin):** Thêm phân công nhân sự vào ca (`POST /api/schedule`), hủy phân công (`DELETE /api/schedule/:id`), chuyển tuần linh hoạt.
+- **Luồng xử lý (Frontend → API → CSDL):**
+  1. Client tính toán ngày Thứ Hai và Chủ Nhật của tuần hiện tại theo giờ địa phương (tránh lỗi múi giờ `toISOString`), gọi `GET /api/schedule?from=YYYY-MM-DD&to=YYYY-MM-DD`.
+  2. Lưới tuần hiển thị các dòng tương ứng với các ca trong hệ thống (`Shifts`), các cột từ Thứ Hai đến Chủ Nhật. Các ô hiển thị tên nhân viên được phân công.
+  3. So khớp `userId` với `getUser().id` để tô màu nổi bật ca của chính mình (`.is-me`).
+  4. Admin có nút "+" trên từng ô hoặc nút "Phân công ca" để mở modal chọn ca, nhân viên (tải từ `GET /api/users`) và ngày làm.
+  5. Khi lưu, server kiểm tra ràng buộc `UNIQUE (ShiftId, UserId, WorkDate)` để chặn trùng lặp bằng mã lỗi `409 Conflict`.
+- **Bảng CSDL liên quan:** `dbo.ShiftAssignments (Id, ShiftId, UserId, WorkDate)` trong `database/schema-mo-rong.sql`.
+- **File cài đặt:** `server/routes/schedule.js`, `public/schedule.html`, `public/assets/js/schedule.js`, `docs/tests/tv1.http`.
+
+---
+
+## 7. Bảng Test Mở Rộng (`[TV1-X2]` & `[TV1-X4]`)
+
+| Mã | Chức năng | Các bước thực hiện | Kết quả mong đợi | Kết quả thực tế | Đạt? |
+|:---|:---|:---|:---|:---|:---:|
+| **TC-X2-01** | Bắt đầu nhận ca làm việc | Đăng nhập Staff, mở `shifts.html`, bấm nút "Nhận ca" ở Ca Sáng | Server tạo bản ghi `ShiftLogs`, trả về `201 Created`, nút đổi thành "Kết thúc ca" | Tạo log thành công, giao diện cập nhật ngay lập tức | Đạt |
+| **TC-X2-02** | Chặn nhận 2 ca cùng lúc | Khi đang có ca mở, thử gọi `POST /api/shifts/2/start` | Server từ chối bằng `409 Conflict` với thông báo "Bạn đang trong một ca chưa kết thúc" | Trả về 409 Conflict chuẩn hợp đồng | Đạt |
+| **TC-X2-03** | Kết thúc ca kèm ghi chú | Bấm "Kết thúc ca", nhập ghi chú bàn giao hợp lệ <= 500 ký tự | Cập nhật `EndedAt` và `HandoverNote`, trả về `200 OK`, xuất hiện trong bảng nhật ký | Cập nhật thành công, modal đóng và hiện toast | Đạt |
+| **TC-X2-04** | Chặn ghi chú quá 500 ký tự | Gửi `POST /api/shifts/1/end` với ghi chú dài hơn 500 ký tự | Server trả về `400 Bad Request` kèm thông báo lỗi cụ thể | Trả về 400 Bad Request | Đạt |
+| **TC-X2-05** | Xem thông tin bàn giao ca | Gọi `GET /api/shifts/1/handover` | Trả về `lastLog` gần nhất và mảng `openTasks` còn dở dang | Hiển thị đầy đủ ghi chú ca trước và các task chưa xong | Đạt |
+| **TC-X2-06** | Lấy nhật ký ca hôm nay | Gọi `GET /api/shifts/logs` | Trả về danh sách tối đa 100 log trực ban trong ngày, xếp theo giờ bắt đầu giảm dần | Trả về đúng danh sách log và render vào bảng | Đạt |
+| **TC-X4-01** | Xem lịch phân ca tuần | Đăng nhập tài khoản bất kỳ, mở trang `schedule.html` | Hiển thị lưới 7 ngày từ Thứ Hai đến Chủ Nhật, hiển thị đầy đủ ca và nhân sự | Lưới hiển thị chuẩn xác, đúng ngày địa phương | Đạt |
+| **TC-X4-02** | Tô đậm ca trực của tôi | Đăng nhập tài khoản Staff đã được phân ca, mở `schedule.html` | Thẻ phân công của chính nhân viên đó được tô đậm màu chủ đạo (`.is-me`) | Hiển thị nổi bật, dễ nhận biết | Đạt |
+| **TC-X4-03** | Admin phân công ca mới | Admin mở modal, chọn Ca Chiều, nhân viên Staff, ngày làm hợp lệ, bấm Lưu | Tạo bản ghi `ShiftAssignments`, trả về `201 Created`, xuất hiện ngay trên lưới | Phân công thành công, xuất hiện tức thì | Đạt |
+| **TC-X4-04** | Chặn phân công trùng lặp | Admin phân công cùng một nhân viên vào cùng 1 ca trong cùng 1 ngày | Server chặn bằng `409 Conflict`: "Nhân viên đã được phân công ca làm việc này trong ngày" | Trả về 409 Conflict | Đạt |
+| **TC-X4-05** | Phân quyền: Staff phân ca | Tài khoản Staff gửi `POST /api/schedule` hoặc `DELETE /api/schedule/:id` | Server từ chối bằng `403 Forbidden` | Trả về 403 Forbidden, Staff không có nút phân công | Đạt |
+| **TC-X4-06** | Responsive di động < 576px | Mở `schedule.html` ở độ phân giải 375px (Mobile) | Lưới bảng tự động ẩn, chuyển thành danh sách thẻ theo từng ngày không bị tràn ngang | Bố cục dạng thẻ mượt mà, không tràn màn hình | Đạt |
+
+---
+
+## 8. Danh Sách Ảnh Chụp Cần Có
+
+1. `shifts_handover_card.png`: Thẻ ca làm việc hiển thị khối "Bàn giao ca trước" và danh sách việc chưa xong.
+2. `shifts_end_modal.png`: Modal kết thúc ca làm việc với ô nhập ghi chú bàn giao và bộ đếm ký tự.
+3. `shifts_logs_today.png`: Bảng nhật ký ca và bàn giao hôm nay với các trạng thái "Đang trực" và "Đã hoàn thành".
+4. `schedule_week_desktop.png`: Lưới phân ca tuần 7 ngày trên giao diện Desktop (1200px) với ca cá nhân được tô đậm.
+5. `schedule_mobile_375.png`: Lịch phân ca hiển thị dưới dạng thẻ danh sách theo ngày trên màn hình điện thoại (375px).
+6. `schedule_assign_modal.png`: Modal Admin phân công ca làm việc cho nhân viên.

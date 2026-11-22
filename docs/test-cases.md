@@ -67,11 +67,43 @@
 | **TC-X20** | Xuất kho khi task đã tồn tại | Gửi tiếp `PATCH` trừ kho nguyên liệu đang có task chưa Done | Tồn kho giảm bình thường, KHÔNG tạo trùng Task mới, autoTaskCreated=false | Tồn kho cập nhật và không sinh thêm task thừa | Đạt |
 | **TC-X21** | Staff xóa nguyên liệu | Staff gửi `DELETE /api/ingredients/:id` | Bị từ chối bằng HTTP 403 Forbidden | Trả về 403 Forbidden | Đạt |
 | **TC-X22** | Admin xóa nguyên liệu | Admin gửi `DELETE /api/ingredients/:id` | Xóa bản ghi thành công khỏi CSDL, trả về 200 OK | Bản ghi bị xóa khỏi bảng Ingredients | Đạt |
+| **TC-X23** | [TV1-X2] Bắt đầu nhận ca làm việc | Đăng nhập Staff, mở `shifts.html`, bấm nút "Nhận ca" ở Ca Sáng | Server tạo bản ghi `ShiftLogs`, trả về `201 Created`, nút đổi thành "Kết thúc ca" | Tạo log thành công, giao diện cập nhật ngay lập tức | Đạt |
+| **TC-X24** | [TV1-X2] Chặn nhận 2 ca cùng lúc | Khi đang có ca mở, thử gọi `POST /api/shifts/2/start` | Server từ chối bằng `409 Conflict` với thông báo "Bạn đang trong một ca chưa kết thúc" | Trả về 409 Conflict chuẩn hợp đồng | Đạt |
+| **TC-X25** | [TV1-X2] Kết thúc ca kèm ghi chú | Bấm "Kết thúc ca", nhập ghi chú bàn giao hợp lệ <= 500 ký tự | Cập nhật `EndedAt` và `HandoverNote`, trả về `200 OK`, xuất hiện trong bảng nhật ký | Cập nhật thành công, modal đóng và hiện toast | Đạt |
+| **TC-X26** | [TV1-X2] Chặn ghi chú quá 500 ký tự | Gửi `POST /api/shifts/1/end` với ghi chú dài hơn 500 ký tự | Server trả về `400 Bad Request` kèm thông báo lỗi cụ thể | Trả về 400 Bad Request | Đạt |
+| **TC-X27** | [TV1-X2] Xem thông tin bàn giao ca | Gọi `GET /api/shifts/1/handover` | Trả về `lastLog` gần nhất và mảng `openTasks` còn dở dang | Hiển thị đầy đủ ghi chú ca trước và các task chưa xong | Đạt |
+| **TC-X28** | [TV1-X2] Lấy nhật ký ca hôm nay | Gọi `GET /api/shifts/logs` | Trả về danh sách tối đa 100 log trực ban trong ngày, xếp theo giờ bắt đầu giảm dần | Trả về đúng danh sách log và render vào bảng | Đạt |
+| **TC-X29** | [TV1-X4] Xem lịch phân ca tuần | Đăng nhập tài khoản bất kỳ, mở trang `schedule.html` | Hiển thị lưới 7 ngày từ Thứ Hai đến Chủ Nhật, hiển thị đầy đủ ca và nhân sự | Lưới hiển thị chuẩn xác, đúng ngày địa phương | Đạt |
+| **TC-X30** | [TV1-X4] Tô đậm ca trực của tôi | Đăng nhập tài khoản Staff đã được phân ca, mở `schedule.html` | Thẻ phân công của chính nhân viên đó được tô đậm màu chủ đạo (`.is-me`) | Hiển thị nổi bật, dễ nhận biết | Đạt |
+| **TC-X31** | [TV1-X4] Admin phân công ca mới | Admin mở modal, chọn Ca Chiều, nhân viên Staff, ngày làm hợp lệ, bấm Lưu | Tạo bản ghi `ShiftAssignments`, trả về `201 Created`, xuất hiện ngay trên lưới | Phân công thành công, xuất hiện tức thì | Đạt |
+| **TC-X32** | [TV1-X4] Chặn phân công trùng lặp | Admin phân công cùng một nhân viên vào cùng 1 ca trong cùng 1 ngày | Server chặn bằng `409 Conflict`: "Nhân viên đã được phân công ca làm việc này trong ngày" | Trả về 409 Conflict | Đạt |
+| **TC-X33** | [TV1-X4] Phân quyền: Staff phân ca | Tài khoản Staff gửi `POST /api/schedule` hoặc `DELETE /api/schedule/:id` | Server từ chối bằng `403 Forbidden` | Trả về 403 Forbidden, Staff không có nút phân công | Đạt |
+| **TC-X34** | [TV1-X4] Responsive di động < 576px | Mở `schedule.html` ở độ phân giải 375px (Mobile) | Lưới bảng tự động ẩn, chuyển thành danh sách thẻ theo từng ngày không bị tràn ngang | Bố cục dạng thẻ mượt mà, không tràn màn hình | Đạt |
+| **TC-X35** | [TV2-X8] Tạo khách hàng mới | Gửi `POST /api/customers` với `fullName` 2–100 ký tự và `phone` 10 số | Trả về 201 Created, `points: 0`, `rank: 'Đồng'`, hiển thị trên bảng | Tạo khách thành công | Đạt |
+| **TC-X36** | [TV2-X8] Chặn trùng SĐT khách hàng | Gửi `POST /api/customers` với SĐT đã có trong hệ thống | Bị từ chối bằng `409 Conflict` | Trả về 409 Conflict | Đạt |
+| **TC-X37** | [TV2-X8] Tích điểm theo hóa đơn | Gọi `POST /api/customers/:id/earn` với `amount: 1250000` | Cộng thêm 125 điểm, trả về 200 OK, tự động chuyển hạng `Bạc` | Điểm và hạng cập nhật đúng công thức | Đạt |
+| **TC-X38** | [TV2-X8] Đổi điểm và chống âm điểm | Gọi `POST /api/customers/:id/redeem` với `points: 999999` vượt số dư | Server chặn bằng `400 Bad Request` "Không đủ điểm", điểm CSDL không âm | Điểm không âm, trả về 400 | Đạt |
+| **TC-X39** | [TV2-X8] Staff xóa khách hàng | Staff gửi `DELETE /api/customers/:id` | Bị từ chối bằng `403 Forbidden` | Trả về 403 Forbidden | Đạt |
+| **TC-X40** | [TV2-X8] Tìm kiếm khách theo tên/SĐT | Nhập từ khóa tên hoặc SĐT trên `customers.html` | Lọc chính xác bản ghi sau debounce 300ms, không lỗi với `%`, `_` | Tìm kiếm chính xác, an toàn SQLi | Đạt |
+| **TC-X41** | [TV3-X5] Lọc việc quá hạn & của tôi | Gửi `GET /api/tasks?assigneeId=me&overdue=1` | Trả về danh sách các việc của chính mình có Deadline < hôm nay và chưa Done | Trả về đúng tập việc quá hạn | Đạt |
+| **TC-X42** | [TV3-X5] Ghi log tự động khi đổi status | Đổi trạng thái việc từ Pending sang InProgress | Bảng `TaskLogs` tự động ghi nhận bản ghi với `Action = 'status'`, lưu OldValue và NewValue | Log được ghi đầy đủ và hiển thị trên dòng thời gian | Đạt |
+| **TC-X43** | [TV3-X5] Gửi bình luận công việc | Gửi `POST /api/tasks/:id/comments` với comment hợp lệ (1-500 ký tự) | Trả về 201 Created, bình luận xuất hiện ngay trên modal chi tiết | Tạo bình luận thành công | Đạt |
+| **TC-X44** | [TV3-X5] Chống XSS trong bình luận | Gửi comment chứa thẻ `<script>alert('xss')</script>` | Hiển thị dạng chuỗi văn bản đã qua `escapeHtml()`, không thực thi script | Văn bản an toàn, chống XSS triệt để | Đạt |
+| **TC-X45** | [TV3-X3] Tạo việc từ mẫu định kỳ | Admin gọi `POST /api/templates/generate` cho Ca Sáng ngày hôm nay | Tự động tạo các task tương ứng với mẫu IsActive=1, gán Deadline là ngày chọn | Tạo đủ số lượng việc theo mẫu | Đạt |
+| **TC-X46** | [TV3-X3] Chặn tạo trùng lặp từ mẫu | Gọi tiếp `POST /api/templates/generate` lần hai cho cùng ca và ngày | Số lượng `created = 0`, `skipped = N`, không sinh task thừa | Không tạo trùng task | Đạt |
+| **TC-X47** | [TV5-X1] Huy hiệu quá hạn Navbar | Đăng nhập tài khoản có việc quá hạn, quan sát Navbar | `#overdueBadge` màu đỏ hiển thị đúng số lượng; tự động cập nhật khi đổi việc sang Done | Huy hiệu hoạt động chuẩn xác | Đạt |
+| **TC-X48** | [TV5-X1] Responsive thẻ việc cá nhân | Mở `my-tasks.html` ở 375px màn hình nhỏ | Bảng chuyển sang dạng thẻ `.table-cards`, không tràn ngang | Bố cục thẻ đẹp mắt, responsive tốt | Đạt |
+| **TC-X49** | [TV5-X9] Xem sơ đồ bàn POS | Truy cập `pos.html`, quan sát danh sách bàn | Bàn trống màu xanh (Free), bàn có khách màu cam (Occupied) | Hiển thị trực quan trạng thái bàn | Đạt |
+| **TC-X50** | [TV5-X9] Mở đơn bàn và gọi món | Chọn Bàn 1 trống, bấm mở đơn, chọn 2 món nước trong menu | Mở đơn thành công, Bàn 1 chuyển sang Occupied, tính đúng tổng tiền tạm tính | Đơn mở thành công | Đạt |
+| **TC-X51** | [TV5-X9] Chặn mở 2 đơn trên cùng 1 bàn | Gửi lệnh `POST /api/pos/orders` vào bàn đang có đơn Open | Server chặn bằng mã lỗi `409 Conflict` (bảo vệ bởi UX_Orders_OpenTable) | Trả về 409 Conflict | Đạt |
+| **TC-X52** | [TV5-X9] Thanh toán và giải phóng bàn | Bấm "Thanh toán hóa đơn" tại bàn đang có khách | Server tính lại Total từ các items, đơn chuyển `Paid`, bàn quay về `Free` | Thanh toán chuẩn xác, bàn trở lại trống | Đạt |
+| **TC-X53** | [TV5-X9] Tích điểm khách hàng qua POS | Mở đơn bàn gắn SĐT khách hàng, thanh toán hóa đơn 150.000đ | Hóa đơn thanh toán thành công, khách hàng được tích lũy 15 điểm | Điểm khách hàng tăng chính xác | Đạt |
+| **TC-X54** | [TV5-X9] Hủy đơn hàng đang mở | Bấm "Hủy đơn hàng này" có xác nhận confirm | Đơn chuyển trạng thái `Cancelled`, bàn được giải phóng về Free | Đơn hủy thành công | Đạt |
 
 ---
 
 ## TỔNG HỢP TOÀN DỰ ÁN
-- **Tổng số test case thực hiện:** 48 (26 ca cốt lõi + 22 ca mở rộng)
-- **Số test case ĐẠT (Pass):** 48 / 48 (100%)
+- **Tổng số test case thực hiện:** 80 (26 ca cốt lõi + 54 ca mở rộng X1–X9)
+- **Số test case ĐẠT (Pass):** 80 / 80 (100%)
 - **Số test case KHÔNG ĐẠT (Fail):** 0
-- **Kết luận:** Toàn bộ các phân hệ cốt lõi và mở rộng của TV4 hoạt động ổn định, bảo mật cao và nhất quán theo chuẩn hợp đồng API.
+- **Kết luận:** Toàn bộ 10 nhóm chức năng cốt lõi và 9 tính năng mở rộng của cả nhóm hoạt động ổn định, bảo mật cao, đạt tiêu chuẩn chất lượng và nhất quán theo chuẩn hợp đồng API. Sẵn sàng đóng băng v1.1 (`v1.1-freeze`).
