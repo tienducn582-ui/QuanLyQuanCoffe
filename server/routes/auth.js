@@ -115,6 +115,12 @@ router.post('/register', async (req, res, next) => {
       message: 'Đăng ký tài khoản thành công.'
     });
   } catch (err) {
+    if (err && (err.number === 2627 || err.number === 2601)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email đã tồn tại trong hệ thống.'
+      });
+    }
     next(err);
   }
 });

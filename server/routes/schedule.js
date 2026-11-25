@@ -199,6 +199,12 @@ router.post('/', requireRole('Admin'), async (req, res, next) => {
       message: 'Phân công ca làm việc thành công'
     });
   } catch (error) {
+    if (error && (error.number === 2627 || error.number === 2601)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Nhân viên đã được phân công ca làm việc này trong ngày.'
+      });
+    }
     next(error);
   }
 });

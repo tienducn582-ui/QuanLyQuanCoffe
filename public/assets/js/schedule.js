@@ -5,14 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Kiểm tra đăng nhập bắt buộc
-  if (typeof requireLogin === 'function') {
-    requireLogin();
-  }
-
-  // 2. Render Navbar dùng chung
-  if (typeof renderNavbar === 'function') {
-    renderNavbar();
-  }
+  if (typeof requireLogin === 'function' && !requireLogin()) return;
 
   const currentUser = typeof getUser === 'function' ? getUser() : null;
   const isAdminUser = typeof isAdmin === 'function' ? isAdmin() : false;

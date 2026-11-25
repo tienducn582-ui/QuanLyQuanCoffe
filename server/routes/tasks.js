@@ -1,4 +1,4 @@
-﻿/**
+/**
  * server/routes/tasks.js - API quản lý công việc (/api/tasks)
  * Thành viên phụ trách: TV3 (Công việc)
  *
@@ -371,12 +371,16 @@ router.get('/', async (req, res, next) => {
     // 5. Lấy đúng một trang: Deadline tăng dần, việc không có Deadline xếp cuối
     const pageNum = Number(page);
     const size = Number(pageSize);
+    const offset = (pageNum - 1) * size;
+    if (!Number.isSafeInteger(offset) || offset > 2147483647) {
+      return sendBadRequest(res, ['Số trang vượt quá giới hạn cho phép.']);
+    }
     const listResult = await query(
       `${SELECT_TASK}
        ${where}
        ORDER BY CASE WHEN t.Deadline IS NULL THEN 1 ELSE 0 END, t.Deadline ASC, t.Id DESC
        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY`,
-      { ...params, offset: (pageNum - 1) * size, pageSize: size }
+      { ...params, offset, pageSize: size }
     );
 
     // Nếu page vượt quá tổng số trang thì data là mảng rỗng, Frontend tự lùi về trang cuối

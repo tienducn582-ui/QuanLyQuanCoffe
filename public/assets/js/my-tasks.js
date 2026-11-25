@@ -21,9 +21,7 @@ let currentTasks = [];
  */
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Kiểm tra đăng nhập
-  if (typeof requireLogin === 'function') {
-    requireLogin();
-  }
+  if (typeof requireLogin === 'function' && !requireLogin()) return;
 
   // 2. Gắn sự kiện bộ lọc
   const filterStatus = document.getElementById('filterStatus');
@@ -150,6 +148,12 @@ async function loadMyTasks() {
 
     currentTasks = res.data || [];
     const pagination = res.pagination || { page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1 };
+
+    // Nếu trang hiện tại không còn bản ghi (vd: vừa xong việc cuối ở trang > 1) -> tự lùi về trang cuối
+    if (currentTasks.length === 0 && pagination.total > 0 && currentPage > pagination.totalPages) {
+      currentPage = pagination.totalPages;
+      return loadMyTasks();
+    }
 
     // Cập nhật tóm tắt số lượng
     if (summaryText) {
