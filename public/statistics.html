@@ -21,60 +21,23 @@
   <link rel="stylesheet" href="assets/css/style.css">
 
   <style>
-    :root {
-      --primary: #6F4E37;
-      --primary-dark: #513624;
-      --accent: #DDA266;
-      --bg-surface: #ffffff;
-      --bg-surface-secondary: #fcf9f6;
-      --text-primary: #2B1810;
-      --text-secondary: #7A6961;
-      --border-color: #E8DFD8;
-      --border-focus: #DDA266;
-      --radius-lg: 12px;
-      --radius-md: 8px;
-      --shadow-sm: 0 2px 8px rgba(43, 24, 16, 0.06);
-      --shadow-md: 0 4px 16px rgba(43, 24, 16, 0.1);
-      --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-serif: 'Playfair Display', Georgia, serif;
-    }
-
-    body {
-      font-family: var(--font-sans);
-      background-color: #F8F5F0;
-      color: var(--text-primary);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
     .dashboard-header-banner {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 1.5rem 1.75rem;
       margin-bottom: 1.5rem;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-card);
       position: relative;
       overflow: hidden;
     }
-    .dashboard-header-banner::after {
-      content: '☕';
-      position: absolute;
-      right: 1.5rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 5rem;
-      opacity: 0.08;
-      pointer-events: none;
-    }
 
     .kpi-metric-card {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 1.25rem;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-card);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -83,12 +46,11 @@
     }
     .kpi-metric-card:hover {
       transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
     }
     .kpi-icon-wrap {
       width: 40px;
       height: 40px;
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-btn);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -99,15 +61,15 @@
       font-weight: 800;
       line-height: 1.1;
       font-family: var(--font-sans);
-      color: var(--text-primary);
+      color: var(--text-color);
     }
 
     .overall-progress-card {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 1.25rem 1.5rem;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-card);
       margin-bottom: 1.75rem;
     }
     .custom-progress-track {
@@ -124,11 +86,11 @@
     }
 
     .chart-panel-card {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 1.5rem;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-card);
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -145,7 +107,7 @@
       font-size: 1.05rem;
       font-weight: 700;
       margin: 0;
-      color: var(--text-primary);
+      color: var(--text-color);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -157,17 +119,17 @@
       justify-content: center;
       gap: 12px;
       padding: 2rem;
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px dashed var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       color: var(--primary);
       font-weight: 600;
       margin-bottom: 1.5rem;
     }
     .chart-empty-state {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px dashed var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 3rem 1.5rem;
       text-align: center;
     }
@@ -183,35 +145,23 @@
       }
     }
   </style>
+
+  <!-- Chống chớp sáng Dark/Light Mode -->
+  <script>
+    (function () {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 <body>
 
   <!-- ================================================================
        NAVBAR RESPONSIVE DÙNG CHUNG (Tự động render bởi ui.js qua #navbar)
        ================================================================ -->
-  <nav id="navbar">
-    <header class="site-navbar navbar navbar-expand-lg bg-white border-bottom py-2">
-      <div class="container">
-        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-dark" href="index.html">
-          <span style="font-size: 1.4rem;">☕</span>
-          <span>Cafe Task Manager</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navFallback">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navFallback">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item"><a class="nav-link" href="index.html">Trang chủ</a></li>
-            <li class="nav-item"><a class="nav-link" href="tasks.html">Công việc</a></li>
-            <li class="nav-item"><a class="nav-link" href="shifts.html">Ca làm</a></li>
-            <li class="nav-item"><a class="nav-link active fw-bold text-primary" href="statistics.html">Thống kê</a></li>
-            <li class="nav-item"><a class="nav-link" href="inventory.html">Kho nguyên liệu</a></li>
-            <li class="nav-item"><a class="nav-link" href="profile.html">Hồ sơ</a></li>
-          </ul>
-        </div>
-      </div>
-    </header>
-  </nav>
+  <nav id="navbar"></nav>
 
   <!-- ================================================================
        NỘI DUNG CHÍNH: BÁO CÁO & THỐNG KÊ (TV4)

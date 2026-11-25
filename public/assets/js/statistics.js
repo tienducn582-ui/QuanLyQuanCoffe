@@ -53,7 +53,9 @@ const safeRequireLogin = () => {
   const token = localStorage.getItem('token');
   if (!token) {
     window.location.href = 'login.html';
+    return false;
   }
+  return true;
 };
 
 const safeIsAdmin = () => {
@@ -95,11 +97,7 @@ const safeEscapeHtml = (str) => {
  * Khởi tạo trang Thống kê khi toàn bộ DOM đã sẵn sàng
  */
 document.addEventListener('DOMContentLoaded', async () => {
-  safeRequireLogin();
-
-  if (typeof renderNavbar === 'function') {
-    renderNavbar();
-  }
+  if (!safeRequireLogin()) return;
 
   // 1. Phân quyền hiển thị nút Xuất CSV (Chỉ Admin)
   const btnExportCsv = document.getElementById('btn-export-csv');
@@ -162,6 +160,8 @@ async function handleExportCsv() {
         throw new Error('Bạn không có quyền thực hiện xuất file CSV (Yêu cầu tài khoản Admin)');
       }
       if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         window.location.href = 'login.html';
         throw new Error('Phiên đăng nhập đã hết hạn');
       }
@@ -226,6 +226,10 @@ async function loadAllStatistics(isManualRefresh = false) {
         overdue: 0,
         completionRate: 0
       });
+      const tbodyByUser = document.getElementById('table-by-user-body');
+      if (tbodyByUser) {
+        tbodyByUser.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-secondary">Chưa có dữ liệu phân công nhân sự</td></tr>';
+      }
       destroyAllCharts();
       if (isManualRefresh) {
         safeShowToast('Hệ thống chưa có công việc nào để thống kê', 'warning');

@@ -27,6 +27,19 @@ function escapeLike(str) {
   return str.replace(/\[/g, '[[]').replace(/%/g, '[%]').replace(/_/g, '[_]');
 }
 
+const MAX_SQL_INT = 2147483647;
+const MAX_DECIMAL_10_2 = 99999999.99;
+
+/**
+ * Kiểm tra giá trị số hợp lệ (không rỗng, hữu hạn, trong khoảng 0..1,000,000)
+ */
+function parseIngredientNumber(val, defaultVal = 0) {
+  if (val === undefined || val === null) return defaultVal;
+  if (typeof val === 'string' && val.trim() === '') return NaN;
+  const num = Number(val);
+  return Number.isFinite(num) ? num : NaN;
+}
+
 /**
  * 1. GET /api/ingredients
  * Tìm kiếm theo tên, lọc lowOnly=1 (Quantity <= MinQuantity), phân trang chuẩn
@@ -44,6 +57,12 @@ router.get('/', async (req, res) => {
     if (pageSize > 50) pageSize = 50;
 
     const offset = (page - 1) * pageSize;
+    if (!Number.isSafeInteger(offset) || offset > MAX_SQL_INT) {
+      return res.status(400).json({
+        success: false,
+        message: 'Số trang vượt quá giới hạn cho phép'
+      });
+    }
 
     // Xây dựng điều kiện WHERE động có tham số hóa
     const conditions = [];
@@ -74,7 +93,7 @@ router.get('/', async (req, res) => {
         Unit,
         Quantity,
         MinQuantity,
-        UpdatedAt,
+        CONVERT(VARCHAR(19), UpdatedAt, 120) AS UpdatedAtText,
         CASE WHEN Quantity <= MinQuantity THEN 1 ELSE 0 END AS isLow
       FROM dbo.Ingredients
       ${whereClause}
@@ -93,7 +112,7 @@ router.get('/', async (req, res) => {
       quantity: Number(row.Quantity),
       minQuantity: Number(row.MinQuantity),
       isLow: Boolean(row.isLow),
-      updatedAt: row.UpdatedAt
+      updatedAt: row.UpdatedAtText
     }));
 
     return res.status(200).json({
@@ -137,7 +156,7 @@ router.get('/:id', async (req, res) => {
         Unit,
         Quantity,
         MinQuantity,
-        UpdatedAt,
+        CONVERT(VARCHAR(19), UpdatedAt, 120) AS UpdatedAtText,
         CASE WHEN Quantity <= MinQuantity THEN 1 ELSE 0 END AS isLow
       FROM dbo.Ingredients
       WHERE Id = @id;
@@ -161,7 +180,7 @@ router.get('/:id', async (req, res) => {
         quantity: Number(row.Quantity),
         minQuantity: Number(row.MinQuantity),
         isLow: Boolean(row.isLow),
-        updatedAt: row.UpdatedAt
+        updatedAt: row.UpdatedAtText
       },
       message: 'Lấy thông tin nguyên liệu thành công'
     });
@@ -181,12 +200,12 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', requireRole('Admin'), async (req, res) => {
   try {
-    const { name, unit, quantity, minQuantity } = req.body;
+    const { name, unit, quantity, minQuantity } = req.body || {};
 
-    const trimmedName = name ? String(name).trim() : '';
-    const trimmedUnit = unit ? String(unit).trim() : '';
-    const numQty = quantity !== undefined && quantity !== null ? Number(quantity) : 0;
-    const numMin = minQuantity !== undefined && minQuantity !== null ? Number(minQuantity) : 0;
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedUnit = typeof unit === 'string' ? unit.trim() : '';
+    const numQty = parseIngredientNumber(quantity, 0);
+    const numMin = parseIngredientNumber(minQuantity, 0);
 
     const errors = [];
     if (!trimmedName || trimmedName.length < 1 || trimmedName.length > 100) {
@@ -222,7 +241,8 @@ router.post('/', requireRole('Admin'), async (req, res) => {
 
     const insertSql = `
       INSERT INTO dbo.Ingredients (Name, Unit, Quantity, MinQuantity, UpdatedAt)
-      OUTPUT INSERTED.Id, INSERTED.Name, INSERTED.Unit, INSERTED.Quantity, INSERTED.MinQuantity, INSERTED.UpdatedAt
+      OUTPUT INSERTED.Id, INSERTED.Name, INSERTED.Unit, INSERTED.Quantity, INSERTED.MinQuantity,
+             CONVERT(VARCHAR(19), INSERTED.UpdatedAt, 120) AS UpdatedAtText
       VALUES (@name, @unit, @quantity, @minQuantity, GETDATE());
     `;
     const insertRes = await query(insertSql, {
@@ -242,11 +262,17 @@ router.post('/', requireRole('Admin'), async (req, res) => {
         quantity: Number(inserted.Quantity),
         minQuantity: Number(inserted.MinQuantity),
         isLow: Number(inserted.Quantity) <= Number(inserted.MinQuantity),
-        updatedAt: inserted.UpdatedAt
+        updatedAt: inserted.UpdatedAtText
       },
       message: 'Thêm nguyên liệu vào kho thành công'
     });
   } catch (error) {
+    if (error && (error.number === 2627 || error.number === 2601)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên nguyên liệu đã tồn tại trong kho'
+      });
+    }
     console.error('[TV4 - Ingredients POST Error]:', error.message || error);
     return res.status(500).json({
       success: false,
@@ -278,11 +304,11 @@ router.put('/:id', requireRole('Admin'), async (req, res) => {
       });
     }
 
-    const { name, unit, quantity, minQuantity } = req.body;
-    const trimmedName = name ? String(name).trim() : '';
-    const trimmedUnit = unit ? String(unit).trim() : '';
-    const numQty = quantity !== undefined && quantity !== null ? Number(quantity) : 0;
-    const numMin = minQuantity !== undefined && minQuantity !== null ? Number(minQuantity) : 0;
+    const { name, unit, quantity, minQuantity } = req.body || {};
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedUnit = typeof unit === 'string' ? unit.trim() : '';
+    const numQty = parseIngredientNumber(quantity, 0);
+    const numMin = parseIngredientNumber(minQuantity, 0);
 
     const errors = [];
     if (!trimmedName || trimmedName.length < 1 || trimmedName.length > 100) {
@@ -319,7 +345,8 @@ router.put('/:id', requireRole('Admin'), async (req, res) => {
     const updateSql = `
       UPDATE dbo.Ingredients
       SET Name = @name, Unit = @unit, Quantity = @quantity, MinQuantity = @minQuantity, UpdatedAt = GETDATE()
-      OUTPUT INSERTED.Id, INSERTED.Name, INSERTED.Unit, INSERTED.Quantity, INSERTED.MinQuantity, INSERTED.UpdatedAt
+      OUTPUT INSERTED.Id, INSERTED.Name, INSERTED.Unit, INSERTED.Quantity, INSERTED.MinQuantity,
+             CONVERT(VARCHAR(19), INSERTED.UpdatedAt, 120) AS UpdatedAtText
       WHERE Id = @id;
     `;
     const updateRes = await query(updateSql, {
@@ -340,11 +367,17 @@ router.put('/:id', requireRole('Admin'), async (req, res) => {
         quantity: Number(updated.Quantity),
         minQuantity: Number(updated.MinQuantity),
         isLow: Number(updated.Quantity) <= Number(updated.MinQuantity),
-        updatedAt: updated.UpdatedAt
+        updatedAt: updated.UpdatedAtText
       },
       message: 'Cập nhật nguyên liệu thành công'
     });
   } catch (error) {
+    if (error && (error.number === 2627 || error.number === 2601)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tên nguyên liệu đã được sử dụng cho mục khác'
+      });
+    }
     console.error('[TV4 - Ingredients PUT Error]:', error.message || error);
     return res.status(500).json({
       success: false,
@@ -458,6 +491,12 @@ router.patch('/:id/stock', async (req, res) => {
         THROW 50002, N'Tồn kho không đủ', 1;
       END;
 
+      IF @currQty + @delta > ${MAX_DECIMAL_10_2}
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 50003, N'Số lượng tồn kho vượt quá giới hạn cho phép', 1;
+      END;
+
       UPDATE dbo.Ingredients 
       SET Quantity = Quantity + @delta, UpdatedAt = GETDATE()
       WHERE Id = @id;
@@ -495,7 +534,8 @@ router.patch('/:id/stock', async (req, res) => {
       COMMIT TRAN;
 
       SELECT 
-        Id, Name, Unit, Quantity, MinQuantity, UpdatedAt,
+        Id, Name, Unit, Quantity, MinQuantity,
+        CONVERT(VARCHAR(19), UpdatedAt, 120) AS UpdatedAtText,
         CASE WHEN Quantity <= MinQuantity THEN 1 ELSE 0 END AS isLow,
         @autoTaskCreated AS autoTaskCreated
       FROM dbo.Ingredients
@@ -513,7 +553,7 @@ router.patch('/:id/stock', async (req, res) => {
       quantity: Number(row.Quantity),
       minQuantity: Number(row.MinQuantity),
       isLow: Boolean(row.isLow),
-      updatedAt: row.UpdatedAt
+      updatedAt: row.UpdatedAtText
     };
 
     return res.status(200).json({
@@ -537,6 +577,12 @@ router.patch('/:id/stock', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Tồn kho không đủ để xuất số lượng yêu cầu'
+      });
+    }
+    if (error.number === 50003 || error.number === 8115) {
+      return res.status(400).json({
+        success: false,
+        message: 'Số lượng tồn kho vượt quá giới hạn cho phép'
       });
     }
 

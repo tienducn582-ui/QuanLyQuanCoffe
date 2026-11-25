@@ -13,6 +13,7 @@ let currentLowOnly = false;
 let searchDebounceTimer = null;
 let modalStockInstance = null;
 let modalIngredientInstance = null;
+let currentIngredients = [];
 
 // Hàm an toàn nếu api.js / ui.js chưa sẵn sàng
 const safeApiFetch = async (path, options = {}) => {
@@ -41,7 +42,11 @@ const safeApiFetch = async (path, options = {}) => {
 
 const safeRequireLogin = () => {
   if (typeof requireLogin === 'function') return requireLogin();
-  if (!localStorage.getItem('token')) window.location.href = 'login.html';
+  if (!localStorage.getItem('token')) {
+    window.location.href = 'login.html';
+    return false;
+  }
+  return true;
 };
 
 const safeIsAdmin = () => {
@@ -79,11 +84,7 @@ const safeEscapeHtml = (str) => {
  * Khởi tạo khi DOM sẵn sàng
  */
 document.addEventListener('DOMContentLoaded', () => {
-  safeRequireLogin();
-
-  if (typeof renderNavbar === 'function') {
-    renderNavbar();
-  }
+  if (!safeRequireLogin()) return;
 
   // Khởi tạo Bootstrap Modals
   const elModalStock = document.getElementById('modalStock');
@@ -129,19 +130,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Lưu nhập / xuất kho
+  // 4. Lưu nhập / xuất kho (hỗ trợ cả nhấn Enter trong ô số lượng)
   const btnSaveStock = document.getElementById('btn-save-stock');
   if (btnSaveStock) {
     btnSaveStock.addEventListener('click', handleSaveStock);
   }
+  const stockAmountInput = document.getElementById('stock-amount');
+  if (stockAmountInput) {
+    stockAmountInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSaveStock();
+      }
+    });
+  }
 
-  // 5. Lưu thêm / sửa nguyên liệu (Admin)
+  // 5. Lưu thêm / sửa nguyên liệu (Admin) — chặn submit mặc định khi nhấn Enter
+  const formIngredient = document.getElementById('form-ingredient');
+  if (formIngredient) {
+    formIngredient.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleSaveIngredient();
+    });
+  }
   const btnSaveIngredient = document.getElementById('btn-save-ingredient');
   if (btnSaveIngredient) {
     btnSaveIngredient.addEventListener('click', handleSaveIngredient);
   }
 
-  // 6. Nạp dữ liệu lần đầu
+  // 6. Ủy quyền sự kiện các nút Nhập / Xuất / Sửa / Xóa trong bảng (tránh lỗi inline onclick khi tên có dấu nháy)
+  const tbody = document.getElementById('table-ingredients-body');
+  if (tbody) {
+    tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action][data-id]');
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const ing = currentIngredients.find(item => item.id === id);
+      if (!ing) return;
+
+      const action = btn.dataset.action;
+      if (action === 'stock-in') {
+        openStockModal(ing.id, ing.name, ing.quantity, ing.unit, 'in');
+      } else if (action === 'stock-out') {
+        openStockModal(ing.id, ing.name, ing.quantity, ing.unit, 'out');
+      } else if (action === 'edit') {
+        openEditIngredientModal(ing.id);
+      } else if (action === 'delete') {
+        handleDeleteIngredient(ing.id, ing.name);
+      }
+    });
+  }
+
+  // 7. Nạp dữ liệu lần đầu
   loadIngredients();
 });
 
@@ -168,9 +208,14 @@ async function loadIngredients() {
 
     const res = await safeApiFetch(`/api/ingredients?${queryParams.toString()}`);
     const list = res.data || [];
+    currentIngredients = list;
     const pagination = res.pagination || { page: 1, pageSize: 10, total: 0, totalPages: 1 };
 
     if (list.length === 0) {
+      if (pagination.total > 0 && currentPage > pagination.totalPages) {
+        currentPage = pagination.totalPages;
+        return loadIngredients();
+      }
       if (tbody) tbody.innerHTML = '';
       if (emptyState) emptyState.style.display = 'block';
       if (paginationInfo) paginationInfo.textContent = 'Hiển thị 0 / 0 nguyên liệu';
@@ -189,32 +234,32 @@ async function loadIngredients() {
 
         return `
           <tr class="${isLow ? 'row-is-low' : ''}">
-            <td>
-              <strong class="d-block ${isLow ? 'text-danger' : 'text-dark'}">${safeEscapeHtml(item.name)}</strong>
+            <td data-label="Nguyên liệu">
+              <strong class="d-block ${isLow ? 'text-danger' : ''}">${safeEscapeHtml(item.name)}</strong>
               ${isLow ? '<small class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Đã chạm ngưỡng an toàn</small>' : ''}
             </td>
-            <td class="text-center"><span class="badge bg-light text-dark border">${safeEscapeHtml(item.unit)}</span></td>
-            <td class="text-center fw-bold ${isLow ? 'text-danger fs-6' : 'text-dark'}">${item.quantity}</td>
-            <td class="text-center text-secondary">${item.minQuantity}</td>
-            <td class="text-center">
+            <td data-label="Đơn vị" class="text-center"><span class="badge bg-light text-dark border">${safeEscapeHtml(item.unit)}</span></td>
+            <td data-label="Tồn kho" class="text-center fw-bold ${isLow ? 'text-danger fs-6' : ''}">${item.quantity}</td>
+            <td data-label="Ngưỡng tối thiểu" class="text-center text-secondary">${item.minQuantity}</td>
+            <td data-label="Trạng thái" class="text-center">
               ${isLow ? '<span class="badge-low"><i class="fa-solid fa-bell me-1"></i>Sắp hết</span>' : '<span class="badge-ok">Đủ hàng</span>'}
             </td>
-            <td class="text-center small text-muted">${updatedTime}</td>
-            <td class="text-end">
+            <td data-label="Cập nhật lúc" class="text-center small text-muted">${safeEscapeHtml(updatedTime)}</td>
+            <td data-label="Thao tác" class="text-end">
               <div class="d-inline-flex gap-1">
                 <!-- Nút Nhập/Xuất kho cho cả Admin và Staff -->
-                <button type="button" class="btn btn-sm btn-outline-success" onclick="openStockModal(${item.id}, '${safeEscapeHtml(item.name)}', ${item.quantity}, '${safeEscapeHtml(item.unit)}', 'in')" title="Nhập thêm">
+                <button type="button" class="btn btn-sm btn-outline-success" data-action="stock-in" data-id="${item.id}" title="Nhập thêm">
                   <i class="fa-solid fa-plus"></i> Nhập
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="openStockModal(${item.id}, '${safeEscapeHtml(item.name)}', ${item.quantity}, '${safeEscapeHtml(item.unit)}', 'out')" title="Xuất dùng">
+                <button type="button" class="btn btn-sm btn-outline-danger" data-action="stock-out" data-id="${item.id}" title="Xuất dùng">
                   <i class="fa-solid fa-minus"></i> Xuất
                 </button>
                 
                 ${isAdminUser ? `
-                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditIngredientModal(${item.id})" title="Chỉnh sửa">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" data-id="${item.id}" title="Chỉnh sửa">
                     <i class="fa-solid fa-pen-to-square"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="handleDeleteIngredient(${item.id}, '${safeEscapeHtml(item.name)}')" title="Xóa">
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${item.id}" title="Xóa">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                 ` : ''}
@@ -376,11 +421,23 @@ async function handleSaveIngredient() {
   const id = document.getElementById('ingredient-id').value;
   const name = document.getElementById('ingredient-name').value.trim();
   const unit = document.getElementById('ingredient-unit').value.trim();
-  const quantity = parseFloat(document.getElementById('ingredient-quantity').value || '0');
-  const minQuantity = parseFloat(document.getElementById('ingredient-min-quantity').value || '0');
+  const rawQty = document.getElementById('ingredient-quantity').value.trim();
+  const rawMin = document.getElementById('ingredient-min-quantity').value.trim();
 
   if (!name || !unit) {
     safeShowToast('Vui lòng điền đầy đủ tên và đơn vị tính', 'warning');
+    return;
+  }
+
+  const quantity = rawQty === '' ? 0 : Number(rawQty);
+  const minQuantity = rawMin === '' ? 0 : Number(rawMin);
+
+  if (!Number.isFinite(quantity) || quantity < 0 || quantity > 1000000) {
+    safeShowToast('Số lượng tồn kho phải là số từ 0 đến 1,000,000', 'warning');
+    return;
+  }
+  if (!Number.isFinite(minQuantity) || minQuantity < 0 || minQuantity > 1000000) {
+    safeShowToast('Ngưỡng tối thiểu phải là số từ 0 đến 1,000,000', 'warning');
     return;
   }
 

@@ -17,40 +17,22 @@
   <link rel="stylesheet" href="assets/css/style.css">
 
   <style>
-    :root {
-      --primary: #6F4E37;
-      --primary-dark: #513624;
-      --accent: #DDA266;
-      --bg-surface: #ffffff;
-      --border-color: #E8DFD8;
-      --radius-lg: 12px;
-    }
-
-    body {
-      font-family: 'Be Vietnam Pro', sans-serif;
-      background-color: #F8F5F0;
-      color: #2B1810;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
     .inventory-header-banner {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-card);
       padding: 1.5rem 1.75rem;
       margin-bottom: 1.5rem;
-      box-shadow: 0 2px 8px rgba(43, 24, 16, 0.06);
+      box-shadow: var(--shadow-card);
       position: relative;
       overflow: hidden;
     }
 
     .table-container {
-      background: var(--bg-surface);
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 2px 8px rgba(43, 24, 16, 0.06);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
       overflow: hidden;
       margin-bottom: 1.5rem;
     }
@@ -77,30 +59,21 @@
       font-size: 0.75rem;
     }
   </style>
+
+  <!-- Chống chớp sáng Dark/Light Mode -->
+  <script>
+    (function () {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark-theme', 'dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 <body>
 
   <!-- Thanh điều hướng dùng chung: render bởi ui.js -->
-  <nav id="navbar">
-    <header class="site-navbar navbar navbar-expand-lg bg-white border-bottom py-2">
-      <div class="container">
-        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-dark" href="index.html">
-          <span style="font-size: 1.4rem;">☕</span>
-          <span>Cafe Task Manager</span>
-        </a>
-        <div class="collapse navbar-collapse" id="navFallback">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item"><a class="nav-link" href="index.html">Trang chủ</a></li>
-            <li class="nav-item"><a class="nav-link" href="tasks.html">Công việc</a></li>
-            <li class="nav-item"><a class="nav-link" href="shifts.html">Ca làm</a></li>
-            <li class="nav-item"><a class="nav-link" href="statistics.html">Thống kê</a></li>
-            <li class="nav-item"><a class="nav-link active fw-bold text-primary" href="inventory.html">Kho nguyên liệu</a></li>
-            <li class="nav-item"><a class="nav-link" href="profile.html">Hồ sơ</a></li>
-          </ul>
-        </div>
-      </div>
-    </header>
-  </nav>
+  <nav id="navbar"></nav>
 
   <!-- NỘI DUNG CHÍNH -->
   <main class="container my-4 flex-grow-1">
