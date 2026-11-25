@@ -8,6 +8,8 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+.vs/
+**/database/.vs/
 
 # Thư mục tạm & sao lưu & kiểm thử
 dist/
