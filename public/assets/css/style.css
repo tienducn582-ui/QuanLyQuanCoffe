@@ -457,6 +457,19 @@ nav#navbar {
   padding: var(--space-32);
 }
 
+.profile-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+}
+
+@media (max-width: 575.98px) {
+  .profile-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
 .auth-card-wide {
   max-width: 640px;
 }
@@ -1008,12 +1021,23 @@ nav#navbar {
 }
 
 .navbar-dropdown .dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1050;
+  list-style: none;
+  margin: 0;
   background-color: var(--card-bg, #ffffff);
   border: 1px solid var(--border-color, #e0d7d0);
   border-radius: var(--radius-card, 8px);
   padding: 6px 0;
   min-width: 175px;
   box-shadow: var(--shadow-card, 0 4px 12px rgba(0,0,0,0.1));
+}
+
+.navbar-dropdown .dropdown-menu.show {
+  display: block;
 }
 
 .navbar-dropdown .dropdown-item {

@@ -89,9 +89,9 @@ async function apiFetch(path, options = {}) {
   if (response.status === 401) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Chỉ chuyển hướng nếu không phải đang ở trang login hoặc register
+    // Chỉ chuyển hướng nếu không yêu cầu bỏ qua redirect và không phải đang ở trang login hoặc register
     const currentFile = window.location.pathname.split('/').pop();
-    if (currentFile !== 'login.html' && currentFile !== 'register.html') {
+    if (!options.skipAuthRedirect && currentFile !== 'login.html' && currentFile !== 'register.html') {
       window.location.href = 'login.html';
     }
     const errData = await response.json().catch(() => ({}));

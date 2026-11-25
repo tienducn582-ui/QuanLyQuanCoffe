@@ -288,7 +288,7 @@ function renderNavbar() {
         <li><a class="nav-link ${isCurrent('my-tasks.html')}" href="my-tasks.html" id="navMyTasksLink">Việc của tôi <span id="overdueBadge" class="badge bg-danger" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle;"></span></a></li>
         <li><a class="nav-link ${isCurrent('shifts.html')}" href="shifts.html">Ca làm</a></li>
         <li class="navbar-dropdown dropdown">
-          <a class="nav-link dropdown-toggle ${extraActiveCls}" href="#" id="navbarExtraDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a class="nav-link dropdown-toggle ${extraActiveCls}" href="#" id="navbarExtraDropdown" role="button" aria-expanded="false">
             Mở rộng
           </a>
           <ul class="dropdown-menu shadow-sm" aria-labelledby="navbarExtraDropdown">
@@ -393,22 +393,28 @@ function renderNavbar() {
     });
   }
 
-  // TV5-XU: Hỗ trợ đóng mở dropdown menu Mở rộng
+  // TV5-XU: Hỗ trợ đóng mở dropdown menu Mở rộng (tránh gắn trùng listener khi renderNavbar chạy lại)
   const extraToggle = document.getElementById('navbarExtraDropdown');
   if (extraToggle) {
     extraToggle.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const menu = extraToggle.nextElementSibling;
       if (menu) {
-        menu.classList.toggle('show');
+        const isOpen = menu.classList.toggle('show');
+        extraToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       }
     });
+  }
+  if (!window.__navbarExtraOutsideBound) {
+    window.__navbarExtraOutsideBound = true;
     document.addEventListener('click', (e) => {
-      if (!extraToggle.contains(e.target)) {
-        const menu = extraToggle.nextElementSibling;
-        if (menu && menu.classList.contains('show')) {
-          menu.classList.remove('show');
-        }
+      const toggle = document.getElementById('navbarExtraDropdown');
+      if (!toggle) return;
+      const menu = toggle.nextElementSibling;
+      if (menu && menu.classList.contains('show') && !toggle.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
+        toggle.setAttribute('aria-expanded', 'false');
       }
     });
   }
@@ -432,11 +438,11 @@ async function updateOverdueBadge() {
   if (!badgeEl) return;
 
   try {
-    if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+    if (!localStorage.getItem('token')) {
       badgeEl.style.display = 'none';
       return;
     }
-    const res = await apiFetch('/api/tasks?assigneeId=me&overdue=1&pageSize=1');
+    const res = await apiFetch('/api/tasks?assigneeId=me&overdue=1&pageSize=1', { skipAuthRedirect: true });
     if (res && res.success && res.pagination && res.pagination.total > 0) {
       badgeEl.textContent = res.pagination.total;
       badgeEl.style.display = 'inline-block';

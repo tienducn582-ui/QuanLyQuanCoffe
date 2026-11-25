@@ -21,6 +21,10 @@ app.use(express.urlencoded({ extended: true }));
 // Phục vụ giao diện tĩnh từ thư mục public/
 const publicPath = path.join(__dirname, '..', 'public');
 app.use(express.static(publicPath));
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/svg+xml');
+  res.sendFile(path.join(publicPath, 'assets', 'img', 'logo.svg'));
+});
 
 // API Kiểm tra trạng thái hệ thống và kết nối CSDL
 app.get('/api/health', async (req, res, next) => {
