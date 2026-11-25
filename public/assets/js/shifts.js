@@ -5,14 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Kiểm tra đăng nhập bắt buộc
-  if (typeof requireLogin === 'function') {
-    requireLogin();
-  }
-
-  // 2. Render Navbar dùng chung
-  if (typeof renderNavbar === 'function') {
-    renderNavbar();
-  }
+  if (typeof requireLogin === 'function' && !requireLogin()) return;
 
   const currentUser = typeof getUser === 'function' ? getUser() : null;
   const isAdminUser = typeof isAdmin === 'function' ? isAdmin() : false;
@@ -117,6 +110,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const endTime = document.getElementById('shiftEndTime').value;
       const note = document.getElementById('shiftNote').value.trim();
 
+      if (!name || !startTime || !endTime) {
+        if (shiftFormError) {
+          shiftFormError.textContent = 'Vui lòng nhập đầy đủ tên ca, giờ bắt đầu và giờ kết thúc!';
+          shiftFormError.classList.remove('d-none');
+        }
+        return;
+      }
+
       if (startTime >= endTime) {
         if (shiftFormError) {
           shiftFormError.textContent = 'Giờ bắt đầu phải nhỏ hơn giờ kết thúc!';
@@ -218,13 +219,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Tải nhật ký hôm nay để biết người dùng hiện tại đang mở ca nào
-   * và vẽ bảng nhật ký bên dưới
+   * Tải nhật ký đang mở (EndedAt IS NULL) của chính người dùng hiện tại trên mọi ngày
    */
   async function getTodayActiveShiftId() {
     try {
-      const today = getTodayString();
-      const res = await apiFetch(`/api/shifts/logs?date=${today}`);
+      const res = await apiFetch('/api/shifts/logs?active=1');
       const logs = res.data || [];
       if (!currentUser) return null;
       const activeLog = logs.find(l => l.userId === currentUser.id && !l.endedAt);
@@ -516,10 +515,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>${safeTitle}</span>
           </div>
           <div class="d-flex align-items-center gap-1">
-            <select class="form-select form-select-sm py-0 px-1 status-select" style="font-size: 0.75rem; width: auto;" data-id="${taskId}">
-              <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="InProgress" ${currentStatus === 'InProgress' ? 'selected' : ''}>InProgress</option>
-              <option value="Done" ${currentStatus === 'Done' ? 'selected' : ''}>Done</option>
+            <select class="form-select form-select-sm py-0 px-1 status-select" style="font-size: 0.75rem; width: auto;" data-id="${taskId}" data-prev="${currentStatus}">
+              <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Chờ làm</option>
+              <option value="InProgress" ${currentStatus === 'InProgress' ? 'selected' : ''}>Đang làm</option>
+              <option value="Done" ${currentStatus === 'Done' ? 'selected' : ''}>Hoàn thành</option>
             </select>
           </div>
         `;
@@ -531,20 +530,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Bắt sự kiện đổi trạng thái công việc (PATCH /api/tasks/:id/status)
       taskContainer.querySelectorAll('.status-select').forEach(select => {
         select.addEventListener('change', async (e) => {
-          const tId = e.target.getAttribute('data-id');
-          const newStatus = e.target.value;
+          const selectEl = e.target;
+          const tId = selectEl.getAttribute('data-id');
+          const prevStatus = selectEl.getAttribute('data-prev') || 'Pending';
+          const newStatus = selectEl.value;
+          selectEl.disabled = true;
           try {
             await apiFetch(`/api/tasks/${tId}/status`, {
               method: 'PATCH',
               body: JSON.stringify({ status: newStatus })
             });
+            selectEl.setAttribute('data-prev', newStatus);
             if (typeof showToast === 'function') {
               showToast('Đổi trạng thái công việc thành công', 'success');
             }
+            loadHandoverForShift(shiftId);
+            if (typeof updateOverdueBadge === 'function') {
+              updateOverdueBadge();
+            }
           } catch (error) {
+            selectEl.value = prevStatus;
             if (typeof showToast === 'function') {
               showToast('Lỗi cập nhật trạng thái: ' + error.message, 'danger');
             }
+          } finally {
+            selectEl.disabled = false;
           }
         });
       });

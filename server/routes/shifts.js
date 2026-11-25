@@ -81,16 +81,19 @@ router.get('/', verifyToken, async (req, res, next) => {
  */
 router.get('/logs', verifyToken, async (req, res, next) => {
   try {
-    const { date, shiftId } = req.query;
+    const { date, shiftId, active } = req.query;
+    const onlyActiveMine = active === '1' || active === 'true';
     let targetDate = date;
 
-    if (targetDate) {
-      if (!isISODate(targetDate)) {
-        return sendBadRequest(res, ['Ngày không đúng định dạng YYYY-MM-DD hoặc không hợp lệ.']);
+    if (!onlyActiveMine) {
+      if (targetDate) {
+        if (!isISODate(targetDate)) {
+          return sendBadRequest(res, ['Ngày không đúng định dạng YYYY-MM-DD hoặc không hợp lệ.']);
+        }
+      } else {
+        const now = new Date();
+        targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       }
-    } else {
-      const now = new Date();
-      targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
     let sql = `
@@ -101,15 +104,23 @@ router.get('/logs', verifyToken, async (req, res, next) => {
         sl.UserId,
         u.FullName AS UserName,
         CONVERT(VARCHAR(10), sl.LogDate, 120) AS LogDate,
-        sl.StartedAt,
-        sl.EndedAt,
+        CONVERT(VARCHAR(19), sl.StartedAt, 120) AS StartedAtText,
+        CONVERT(VARCHAR(19), sl.EndedAt, 120) AS EndedAtText,
         sl.HandoverNote
       FROM ShiftLogs sl
       JOIN Shifts s ON sl.ShiftId = s.Id
       JOIN Users u ON sl.UserId = u.Id
-      WHERE sl.LogDate = @date
+      WHERE 1 = 1
     `;
-    const params = { date: targetDate };
+    const params = {};
+
+    if (onlyActiveMine) {
+      sql += ' AND sl.UserId = @userId AND sl.EndedAt IS NULL';
+      params.userId = req.user.id;
+    } else {
+      sql += ' AND sl.LogDate = @date';
+      params.date = targetDate;
+    }
 
     if (shiftId !== undefined && shiftId !== '') {
       if (!isPositiveInt(shiftId)) {
@@ -129,8 +140,8 @@ router.get('/logs', verifyToken, async (req, res, next) => {
       userId: r.UserId,
       userName: r.UserName,
       logDate: r.LogDate,
-      startedAt: r.StartedAt,
-      endedAt: r.EndedAt,
+      startedAt: r.StartedAtText,
+      endedAt: r.EndedAtText || null,
       handoverNote: r.HandoverNote || ''
     }));
 
@@ -393,7 +404,9 @@ router.post('/:id/start', verifyToken, async (req, res, next) => {
     // 3. Tạo bản ghi ShiftLogs mới với LogDate = hôm nay, StartedAt = SYSDATETIME()
     const insertSql = `
       INSERT INTO ShiftLogs (ShiftId, UserId, LogDate, StartedAt, EndedAt, HandoverNote)
-      OUTPUT INSERTED.Id, INSERTED.ShiftId, INSERTED.UserId, CONVERT(VARCHAR(10), INSERTED.LogDate, 120) AS LogDate, INSERTED.StartedAt
+      OUTPUT INSERTED.Id, INSERTED.ShiftId, INSERTED.UserId,
+             CONVERT(VARCHAR(10), INSERTED.LogDate, 120) AS LogDate,
+             CONVERT(VARCHAR(19), INSERTED.StartedAt, 120) AS StartedAtText
       VALUES (@shiftId, @userId, CAST(GETDATE() AS DATE), SYSDATETIME(), NULL, NULL)
     `;
 
@@ -407,7 +420,7 @@ router.post('/:id/start', verifyToken, async (req, res, next) => {
         shiftId: inserted.ShiftId,
         userId: inserted.UserId,
         logDate: inserted.LogDate,
-        startedAt: inserted.StartedAt
+        startedAt: inserted.StartedAtText
       },
       message: 'Nhận ca làm việc thành công'
     });
@@ -494,7 +507,7 @@ router.get('/:id/handover', verifyToken, async (req, res, next) => {
     const logSql = `
       SELECT TOP 1 
         u.FullName AS userName,
-        sl.EndedAt AS endedAt,
+        CONVERT(VARCHAR(19), sl.EndedAt, 120) AS endedAt,
         sl.HandoverNote AS handoverNote
       FROM ShiftLogs sl
       JOIN Users u ON sl.UserId = u.Id
