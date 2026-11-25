@@ -316,23 +316,43 @@ router.get('/menu', async (req, res) => {
   }
 });
 
+const MAX_SQL_INT = 2147483647;
+const MAX_MENU_PRICE = 10000000;
+
+/**
+ * Kiểm tra đơn giá món hợp lệ: số nguyên từ 0 đến MAX_MENU_PRICE (tránh rỗng, thập phân hoặc tràn INT SQL)
+ */
+function parseMenuPrice(rawPrice) {
+  if (rawPrice === undefined || rawPrice === null) return null;
+  if (typeof rawPrice === 'string') {
+    const trimmed = rawPrice.trim();
+    if (!/^\d+$/.test(trimmed)) return null;
+    const n = Number(trimmed);
+    return Number.isSafeInteger(n) && n >= 0 && n <= MAX_MENU_PRICE ? n : null;
+  }
+  if (typeof rawPrice === 'number') {
+    return Number.isInteger(rawPrice) && rawPrice >= 0 && rawPrice <= MAX_MENU_PRICE ? rawPrice : null;
+  }
+  return null;
+}
+
 /**
  * POST /api/pos/menu [Chỉ Admin]
- * Thêm món mới vào thực đơn: { name (1-100), price (>= 0), isActive (boolean) }
+ * Thêm món mới vào thực đơn: { name (1-100), price (0..10,000,000), isActive (boolean) }
  */
 router.post('/menu', requireRole('Admin'), async (req, res) => {
   try {
-    const { name, price, isActive } = req.body;
+    const { name, price, isActive } = req.body || {};
 
     if (!isString(name, 1, 100)) {
       return sendBadRequest(res, 'Tên món phải từ 1 đến 100 ký tự.');
     }
-    if (price === undefined || price === null || isNaN(Number(price)) || Number(price) < 0) {
-      return sendBadRequest(res, 'Đơn giá món phải là số lớn hơn hoặc bằng 0.');
+    const itemPrice = parseMenuPrice(price);
+    if (itemPrice === null) {
+      return sendBadRequest(res, `Đơn giá món phải là số nguyên từ 0 đến ${MAX_MENU_PRICE.toLocaleString('vi-VN')}.`);
     }
 
     const trimmedName = name.trim();
-    const itemPrice = Math.floor(Number(price));
     const activeBit = isActive === false ? 0 : 1;
 
     // Kiểm tra trùng tên món
@@ -390,7 +410,7 @@ router.post('/menu', requireRole('Admin'), async (req, res) => {
 router.put('/menu/:id', requireRole('Admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, isActive } = req.body;
+    const { name, price, isActive } = req.body || {};
 
     if (!isPositiveInt(id)) {
       return sendBadRequest(res, 'Mã món không hợp lệ.');
@@ -398,13 +418,13 @@ router.put('/menu/:id', requireRole('Admin'), async (req, res) => {
     if (!isString(name, 1, 100)) {
       return sendBadRequest(res, 'Tên món phải từ 1 đến 100 ký tự.');
     }
-    if (price === undefined || price === null || isNaN(Number(price)) || Number(price) < 0) {
-      return sendBadRequest(res, 'Đơn giá món phải là số lớn hơn hoặc bằng 0.');
+    const itemPrice = parseMenuPrice(price);
+    if (itemPrice === null) {
+      return sendBadRequest(res, `Đơn giá món phải là số nguyên từ 0 đến ${MAX_MENU_PRICE.toLocaleString('vi-VN')}.`);
     }
 
     const itemId = Number(id);
     const trimmedName = name.trim();
-    const itemPrice = Math.floor(Number(price));
     const activeBit = isActive === false ? 0 : 1;
 
     // 1. Kiểm tra món tồn tại
@@ -640,8 +660,8 @@ router.get('/orders/:id', async (req, res) => {
         o.Total,
         o.CreatedBy,
         u.FullName AS CreatedByName,
-        o.CreatedAt,
-        o.PaidAt
+        CONVERT(VARCHAR(19), o.CreatedAt, 120) AS CreatedAtText,
+        CONVERT(VARCHAR(19), o.PaidAt, 120) AS PaidAtText
       FROM dbo.Orders o
       JOIN dbo.DiningTables t ON t.Id = o.TableId
       LEFT JOIN dbo.Customers c ON c.Id = o.CustomerId
@@ -702,8 +722,8 @@ router.get('/orders/:id', async (req, res) => {
         total: calculatedTotal,
         createdBy: row.CreatedBy ? Number(row.CreatedBy) : null,
         createdByName: row.CreatedByName || null,
-        createdAt: row.CreatedAt,
-        paidAt: row.PaidAt,
+        createdAt: row.CreatedAtText,
+        paidAt: row.PaidAtText || null,
         items
       }
     });
@@ -724,101 +744,119 @@ router.get('/orders/:id', async (req, res) => {
 router.post('/orders/:id/items', async (req, res) => {
   try {
     const { id } = req.params;
-    const { menuItemId, quantity } = req.body;
+    const { menuItemId, quantity } = req.body || {};
 
-    if (!isPositiveInt(id)) {
+    if (!isPositiveInt(id) || Number(id) > MAX_SQL_INT) {
       return sendBadRequest(res, 'Mã đơn hàng không hợp lệ.');
     }
-    if (!isPositiveInt(menuItemId)) {
+    if (!isPositiveInt(menuItemId) || Number(menuItemId) > MAX_SQL_INT) {
       return sendBadRequest(res, 'Mã món (menuItemId) không hợp lệ.');
     }
     if (!isPositiveInt(quantity) || Number(quantity) > 99) {
       return sendBadRequest(res, 'Số lượng món phải là số nguyên từ 1 đến 99.');
     }
 
-    // 1. Kiểm tra đơn hàng: phải tồn tại và đang ở trạng thái 'Open'
-    const orderRes = await query('SELECT Id, Status FROM dbo.Orders WHERE Id = @id', {
-      id: Number(id)
-    });
-    if (orderRes.recordset.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Đơn hàng không tồn tại.'
-      });
-    }
-    if (orderRes.recordset[0].Status !== 'Open') {
-      return res.status(409).json({
-        success: false,
-        message: 'Chỉ có thể thêm món vào đơn hàng đang mở.'
-      });
-    }
-
-    // 2. Kiểm tra món ăn: phải tồn tại và đang bán (IsActive = 1)
-    const menuRes = await query('SELECT Id, Name, Price, IsActive FROM dbo.MenuItems WHERE Id = @menuItemId', {
-      menuItemId: Number(menuItemId)
-    });
-    if (menuRes.recordset.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Món ăn không tồn tại.'
-      });
-    }
-    const menuItem = menuRes.recordset[0];
-    if (!menuItem.IsActive) {
-      return res.status(400).json({
-        success: false,
-        message: 'Món ăn này hiện đang ngừng phục vụ.'
-      });
-    }
-
-    const unitPrice = Number(menuItem.Price);
+    const orderId = Number(id);
+    const mId = Number(menuItemId);
     const addQty = Number(quantity);
 
-    // 3. Kiểm tra xem món này đã có trong đơn chưa
-    const existingRes = await query(
-      'SELECT Id, Quantity FROM dbo.OrderItems WHERE OrderId = @orderId AND MenuItemId = @menuItemId',
-      { orderId: Number(id), menuItemId: Number(menuItemId) }
-    );
+    // Thực hiện kiểm tra + cộng dồn/thêm món + cập nhật tổng trong 1 transaction có khóa để tránh double-click tạo trùng dòng
+    const addSql = `
+      SET NOCOUNT ON;
+      SET XACT_ABORT ON;
+      BEGIN TRAN;
 
-    if (existingRes.recordset.length > 0) {
-      const existingItem = existingRes.recordset[0];
-      const newQty = Number(existingItem.Quantity) + addQty;
-      if (newQty > 99) {
-        return res.status(400).json({
-          success: false,
-          message: 'Tổng số lượng cho món này trong đơn vượt quá 99.'
-        });
-      }
+      DECLARE @orderStatus NVARCHAR(20);
+      SELECT @orderStatus = Status
+      FROM dbo.Orders WITH (UPDLOCK, ROWLOCK)
+      WHERE Id = @orderId;
 
-      await query(
-        'UPDATE dbo.OrderItems SET Quantity = @quantity WHERE Id = @itemId',
-        { quantity: newQty, itemId: Number(existingItem.Id) }
-      );
-    } else {
-      await query(
-        'INSERT INTO dbo.OrderItems (OrderId, MenuItemId, Quantity, UnitPrice) VALUES (@orderId, @menuItemId, @quantity, @unitPrice)',
-        {
-          orderId: Number(id),
-          menuItemId: Number(menuItemId),
-          quantity: addQty,
-          unitPrice
-        }
-      );
-    }
+      IF @orderStatus IS NULL
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 51001, N'Đơn hàng không tồn tại.', 1;
+      END;
 
-    // 4. Tính lại và cập nhật Total của đơn hàng trên CSDL
-    await query(
-      `UPDATE dbo.Orders
-       SET Total = (SELECT ISNULL(SUM(Quantity * UnitPrice), 0) FROM dbo.OrderItems WHERE OrderId = @orderId)
-       WHERE Id = @orderId;`,
-      { orderId: Number(id) }
-    );
+      IF @orderStatus <> 'Open'
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 51002, N'Chỉ có thể thêm món vào đơn hàng đang mở.', 1;
+      END;
+
+      DECLARE @unitPrice INT, @isActive BIT;
+      SELECT @unitPrice = Price, @isActive = IsActive
+      FROM dbo.MenuItems
+      WHERE Id = @menuItemId;
+
+      IF @unitPrice IS NULL
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 51003, N'Món ăn không tồn tại.', 1;
+      END;
+
+      IF @isActive = 0
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 51004, N'Món ăn này hiện đang ngừng phục vụ.', 1;
+      END;
+
+      DECLARE @existingItemId INT, @existingQty INT;
+      SELECT TOP 1 @existingItemId = Id, @existingQty = Quantity
+      FROM dbo.OrderItems WITH (UPDLOCK, HOLDLOCK)
+      WHERE OrderId = @orderId AND MenuItemId = @menuItemId
+      ORDER BY Id ASC;
+
+      IF @existingItemId IS NOT NULL
+      BEGIN
+        IF @existingQty + @quantity > 99
+        BEGIN
+          ROLLBACK TRAN;
+          THROW 51005, N'Tổng số lượng cho món này trong đơn vượt quá 99.', 1;
+        END;
+
+        UPDATE dbo.OrderItems
+        SET Quantity = Quantity + @quantity
+        WHERE Id = @existingItemId;
+      END
+      ELSE
+      BEGIN
+        INSERT INTO dbo.OrderItems (OrderId, MenuItemId, Quantity, UnitPrice)
+        VALUES (@orderId, @menuItemId, @quantity, @unitPrice);
+      END;
+
+      DECLARE @newTotal BIGINT;
+      SELECT @newTotal = ISNULL(SUM(CAST(Quantity AS BIGINT) * CAST(UnitPrice AS BIGINT)), 0)
+      FROM dbo.OrderItems
+      WHERE OrderId = @orderId;
+
+      IF @newTotal > ${MAX_SQL_INT}
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 51006, N'Tổng tiền đơn hàng vượt quá giới hạn cho phép.', 1;
+      END;
+
+      UPDATE dbo.Orders
+      SET Total = CAST(@newTotal AS INT)
+      WHERE Id = @orderId;
+
+      COMMIT TRAN;
+    `;
+
+    await query(addSql, { orderId, menuItemId: mId, quantity: addQty });
 
     return res.json({
       success: true,
       message: 'Thêm món vào đơn hàng thành công.'
     });
   } catch (err) {
+    if (err && err.number === 51001) return res.status(404).json({ success: false, message: 'Đơn hàng không tồn tại.' });
+    if (err && err.number === 51002) return res.status(409).json({ success: false, message: 'Chỉ có thể thêm món vào đơn hàng đang mở.' });
+    if (err && err.number === 51003) return res.status(404).json({ success: false, message: 'Món ăn không tồn tại.' });
+    if (err && err.number === 51004) return res.status(400).json({ success: false, message: 'Món ăn này hiện đang ngừng phục vụ.' });
+    if (err && err.number === 51005) return res.status(400).json({ success: false, message: 'Tổng số lượng cho món này trong đơn vượt quá 99.' });
+    if (err && (err.number === 51006 || err.number === 8115)) {
+      return res.status(400).json({ success: false, message: 'Tổng tiền đơn hàng vượt quá giới hạn cho phép.' });
+    }
     console.error('[POS] Lỗi POST /orders/:id/items:', err);
     return res.status(500).json({
       success: false,
@@ -1023,76 +1061,85 @@ router.post('/orders/:id/cancel', async (req, res) => {
 router.post('/orders/:id/pay', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isPositiveInt(id)) {
+    if (!isPositiveInt(id) || Number(id) > MAX_SQL_INT) {
       return sendBadRequest(res, 'Mã đơn hàng không hợp lệ.');
     }
 
-    // 1. Kiểm tra đơn hàng
-    const orderRes = await query('SELECT Id, Status, CustomerId FROM dbo.Orders WHERE Id = @id', {
-      id: Number(id)
-    });
-    if (orderRes.recordset.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Đơn hàng không tồn tại.'
-      });
-    }
-    const order = orderRes.recordset[0];
-    if (order.Status !== 'Open') {
-      return res.status(409).json({
-        success: false,
-        message: 'Đơn hàng không ở trạng thái mở hoặc đã thanh toán trước đó.'
-      });
-    }
+    const orderId = Number(id);
 
-    // 2. Kiểm tra số lượng món trong đơn (Đơn rỗng -> HTTP 400)
-    const itemsCheck = await query(
-      'SELECT COUNT(*) AS ItemCount FROM dbo.OrderItems WHERE OrderId = @id',
-      { id: Number(id) }
-    );
-    const itemCount = itemsCheck.recordset[0] ? Number(itemsCheck.recordset[0].ItemCount) : 0;
-    if (itemCount === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Đơn hàng chưa có món nào, không thể thanh toán.'
-      });
-    }
-
-    // 3. Thực thi thanh toán và tích điểm trong 1 batch giao dịch T-SQL
+    // Thực thi kiểm tra trạng thái, đơn rỗng, thanh toán và tích điểm trong 1 transaction nguyên tử
     const paySql = `
+      SET NOCOUNT ON;
       SET XACT_ABORT ON;
       BEGIN TRAN;
 
-      DECLARE @calcTotal INT;
-      SELECT @calcTotal = ISNULL(SUM(Quantity * UnitPrice), 0)
+      DECLARE @orderStatus NVARCHAR(20), @targetCustomerId INT;
+      SELECT @orderStatus = Status, @targetCustomerId = CustomerId
+      FROM dbo.Orders WITH (UPDLOCK, ROWLOCK)
+      WHERE Id = @orderId;
+
+      IF @orderStatus IS NULL
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 52001, N'Đơn hàng không tồn tại.', 1;
+      END;
+
+      IF @orderStatus <> 'Open'
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 52002, N'Đơn hàng không ở trạng thái mở hoặc đã thanh toán trước đó.', 1;
+      END;
+
+      DECLARE @itemCount INT;
+      SELECT @itemCount = COUNT(*) FROM dbo.OrderItems WHERE OrderId = @orderId;
+      IF @itemCount = 0
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 52003, N'Đơn hàng chưa có món nào, không thể thanh toán.', 1;
+      END;
+
+      DECLARE @calcTotalBig BIGINT;
+      SELECT @calcTotalBig = ISNULL(SUM(CAST(Quantity AS BIGINT) * CAST(UnitPrice AS BIGINT)), 0)
       FROM dbo.OrderItems
       WHERE OrderId = @orderId;
+
+      IF @calcTotalBig > ${MAX_SQL_INT}
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 52004, N'Tổng tiền đơn hàng vượt quá giới hạn cho phép.', 1;
+      END;
+
+      DECLARE @calcTotal INT = CAST(@calcTotalBig AS INT);
 
       UPDATE dbo.Orders
       SET Status = 'Paid',
           PaidAt = GETDATE(),
           Total = @calcTotal
-      WHERE Id = @orderId;
+      WHERE Id = @orderId AND Status = 'Open';
 
-      DECLARE @targetCustomerId INT;
-      SELECT @targetCustomerId = CustomerId FROM dbo.Orders WHERE Id = @orderId;
+      IF @@ROWCOUNT = 0
+      BEGIN
+        ROLLBACK TRAN;
+        THROW 52002, N'Đơn hàng không ở trạng thái mở hoặc đã thanh toán trước đó.', 1;
+      END;
 
       IF @targetCustomerId IS NOT NULL AND @calcTotal >= 10000
       BEGIN
         DECLARE @pointsEarned INT = FLOOR(@calcTotal / 10000);
         UPDATE dbo.Customers
         SET Points = Points + @pointsEarned
-        WHERE Id = @targetCustomerId;
-      END
+        WHERE Id = @targetCustomerId AND CAST(Points AS BIGINT) + @pointsEarned <= ${MAX_SQL_INT};
+      END;
 
-      COMMIT;
+      COMMIT TRAN;
 
-      SELECT o.Id, o.TableId, o.CustomerId, o.Status, o.Total, o.PaidAt
+      SELECT o.Id, o.TableId, o.CustomerId, o.Status, o.Total,
+             CONVERT(VARCHAR(19), o.PaidAt, 120) AS PaidAtText
       FROM dbo.Orders o
       WHERE o.Id = @orderId;
     `;
 
-    const payResult = await query(paySql, { orderId: Number(id) });
+    const payResult = await query(paySql, { orderId });
     const paidOrder = payResult.recordset[0];
 
     return res.json({
@@ -1104,10 +1151,20 @@ router.post('/orders/:id/pay', async (req, res) => {
         customerId: paidOrder.CustomerId ? Number(paidOrder.CustomerId) : null,
         status: paidOrder.Status,
         total: Number(paidOrder.Total),
-        paidAt: paidOrder.PaidAt
+        paidAt: paidOrder.PaidAtText
       }
     });
   } catch (err) {
+    if (err && err.number === 52001) return res.status(404).json({ success: false, message: 'Đơn hàng không tồn tại.' });
+    if (err && err.number === 52002) {
+      return res.status(409).json({ success: false, message: 'Đơn hàng không ở trạng thái mở hoặc đã thanh toán trước đó.' });
+    }
+    if (err && err.number === 52003) {
+      return res.status(400).json({ success: false, message: 'Đơn hàng chưa có món nào, không thể thanh toán.' });
+    }
+    if (err && (err.number === 52004 || err.number === 8115)) {
+      return res.status(400).json({ success: false, message: 'Tổng tiền đơn hàng vượt quá giới hạn cho phép.' });
+    }
     console.error('[POS] Lỗi POST /orders/:id/pay:', err);
     return res.status(500).json({
       success: false,

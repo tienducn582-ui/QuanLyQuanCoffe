@@ -5,9 +5,16 @@
 
 let tablesData = [];
 let menuData = [];
+let manageMenuData = [];
 let currentFilter = 'all'; // 'all' | 'free' | 'occupied'
 let selectedTable = null;
 let currentOrder = null;
+let orderLoadCounter = 0;
+const addingMenuItems = new Set();
+const updatingOrderItems = new Set();
+let creatingOrder = false;
+let cancellingOrder = false;
+let payingOrder = false;
 
 // Modal instances
 let payModalInstance = null;
@@ -18,9 +25,6 @@ let manageMenuModalInstance = null;
 // Khởi tạo trang khi DOM sẵn sàng
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireLogin()) return;
-
-  // Render thanh điều hướng chung
-  renderNavbar();
 
   // Khởi tạo các modal Bootstrap
   const payModalEl = document.getElementById('payModal');
@@ -49,11 +53,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (adminBox) adminBox.classList.remove('d-none');
   }
 
-  // Hỗ trợ bấm Enter trong ô tìm kiếm SĐT khách hàng
-  document.getElementById('posCustomerPhone')?.addEventListener('keydown', (e) => {
+  // Hỗ trợ bấm Enter & tự xóa khách đã chọn nếu người dùng sửa lại SĐT
+  const phoneInputEl = document.getElementById('posCustomerPhone');
+  phoneInputEl?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       searchCustomer();
+    }
+  });
+  phoneInputEl?.addEventListener('input', () => {
+    const custIdEl = document.getElementById('posCustomerId');
+    if (custIdEl) custIdEl.value = '';
+    const resEl = document.getElementById('posCustomerResult');
+    if (resEl) resEl.textContent = '';
+  });
+
+  // Ủy quyền sự kiện cho bảng quản lý Bàn & Thực đơn (tránh inline onclick bị vỡ bởi dấu nháy)
+  document.getElementById('manageTablesTbody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action][data-id]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const tbl = tablesData.find(t => t.id === id);
+    if (!tbl) return;
+    if (btn.dataset.action === 'edit-table') {
+      editTable(tbl.id, tbl.name, tbl.seats);
+    } else if (btn.dataset.action === 'delete-table') {
+      deleteTable(tbl.id, tbl.name);
+    }
+  });
+
+  document.getElementById('manageMenuTbody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action][data-id]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const item = manageMenuData.find(m => m.id === id);
+    if (!item) return;
+    if (btn.dataset.action === 'edit-menu') {
+      editMenu(item.id, item.name, item.price, item.isActive);
+    } else if (btn.dataset.action === 'delete-menu') {
+      deleteMenu(item.id, item.name);
+    }
+  });
+
+  // Tự đóng modal panel mobile nếu xoay ngang hoặc phóng to màn hình >= 768px
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 768) {
+      closeMobileOrderPanel();
     }
   });
 
@@ -308,13 +353,17 @@ function closeMobileOrderPanel() {
  * Tải chi tiết đơn hàng: GET /api/pos/orders/:id
  */
 async function loadOrderDetails(orderId) {
+  const myLoad = ++orderLoadCounter;
   try {
     const res = await apiFetch(`/api/pos/orders/${orderId}`);
+    if (myLoad !== orderLoadCounter) return;
+    if (!selectedTable || selectedTable.openOrderId !== orderId) return;
     if (res && res.success && res.data) {
       currentOrder = res.data;
       renderActiveOrder();
     }
   } catch (err) {
+    if (myLoad !== orderLoadCounter) return;
     console.error('Lỗi loadOrderDetails:', err);
     showToast(err.message || 'Không thể tải chi tiết đơn hàng.', 'danger');
   }
@@ -388,6 +437,7 @@ function renderActiveOrder() {
  * Mở đơn hàng mới cho bàn đang chọn
  */
 async function openOrderForCurrentTable() {
+  if (creatingOrder) return;
   if (!selectedTable) {
     showToast('Vui lòng chọn bàn cần mở đơn.', 'warning');
     return;
@@ -396,6 +446,7 @@ async function openOrderForCurrentTable() {
   const btn = document.getElementById('btnCreateOrder');
   const custIdVal = document.getElementById('posCustomerId')?.value;
   const customerId = custIdVal ? Number(custIdVal) : undefined;
+  creatingOrder = true;
 
   try {
     if (btn) {
@@ -423,6 +474,7 @@ async function openOrderForCurrentTable() {
     console.error('Lỗi openOrderForCurrentTable:', err);
     showToast(err.message || 'Không thể tạo đơn hàng mới.', 'danger');
   } finally {
+    creatingOrder = false;
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Mở đơn phục vụ bàn này';
@@ -444,11 +496,16 @@ async function onMenuItemClick(menuItemId) {
     return;
   }
 
+  const lockKey = `${selectedTable.openOrderId}:${menuItemId}`;
+  if (addingMenuItems.has(lockKey)) return;
+
   const item = menuData.find(m => m.id === menuItemId);
   const itemName = item ? item.name : 'món';
+  const targetOrderId = selectedTable.openOrderId;
+  addingMenuItems.add(lockKey);
 
   try {
-    const res = await apiFetch(`/api/pos/orders/${selectedTable.openOrderId}/items`, {
+    const res = await apiFetch(`/api/pos/orders/${targetOrderId}/items`, {
       method: 'POST',
       body: JSON.stringify({
         menuItemId,
@@ -460,13 +517,15 @@ async function onMenuItemClick(menuItemId) {
       showToast(`Đã thêm 1 ${itemName}`, 'success');
       // Tải lại chi tiết đơn và danh sách bàn (cập nhật tổng tiền hiển thị trên card bàn)
       await Promise.all([
-        loadOrderDetails(selectedTable.openOrderId),
+        loadOrderDetails(targetOrderId),
         loadTables()
       ]);
     }
   } catch (err) {
     console.error('Lỗi thêm món:', err);
     showToast(err.message || 'Không thể thêm món vào đơn.', 'danger');
+  } finally {
+    addingMenuItems.delete(lockKey);
   }
 }
 
@@ -486,21 +545,27 @@ async function changeItemQuantity(itemId, newQuantity) {
     return;
   }
 
+  if (updatingOrderItems.has(itemId)) return;
+  const targetOrderId = currentOrder.id;
+  updatingOrderItems.add(itemId);
+
   try {
-    const res = await apiFetch(`/api/pos/orders/${currentOrder.id}/items/${itemId}`, {
+    const res = await apiFetch(`/api/pos/orders/${targetOrderId}/items/${itemId}`, {
       method: 'PATCH',
       body: JSON.stringify({ quantity: newQuantity })
     });
 
     if (res && res.success) {
       await Promise.all([
-        loadOrderDetails(currentOrder.id),
+        loadOrderDetails(targetOrderId),
         loadTables()
       ]);
     }
   } catch (err) {
     console.error('Lỗi sửa số lượng:', err);
     showToast(err.message || 'Không thể cập nhật số lượng món.', 'danger');
+  } finally {
+    updatingOrderItems.delete(itemId);
   }
 }
 
@@ -549,7 +614,8 @@ function showCancelModal() {
  * Gửi yêu cầu hủy đơn hàng: POST /api/pos/orders/:id/cancel
  */
 async function submitCancelOrder() {
-  if (!currentOrder) return;
+  if (!currentOrder || cancellingOrder) return;
+  cancellingOrder = true;
 
   const btn = document.getElementById('btnConfirmCancel');
   try {
@@ -576,6 +642,7 @@ async function submitCancelOrder() {
     console.error('Lỗi hủy đơn:', err);
     showToast(err.message || 'Không thể hủy đơn hàng.', 'danger');
   } finally {
+    cancellingOrder = false;
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Xác nhận hủy đơn';
@@ -622,7 +689,8 @@ function showPayModal() {
  * Gửi yêu cầu thanh toán đơn hàng: POST /api/pos/orders/:id/pay
  */
 async function submitPayOrder() {
-  if (!currentOrder) return;
+  if (!currentOrder || payingOrder) return;
+  payingOrder = true;
 
   const btn = document.getElementById('btnConfirmPay');
   try {
@@ -636,8 +704,9 @@ async function submitPayOrder() {
     });
 
     if (res && res.success) {
-      showToast('Thanh toán thành công hóa đơn ' + currentOrder.total.toLocaleString('vi-VN') + ' đ!', 'success');
-      
+      const paidTotal = res.data && typeof res.data.total === 'number' ? res.data.total : currentOrder.total;
+      showToast('Thanh toán thành công hóa đơn ' + Number(paidTotal || 0).toLocaleString('vi-VN') + ' đ!', 'success');
+
       if (payModalInstance) {
         payModalInstance.hide();
       }
@@ -652,6 +721,7 @@ async function submitPayOrder() {
     console.error('Lỗi thanh toán:', err);
     showToast(err.message || 'Không thể thực hiện thanh toán.', 'danger');
   } finally {
+    payingOrder = false;
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Đồng ý thanh toán';
@@ -669,6 +739,7 @@ async function searchCustomer() {
   const phone = phoneInput ? phoneInput.value.trim() : '';
 
   if (!phone) {
+    if (custIdInput) custIdInput.value = '';
     if (resultEl) resultEl.textContent = 'Vui lòng nhập số điện thoại khách hàng.';
     return;
   }
@@ -677,10 +748,18 @@ async function searchCustomer() {
     if (resultEl) resultEl.textContent = 'Đang tìm kiếm...';
     const res = await apiFetch(`/api/customers?search=${encodeURIComponent(phone)}`);
     if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-      const cust = res.data[0];
+      const exactMatch = res.data.find(c => c.phone === phone);
+      if (!exactMatch && res.data.length > 1) {
+        if (custIdInput) custIdInput.value = '';
+        if (resultEl) {
+          resultEl.innerHTML = `<span class="text-warning">Tìm thấy ${res.data.length} khách hàng gần giống. Vui lòng nhập đầy đủ SĐT để chọn chính xác.</span>`;
+        }
+        return;
+      }
+      const cust = exactMatch || res.data[0];
       if (custIdInput) custIdInput.value = cust.id;
       if (resultEl) {
-        resultEl.innerHTML = `<span class="text-success">Đã tìm thấy: <strong>${escapeHtml(cust.fullName)}</strong> (${escapeHtml(cust.rank)} - ${cust.points} điểm)</span>`;
+        resultEl.innerHTML = `<span class="text-success">Đã tìm thấy: <strong>${escapeHtml(cust.fullName)}</strong> (${escapeHtml(cust.phone)} · ${escapeHtml(cust.rank)} - ${cust.points} điểm)</span>`;
       }
     } else {
       if (custIdInput) custIdInput.value = '';
@@ -689,6 +768,7 @@ async function searchCustomer() {
       }
     }
   } catch (err) {
+    if (custIdInput) custIdInput.value = '';
     console.warn('API customers chưa sẵn sàng hoặc lỗi:', err);
     if (resultEl) {
       resultEl.innerHTML = `<span class="text-secondary">Không tìm thấy hoặc chưa hỗ trợ tìm khách.</span>`;
@@ -759,8 +839,8 @@ function renderManageTablesTable() {
         </span>
       </td>
       <td class="text-end">
-        <button type="button" class="btn btn-sm btn-outline me-1" onclick="editTable(${t.id}, '${escapeHtml(t.name)}', ${t.seats})">Sửa</button>
-        <button type="button" class="btn btn-sm btn-outline text-danger border-danger" onclick="deleteTable(${t.id}, '${escapeHtml(t.name)}')">Xóa</button>
+        <button type="button" class="btn btn-sm btn-outline me-1" data-action="edit-table" data-id="${t.id}">Sửa</button>
+        <button type="button" class="btn btn-sm btn-outline text-danger border-danger" data-action="delete-table" data-id="${t.id}">Xóa</button>
       </td>
     </tr>
   `).join('');
@@ -857,6 +937,7 @@ async function loadManageMenuTable() {
     // Admin lấy cả món đã ngừng bán: ?all=1
     const res = await apiFetch('/api/pos/menu?all=1');
     if (res && res.success && Array.isArray(res.data)) {
+      manageMenuData = res.data;
       if (res.data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có món nào.</td></tr>';
         return;
@@ -873,8 +954,8 @@ async function loadManageMenuTable() {
             </span>
           </td>
           <td class="text-end">
-            <button type="button" class="btn btn-sm btn-outline me-1" onclick="editMenu(${m.id}, '${escapeHtml(m.name)}', ${m.price}, ${m.isActive})">Sửa</button>
-            <button type="button" class="btn btn-sm btn-outline text-danger border-danger" onclick="deleteMenu(${m.id}, '${escapeHtml(m.name)}')">Xóa</button>
+            <button type="button" class="btn btn-sm btn-outline me-1" data-action="edit-menu" data-id="${m.id}">Sửa</button>
+            <button type="button" class="btn btn-sm btn-outline text-danger border-danger" data-action="delete-menu" data-id="${m.id}">Xóa</button>
           </td>
         </tr>
       `).join('');
@@ -898,7 +979,7 @@ function editMenu(id, name, price, isActive) {
 async function saveMenu() {
   const id = document.getElementById('editingMenuId').value;
   const name = document.getElementById('inputMenuName').value.trim();
-  const price = parseInt(document.getElementById('inputMenuPrice').value, 10);
+  const rawPrice = document.getElementById('inputMenuPrice').value.trim();
   const isActive = document.getElementById('inputMenuActive').checked;
   const errEl = document.getElementById('menuFormError');
 
@@ -906,8 +987,13 @@ async function saveMenu() {
     errEl.textContent = 'Vui lòng nhập tên món.';
     return;
   }
-  if (isNaN(price) || price < 0) {
-    errEl.textContent = 'Đơn giá phải là số lớn hơn hoặc bằng 0.';
+  if (!/^\d+$/.test(rawPrice)) {
+    errEl.textContent = 'Đơn giá phải là số nguyên không âm (VNĐ).';
+    return;
+  }
+  const price = Number(rawPrice);
+  if (!Number.isSafeInteger(price) || price < 0 || price > 10000000) {
+    errEl.textContent = 'Đơn giá phải từ 0 đến 10.000.000 đ.';
     return;
   }
 
